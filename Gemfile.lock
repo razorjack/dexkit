@@ -1,0 +1,45 @@
+PATH
+  remote: .
+  specs:
+    dexkit (0.1.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    ast (2.4.2)
+    minitest (5.25.4)
+    parallel (1.26.3)
+    parser (3.3.7.1)
+      ast (~> 2.4.1)
+      racc
+    racc (1.8.1)
+    rainbow (3.1.1)
+    rake (13.2.1)
+    regexp_parser (2.10.0)
+    rexml (3.4.1)
+    rubocop (1.30.1)
+      parallel (~> 1.10)
+      parser (>= 3.1.0.0)
+      rainbow (>= 2.2.2, < 4.0)
+      regexp_parser (>= 1.8, < 3.0)
+      rexml (>= 3.2.5, < 4.0)
+      rubocop-ast (>= 1.18.0, < 2.0)
+      ruby-progressbar (~> 1.7)
+      unicode-display_width (>= 1.4.0, < 3.0)
+    rubocop-ast (1.18.0)
+      parser (>= 3.1.1.0)
+    ruby-progressbar (1.13.0)
+    unicode-display_width (2.6.0)
+
+PLATFORMS
+  arm64-darwin-24
+  ruby
+
+DEPENDENCIES
+  dexkit!
+  minitest (~> 5.16)
+  rake (~> 13.0)
+  rubocop (~> 1.21)
+
+BUNDLED WITH
+   2.6.2
