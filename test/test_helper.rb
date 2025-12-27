@@ -5,6 +5,10 @@ require "dexkit"
 
 require "minitest/autorun"
 
+require "active_job"
+require "active_job/test_helper"
+ActiveJob::Base.queue_adapter = :test
+
 require 'dry/types'
 module Types
   include Dry.Types(default: :nominal)
