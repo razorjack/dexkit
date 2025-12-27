@@ -127,10 +127,17 @@ module Dex
       def serialized_params = @operation.params.to_h
     end
 
-    class Job < ActiveJob::Base
-      def perform(class_name:, params:)
-        klass = class_name.constantize
-        klass.new(**params.deep_symbolize_keys).perform
+    # Job class is defined lazily when ActiveJob is loaded
+    def self.const_missing(name)
+      if name == :Job && defined?(ActiveJob::Base)
+        const_set(:Job, Class.new(ActiveJob::Base) do
+          def perform(class_name:, params:)
+            klass = class_name.constantize
+            klass.new(**params.deep_symbolize_keys).perform
+          end
+        end)
+      else
+        super
       end
     end
   end

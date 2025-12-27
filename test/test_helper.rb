@@ -8,6 +8,7 @@ require "minitest/autorun"
 require "active_job"
 require "active_job/test_helper"
 ActiveJob::Base.queue_adapter = :test
+ActiveJob::Base.logger = nil
 
 require 'dry/types'
 module Types
