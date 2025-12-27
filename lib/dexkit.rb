@@ -1,8 +1,15 @@
 # frozen_string_literal: true
 
-require_relative "dexkit/version"
+require "zeitwerk"
+require "dex/version"
 
-module Dexkit
-  class Error < StandardError; end
-  # Your code goes here...
+require "dry/types"
+require "dry/struct"
+
+module Dex
+  loader = Zeitwerk::Loader.for_gem
+  loader.inflector.inflect(
+    "dex" => "Dex"
+  )
+  loader.setup
 end
