@@ -30,7 +30,5 @@ class TestOperationParams < Minitest::Test
 
     op.new(name: "Test test", spy: logger).perform
     assert_mock logger
-
-    puts TestMyOperation.new(name: "Jacek").params.class
   end
 end
