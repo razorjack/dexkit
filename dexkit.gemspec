@@ -41,6 +41,10 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "activejob", ">= 6.1"
   spec.add_development_dependency "activesupport", ">= 6.1"
 
+  # Development dependencies for testing recording
+  spec.add_development_dependency "activerecord", ">= 6.1"
+  spec.add_development_dependency "sqlite3", ">= 2.1"
+
   # For more information and examples about making a new gem, check out our
   # guide at: https://bundler.io/guides/creating_gem.html
 end

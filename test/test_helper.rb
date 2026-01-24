@@ -10,6 +10,9 @@ require "active_job/test_helper"
 ActiveJob::Base.queue_adapter = :test
 ActiveJob::Base.logger = nil
 
+require "active_record"
+ActiveRecord::Base.logger = nil
+
 require 'dry/types'
 module Types
   include Dry.Types(default: :nominal)

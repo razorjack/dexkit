@@ -1,11 +1,59 @@
 module Dex
   module RecordWrapper
     def perform(*, **)
-      # Operation::Record.create!(
-      #   name: self.class.name,
-      #   params: self.params.as_json
-      # )
+      _record_save! if _record_enabled?
       super
+    end
+
+    private
+
+    def _record_enabled?
+      return false unless Dex.record_backend
+      return false unless self.class.name # Anonymous classes can't be recorded
+
+      record_settings = self.class.settings_for(:record)
+      record_settings.fetch(:enabled, true)
+    end
+
+    def _record_save!
+      Dex.record_backend.create_record(_record_attributes)
+    rescue => e
+      _record_handle_error(e)
+    end
+
+    def _record_attributes
+      {
+        name: self.class.name,
+        params: _record_params,
+        performed_at: Time.now
+      }
+    end
+
+    def _record_params
+      return {} unless respond_to?(:params) && params
+      params.as_json
+    end
+
+    def _record_handle_error(error)
+      if defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
+        Rails.logger.warn "[Dex] Failed to record operation: #{error.message}"
+      end
+    end
+
+    module ClassMethods
+      def record(enabled = nil, **options)
+        if enabled == false
+          set :record, enabled: false
+        elsif enabled == true || enabled.nil?
+          set :record, enabled: true, **options
+        end
+      end
+    end
+
+    def self.prepended(base)
+      class << base
+        prepend ClassMethods
+      end
     end
   end
 
@@ -138,6 +186,52 @@ module Dex
         end)
       else
         super
+      end
+    end
+
+    module RecordBackend
+      def self.for(record_class)
+        return nil unless record_class
+
+        if defined?(ActiveRecord::Base) && record_class < ActiveRecord::Base
+          ActiveRecordAdapter.new(record_class)
+        elsif defined?(Mongoid::Document) && record_class.included_modules.include?(Mongoid::Document)
+          MongoidAdapter.new(record_class)
+        else
+          raise ArgumentError, "record_class must inherit from ActiveRecord::Base or include Mongoid::Document"
+        end
+      end
+
+      class Base
+        attr_reader :record_class
+
+        def initialize(record_class)
+          @record_class = record_class
+        end
+
+        def create_record(attributes)
+          record_class.create!(safe_attributes(attributes))
+        end
+
+        def safe_attributes(attributes)
+          attributes.select { |key, _| has_field?(key.to_s) }
+        end
+
+        def has_field?(field_name)
+          raise NotImplementedError
+        end
+      end
+
+      class ActiveRecordAdapter < Base
+        def has_field?(field_name)
+          record_class.column_names.include?(field_name.to_s)
+        end
+      end
+
+      class MongoidAdapter < Base
+        def has_field?(field_name)
+          record_class.fields.key?(field_name.to_s)
+        end
       end
     end
   end

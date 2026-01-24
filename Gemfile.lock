@@ -11,6 +11,12 @@ GEM
     activejob (8.1.1)
       activesupport (= 8.1.1)
       globalid (>= 0.3.6)
+    activemodel (8.1.1)
+      activesupport (= 8.1.1)
+    activerecord (8.1.1)
+      activemodel (= 8.1.1)
+      activesupport (= 8.1.1)
+      timeout (>= 0.4.0)
     activesupport (8.1.1)
       base64
       bigdecimal
@@ -59,7 +65,8 @@ GEM
     ice_nine (0.11.2)
     json (2.18.0)
     logger (1.7.0)
-    minitest (5.25.4)
+    mini_portile2 (2.8.9)
+    minitest (5.27.0)
     parallel (1.26.3)
     parser (3.3.7.1)
       ast (~> 2.4.1)
@@ -82,6 +89,10 @@ GEM
       parser (>= 3.1.1.0)
     ruby-progressbar (1.13.0)
     securerandom (0.4.1)
+    sqlite3 (2.8.1)
+      mini_portile2 (~> 2.8.0)
+    sqlite3 (2.8.1-arm64-darwin)
+    timeout (0.6.0)
     tzinfo (2.0.6)
       concurrent-ruby (~> 1.0)
     unicode-display_width (2.6.0)
@@ -94,11 +105,13 @@ PLATFORMS
 
 DEPENDENCIES
   activejob (>= 6.1)
+  activerecord (>= 6.1)
   activesupport (>= 6.1)
   dexkit!
   minitest (~> 5.16)
   rake (~> 13.0)
   rubocop (~> 1.21)
+  sqlite3 (>= 2.1)
 
 BUNDLED WITH
    2.6.2
