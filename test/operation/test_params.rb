@@ -13,6 +13,10 @@ class TestMyOperation < Dex::Operation
 end
 
 class TestOperationParams < Minitest::Test
+  def setup
+    setup_test_database
+  end
+
   def test_parameters_and_perform
     op = Class.new(Dex::Operation) do
       params do

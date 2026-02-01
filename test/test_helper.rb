@@ -17,3 +17,13 @@ require 'dry/types'
 module Types
   include Dry.Types(default: :nominal)
 end
+
+# Load test support files
+require_relative "support/operation_helpers"
+require_relative "support/database_helpers"
+
+# Include helpers in all test cases
+class Minitest::Test
+  include OperationHelpers
+  include DatabaseHelpers
+end

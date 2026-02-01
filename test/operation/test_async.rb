@@ -5,6 +5,10 @@ require "test_helper"
 class TestOperationAsync < Minitest::Test
   include ActiveJob::TestHelper
 
+  def setup
+    setup_test_database
+  end
+
   def test_async_returns_proxy
     op = build_operation.new(name: "Test")
     proxy = op.async
@@ -24,7 +28,7 @@ class TestOperationAsync < Minitest::Test
     spy = Minitest::Mock.new
     spy.expect :call, nil, ["Test"]
 
-    op_class = Class.new(Dex::Operation) do
+    define_operation(:TestSpyOperation) do
       params do
         attribute :name, Types::String
         attribute :spy, Types::Any
@@ -35,15 +39,10 @@ class TestOperationAsync < Minitest::Test
       end
     end
 
-    # Need to give the class a name for constantize to work
-    Object.const_set(:TestSpyOperation, op_class)
-
     # Directly test the job execution (avoids Rails 8 tagged_logger issues)
     Dex::Operation::Job.new.perform(class_name: "TestSpyOperation", params: { name: "Test", spy: spy })
 
     assert_mock spy
-  ensure
-    Object.send(:remove_const, :TestSpyOperation)
   end
 
   def test_async_with_queue
@@ -132,8 +131,9 @@ class TestOperationAsync < Minitest::Test
 
   private
 
+  # Override the global helper with test-specific defaults
   def build_operation
-    Class.new(Dex::Operation) do
+    super do
       params do
         attribute :name, Types::String
       end

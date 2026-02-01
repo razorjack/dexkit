@@ -220,7 +220,7 @@ module Dex
       def scheduled_at = merged_options[:at]
       def scheduled_in = merged_options[:in]
       def operation_class_name = @operation.class.name
-      def serialized_params = @operation.params.to_h
+      def serialized_params = @operation.params&.to_h || {}
     end
 
     # Job class is defined lazily when ActiveJob is loaded
