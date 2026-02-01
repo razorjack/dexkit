@@ -1,4 +1,18 @@
 module Dex
+  class Error < StandardError
+    attr_reader :code, :details
+
+    def initialize(code, message = nil, details: nil)
+      @code = code
+      @details = details
+      super(message || code.to_s)
+    end
+
+    def deconstruct_keys(keys)
+      {code: @code, message: message, details: @details}
+    end
+  end
+
   module RecordWrapper
     def self.prepended(base)
       class << base
@@ -135,6 +149,48 @@ module Dex
     end
   end
 
+  module ResultWrapper
+    module ClassMethods
+      def result(&block)
+        klass = Class.new(Dex::Parameters, &block)
+        const_set(:Result, klass)
+        @_result_schema = klass
+      end
+
+      def _result_schema
+        @_result_schema
+      end
+
+      def _result_has_schema?
+        !!@_result_schema
+      end
+    end
+
+    def self.prepended(base)
+      class << base
+        prepend ClassMethods
+      end
+    end
+
+    def perform(*, **)
+      raw_result = super
+      _result_wrap(raw_result)
+    end
+
+    def error!(code, message = nil, details: nil)
+      raise Dex::Error.new(code, message, details: details)
+    end
+
+    private
+
+    def _result_wrap(raw_result)
+      return raw_result unless self.class._result_has_schema?
+      return raw_result unless raw_result.is_a?(Hash)
+
+      self.class._result_schema.new(raw_result)
+    end
+  end
+
   module Settings
     module ClassMethods
       def set(key, **options)
@@ -178,6 +234,12 @@ module Dex
     end
   end
 
+  module SafeWrapper
+    def safe
+      Operation::SafeProxy.new(self)
+    end
+  end
+
   class Operation
     def initialize(*, **)
     end
@@ -188,9 +250,11 @@ module Dex
     def self.inherited(base)
       base.prepend RecordWrapper
       base.prepend TransactionWrapper
+      base.prepend ResultWrapper
       base.prepend ParamsWrapper
       base.prepend Settings
       base.prepend AsyncWrapper
+      base.prepend SafeWrapper
     end
 
     class AsyncProxy
@@ -224,6 +288,71 @@ module Dex
       def scheduled_in = merged_options[:in]
       def operation_class_name = @operation.class.name
       def serialized_params = @operation.params&.to_h || {}
+    end
+
+    class Ok
+      attr_reader :value
+
+      def initialize(value)
+        @value = value
+      end
+
+      def ok? = true
+      def error? = false
+
+      def value! = @value
+
+      def method_missing(method, *args, &block)
+        if @value.respond_to?(method)
+          @value.public_send(method, *args, &block)
+        else
+          super
+        end
+      end
+
+      def respond_to_missing?(method, include_private = false)
+        @value.respond_to?(method, include_private) || super
+      end
+
+      def deconstruct_keys(keys)
+        return {value: @value} unless @value.respond_to?(:deconstruct_keys)
+        @value.deconstruct_keys(keys)
+      end
+    end
+
+    class Err
+      attr_reader :error
+
+      def initialize(error)
+        @error = error
+      end
+
+      def ok? = false
+      def error? = true
+
+      def value = nil
+      def value! = raise @error
+
+      def code = @error.code
+      def message = @error.message
+      def details = @error.details
+
+      def deconstruct_keys(keys)
+        {code: @error.code, message: @error.message, details: @error.details}
+      end
+    end
+
+    class SafeProxy
+      def initialize(operation)
+        @operation = operation
+      end
+
+      def perform
+        result = @operation.perform
+        Operation::Ok.new(result)
+      rescue Dex::Error => e
+        Operation::Err.new(e)
+      end
     end
 
     # Job class is defined lazily when ActiveJob is loaded
@@ -317,4 +446,8 @@ module Dex
       end
     end
   end
+
+  # Top-level aliases for clean pattern matching
+  Ok = Operation::Ok
+  Err = Operation::Err
 end

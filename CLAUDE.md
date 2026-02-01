@@ -82,7 +82,9 @@ end
 |--------|---------|---------|
 | Settings | Class-level configuration via `set`/`settings_for` | Active |
 | ParamsWrapper | Typed parameters via `params` block | Active |
+| ResultWrapper | Typed results via `result` block, `error!` method | Active |
 | AsyncWrapper | Background execution via `.async.perform` | Opt-in |
+| SafeWrapper | Safe execution via `.safe` returning `Ok`/`Err` | Active |
 | TransactionWrapper | Wraps `perform` in DB transaction | Enabled |
 | RecordWrapper | Logs operation calls to database | Requires config |
 
@@ -142,10 +144,15 @@ For markdown files with Ruby code snippets:
 bundle exec rubocop -c .rubocop-md.yml
 ```
 
+### Implemented Features
+
+- ✅ Typed result objects via `result do` block (dry-struct based)
+- ✅ Explicit failure signaling via `error!` method
+- ✅ Monad-like result objects (`Ok`/`Err`) via `.safe` modifier
+- ✅ Pattern matching support for errors and outcomes
+
 ### Future plans
 
 - Ability to define params contract (using dry-validation)
-- Wrapping operation response hash into params-like object (basically a dry-struct) so that result objects can be accessed in dot notation, not hash notation
-- Ability to save the operation response in the database record (connected to wrapping operation response)
+- Ability to save the operation response in the database record
 - Performing an operation with nonce token (as used nonce tokens need to be saved somewhere)
-- Monad-like result objects. Success or Failure. Option to swallow Operation::Error exceptions and return Failure with error code

@@ -48,6 +48,104 @@ class SendWelcomeEmail < Dex::Operation
 end
 ```
 
+### Result Objects
+
+Define typed result structs for your operations.
+
+```ruby
+class CreateUser < Dex::Operation
+  params do
+    attribute :email, Types::String
+    attribute :name, Types::String
+  end
+
+  result do
+    attribute :user_id, Types::Integer
+    attribute :status, Types::String
+  end
+
+  def perform
+    user = User.create!(email: params.email, name: params.name)
+    {user_id: user.id, status: "created"}
+  end
+end
+
+result = CreateUser.new(email: "user@example.com", name: "John").perform
+result.user_id  # => 1
+result.status   # => "created"
+```
+
+### Error Handling
+
+Signal failures explicitly with `error!`. Automatically triggers transaction rollback.
+
+```ruby
+class ProcessPayment < Dex::Operation
+  params do
+    attribute :amount, Types::Integer
+  end
+
+  def perform
+    if params.amount < 0
+      error!(:invalid_amount, "Amount must be positive")
+    end
+
+    # Process payment...
+  end
+end
+
+ProcessPayment.new(amount: -100).perform
+# raises Dex::Error with code: :invalid_amount
+```
+
+Add details to errors:
+
+```ruby
+error!(:validation_failed, "Invalid data", details: {field: "email", issue: "format"})
+```
+
+### Outcome Handling
+
+Use `.safe` to return `Ok`/`Err` instead of raising exceptions. Perfect for pattern matching.
+
+```ruby
+class FindUser < Dex::Operation
+  params do
+    attribute :user_id, Types::Integer
+  end
+
+  result do
+    attribute :user, Types::Hash
+  end
+
+  def perform
+    user = User.find_by(id: params.user_id)
+    error!(:not_found, "User not found") unless user
+
+    {user: user.as_json}
+  end
+end
+
+outcome = FindUser.new(user_id: 123).safe.perform
+
+case outcome
+in Dex::Ok(user:)
+  puts "Found: #{user['name']}"
+in Dex::Err(code: :not_found)
+  puts "User not found"
+end
+```
+
+Check outcome status:
+
+```ruby
+outcome.ok?      # => true/false
+outcome.error?   # => true/false
+outcome.value    # => result or nil
+outcome.code     # => error code (Err only)
+outcome.message  # => error message (Err only)
+```
+
 ### Recording
 
 Record operation calls to database. Supports ActiveRecord and Mongoid.
