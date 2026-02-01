@@ -187,6 +187,16 @@ class TestOperationOutcome < Minitest::Test
     assert_equal Dex::Operation::Err, Dex::Err
   end
 
+  def test_match_module_provides_ok_and_err
+    test_class = Class.new do
+      include Dex::Match
+    end
+
+    instance = test_class.new
+    assert_equal Dex::Ok, instance.class::Ok
+    assert_equal Dex::Err, instance.class::Err
+  end
+
   # Integration test
   def test_safe_with_params_and_result
     op = Class.new(Dex::Operation) do

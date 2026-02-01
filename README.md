@@ -126,12 +126,15 @@ class FindUser < Dex::Operation
   end
 end
 
+# Include Dex::Match for cleaner pattern matching syntax
+include Dex::Match
+
 outcome = FindUser.new(user_id: 123).safe.perform
 
 case outcome
-in Dex::Ok(user:)
+in Ok(user:)
   puts "Found: #{user['name']}"
-in Dex::Err(code: :not_found)
+in Err(code: :not_found)
   puts "User not found"
 end
 ```
