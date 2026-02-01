@@ -11,6 +11,7 @@ loader.setup
 
 require_relative "dex/version"
 require_relative "dex/parameters"
+require_relative "dex/types"
 require_relative "dex/operation"
 
 module Dex

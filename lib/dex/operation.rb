@@ -77,8 +77,14 @@ module Dex
     def _record_response(result)
       case result
       when nil then nil
-      when Dex::Parameters then result.to_h
-      when Hash then result
+      when Dex::Parameters then result.as_json
+      when Hash
+        # If there's a result schema, wrap the hash to get proper serialization
+        if self.class._result_has_schema?
+          self.class._result_schema.new(result).as_json
+        else
+          result
+        end
       else {value: result}
       end
     end

@@ -16,6 +16,7 @@ ActiveRecord::Base.logger = nil
 require "dry/types"
 module Types
   include Dry.Types(default: :nominal)
+  extend Dex::Types::Extension
 end
 
 # Load test support files

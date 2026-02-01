@@ -18,6 +18,7 @@ lib/
   dex/
     version.rb           # Version constant
     parameters.rb        # Dex::Parameters (Dry::Struct subclass)
+    types.rb             # Dex::Types::Extension (adds Record() type)
     operation.rb         # All operation logic and wrapper modules
 
 test/
@@ -27,6 +28,8 @@ test/
     database_helpers.rb  # setup_test_database()
   operation/
     test_*.rb            # Per-feature test files
+  types/
+    test_*.rb            # Per-type test files
 ```
 
 ## Core dependencies
@@ -151,6 +154,7 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ Monad-like result objects (`Ok`/`Err`) via `.safe` modifier
 - ✅ Pattern matching support for errors and outcomes
 - ✅ Operation response recording to database with granular control (`record params: false, response: false`)
+- ✅ `Types::Record(Model)` - parameterized type for model instances with ID coercion and serialization
 
 ### Future plans
 

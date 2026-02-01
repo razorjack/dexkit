@@ -251,7 +251,70 @@ Uses [dry-types](https://dry-rb.org/gems/dry-types). Define in your app:
 ```ruby
 module Types
   include Dry.Types(default: :nominal)
+  extend Dex::Types::Extension
 end
+```
+
+### Record Types
+
+`Types::Record(ModelClass)` accepts model instances or IDs, automatically finding records from the database. Perfect for working with ActiveRecord or Mongoid models in operations.
+
+```ruby
+class SendEmail < Dex::Operation
+  params do
+    attribute :user, Types::Record(User)
+  end
+
+  def perform
+    # params.user is an actual User instance
+    Mailer.welcome(params.user).deliver_later
+  end
+end
+
+# Both work - pass instance or ID
+SendEmail.new(user: User.find(123)).perform
+SendEmail.new(user: 123).perform
+```
+
+Works in result blocks too:
+
+```ruby
+class FindUser < Dex::Operation
+  result do
+    attribute :user, Types::Record(User)
+    attribute :status, Types::String
+  end
+
+  def perform
+    user = User.find_by(id: params.user_id)
+    error!(:not_found) unless user
+
+    { user: user, status: 'active' }
+  end
+end
+
+result = FindUser.new(user_id: 123).perform
+result.user.name  # => "John Doe" (actual User instance)
+```
+
+Optional records:
+
+```ruby
+class UpdateProfile < Dex::Operation
+  params do
+    attribute :user, Types::Record(User)
+    attribute :avatar, Types::Record(Avatar).optional
+  end
+end
+
+UpdateProfile.new(user: 1, avatar: nil).perform  # avatar can be nil
+```
+
+When recording to database, Record types serialize as IDs (not full objects):
+
+```ruby
+# params.as_json => {"user" => 123, "avatar" => 456}
+# Keeps your operation_records table clean and efficient
 ```
 
 ## License
