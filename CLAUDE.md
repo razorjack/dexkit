@@ -65,6 +65,10 @@ once the API of the library matures.
 
 Modularity: when it makes sense, keep existing pattern of modularizing each type of behavior and prepending the module on the base class.
 
+### Process
+
+When you're done adding a new feature or significantly modifying existing one, update README.md accordingly.
+
 **Naming internal methods**: All private/internal instance methods in Operation modules MUST be prefixed with underscore `_` (non-negotiable). Additionally, try hard to prefix them with `_modulename_` to clearly indicate which module they belong to. Example: in `RecordWrapper` module, internal methods should be named `_record_enabled?`, `_record_save!`, `_record_attributes`, etc. This prevents naming collisions and makes it clear these are framework-internal methods.
 
 Tests can be scoped per-area, each area in a separate file. Example: test/operation/test_params.rb for testing params.

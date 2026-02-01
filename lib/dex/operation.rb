@@ -57,6 +57,53 @@ module Dex
     end
   end
 
+  module TransactionWrapper
+    def perform(*, **)
+      if _transaction_enabled?
+        _transaction_execute { super }
+      else
+        super
+      end
+    end
+
+    private
+
+    def _transaction_enabled?
+      settings = self.class.settings_for(:transaction)
+      settings.fetch(:enabled, true)  # Default: enabled
+    end
+
+    def _transaction_adapter
+      settings = self.class.settings_for(:transaction)
+      adapter_name = settings.fetch(:adapter, Dex.transaction_adapter)
+      Operation::TransactionAdapter.for(adapter_name)
+    end
+
+    def _transaction_execute(&block)
+      _transaction_adapter.wrap(&block)
+    end
+
+    module ClassMethods
+      def transaction(enabled_or_options = nil, **options)
+        case enabled_or_options
+        when false
+          set :transaction, enabled: false
+        when true, nil
+          set :transaction, enabled: true, **options
+        when Symbol
+          # Shorthand: `transaction :mongoid`
+          set :transaction, enabled: true, adapter: enabled_or_options, **options
+        end
+      end
+    end
+
+    def self.prepended(base)
+      class << base
+        prepend ClassMethods
+      end
+    end
+  end
+
   module ParamsWrapper
     @_params_schema = Dex::Parameters
 
@@ -137,6 +184,7 @@ module Dex
 
     def self.inherited(base)
       base.prepend RecordWrapper
+      base.prepend TransactionWrapper
       base.prepend ParamsWrapper
       base.prepend Settings
       base.prepend AsyncWrapper
@@ -231,6 +279,37 @@ module Dex
       class MongoidAdapter < Base
         def has_field?(field_name)
           record_class.fields.key?(field_name.to_s)
+        end
+      end
+    end
+
+    module TransactionAdapter
+      def self.for(adapter_name)
+        case adapter_name&.to_sym
+        when :active_record
+          ActiveRecordAdapter
+        when :mongoid
+          MongoidAdapter
+        else
+          raise ArgumentError, "Unknown transaction adapter: #{adapter_name}"
+        end
+      end
+
+      module ActiveRecordAdapter
+        def self.wrap(&block)
+          unless defined?(ActiveRecord::Base)
+            raise LoadError, "ActiveRecord is required for transactions"
+          end
+          ActiveRecord::Base.transaction(&block)
+        end
+      end
+
+      module MongoidAdapter
+        def self.wrap(&block)
+          unless defined?(Mongoid)
+            raise LoadError, "Mongoid is required for transactions"
+          end
+          Mongoid.transaction(&block)
         end
       end
     end

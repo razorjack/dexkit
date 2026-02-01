@@ -78,6 +78,49 @@ class SensitiveOperation < Dex::Operation
 end
 ```
 
+### Transactions
+
+Operations run inside database transactions by default. Changes are rolled back on errors.
+
+```ruby
+class CreateOrder < Dex::Operation
+  def perform
+    Order.create!(...)
+    LineItem.create!(...)
+    # Both rolled back if error occurs
+  end
+end
+```
+
+Opt out for read-only operations:
+
+```ruby
+class ReadOnlyOperation < Dex::Operation
+  transaction false
+  # ...
+end
+```
+
+Configure adapter globally (default: `:active_record`):
+
+```ruby
+# config/initializers/dex.rb
+Dex.configure do |config|
+  config.transaction_adapter = :mongoid
+end
+```
+
+Override per-operation:
+
+```ruby
+class MongoidOperation < Dex::Operation
+  transaction adapter: :mongoid
+  # or shorthand:
+  transaction :mongoid
+  # ...
+end
+```
+
 ### Settings
 
 Generic class-level configuration with inheritance.

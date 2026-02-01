@@ -15,10 +15,11 @@ require_relative "dex/operation"
 
 module Dex
   class Configuration
-    attr_accessor :record_class
+    attr_accessor :record_class, :transaction_adapter
 
     def initialize
       @record_class = nil
+      @transaction_adapter = :active_record
     end
   end
 
@@ -42,6 +43,14 @@ module Dex
 
     def reset_record_backend!
       remove_instance_variable(:@record_backend) if defined?(@record_backend)
+    end
+
+    def transaction_adapter
+      configuration.transaction_adapter
+    end
+
+    def transaction_adapter=(adapter)
+      configuration.transaction_adapter = adapter
     end
   end
 end
