@@ -150,9 +150,9 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ Explicit failure signaling via `error!` method
 - ✅ Monad-like result objects (`Ok`/`Err`) via `.safe` modifier
 - ✅ Pattern matching support for errors and outcomes
+- ✅ Operation response recording to database with granular control (`record params: false, response: false`)
 
 ### Future plans
 
 - Ability to define params contract (using dry-validation)
-- Ability to save the operation response in the database record
 - Performing an operation with nonce token (as used nonce tokens need to be saved somewhere)

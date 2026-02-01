@@ -162,17 +162,25 @@ end
 create_table :operation_records do |t|
   t.string :name, null: false      # Required: operation class name
   t.jsonb :params, default: {}     # Optional: operation params
+  t.jsonb :response                # Optional: operation response/result
   t.datetime :performed_at         # Optional: execution timestamp
   t.timestamps
 end
 ```
 
-Disable recording per-class:
+By default, both params and response are recorded. Granular control:
 
 ```ruby
 class SensitiveOperation < Dex::Operation
-  record false
-  # ...
+  record false                     # Disable recording entirely
+end
+
+class LargeResponseOperation < Dex::Operation
+  record response: false           # Save params, skip response
+end
+
+class AuditOperation < Dex::Operation
+  record params: false             # Save response, skip params
 end
 ```
 

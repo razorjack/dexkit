@@ -171,4 +171,157 @@ class TestOperationRecording < Minitest::Test
 
     assert_nil backend
   end
+
+  # Response recording tests
+
+  def test_records_response_hash
+    with_recording do
+      op = define_operation(:TestRecordsResponseHash) do
+        params { attribute :name, Types::String }
+        def perform
+          {greeting: "Hello #{params.name}"}
+        end
+      end
+
+      op.new(name: "World").perform
+
+      assert_equal({"greeting" => "Hello World"}, OperationRecord.last.response)
+    end
+  end
+
+  def test_records_response_with_result_schema
+    with_recording do
+      op = define_operation(:TestRecordsResponseWithSchema) do
+        params { attribute :name, Types::String }
+        result do
+          attribute :greeting, Types::String
+        end
+
+        def perform
+          {greeting: "Hello #{params.name}"}
+        end
+      end
+
+      op.new(name: "World").perform
+
+      assert_equal({"greeting" => "Hello World"}, OperationRecord.last.response)
+    end
+  end
+
+  def test_records_nil_response
+    with_recording do
+      op = define_operation(:TestRecordsNilResponse) do
+        params { attribute :name, Types::String }
+        def perform
+          nil
+        end
+      end
+
+      op.new(name: "Test").perform
+
+      assert_nil OperationRecord.last.response
+    end
+  end
+
+  def test_records_primitive_response_wrapped
+    with_recording do
+      op = define_operation(:TestRecordsPrimitiveResponse) do
+        params { attribute :name, Types::String }
+        def perform
+          42
+        end
+      end
+
+      op.new(name: "Test").perform
+
+      assert_equal({"value" => 42}, OperationRecord.last.response)
+    end
+  end
+
+  def test_missing_response_column_still_works
+    with_recording(record_class: MinimalOperationRecord) do
+      op = define_operation(:TestMissingResponseColumn) do
+        params { attribute :name, Types::String }
+        def perform
+          {result: "success"}
+        end
+      end
+
+      op.new(name: "Test").perform
+
+      assert_equal 1, MinimalOperationRecord.count
+      assert_equal "TestMissingResponseColumn", MinimalOperationRecord.last.name
+    end
+  end
+
+  def test_error_does_not_record
+    with_recording do
+      op = define_operation(:TestErrorDoesNotRecord) do
+        params { attribute :name, Types::String }
+        def perform
+          error!(:test_error, "Test error message")
+        end
+      end
+
+      assert_raises(Dex::Error) do
+        op.new(name: "Test").perform
+      end
+
+      assert_equal 0, OperationRecord.count
+    end
+  end
+
+  def test_record_response_false_skips_response
+    with_recording do
+      op = define_operation(:TestRecordResponseFalse) do
+        record response: false
+        params { attribute :name, Types::String }
+        def perform
+          {greeting: "Hello"}
+        end
+      end
+
+      op.new(name: "Test").perform
+
+      record = OperationRecord.last
+      assert_equal({"name" => "Test"}, record.params)
+      assert_nil record.response
+    end
+  end
+
+  def test_record_params_false_skips_params
+    with_recording do
+      op = define_operation(:TestRecordParamsFalse) do
+        record params: false
+        params { attribute :name, Types::String }
+        def perform
+          {greeting: "Hello"}
+        end
+      end
+
+      op.new(name: "Test").perform
+
+      record = OperationRecord.last
+      assert_nil record.params
+      assert_equal({"greeting" => "Hello"}, record.response)
+    end
+  end
+
+  def test_record_defaults_include_both
+    with_recording do
+      op = define_operation(:TestRecordDefaults) do
+        record true
+        params { attribute :name, Types::String }
+        def perform
+          {greeting: "Hello"}
+        end
+      end
+
+      op.new(name: "Test").perform
+
+      record = OperationRecord.last
+      assert_equal({"name" => "Test"}, record.params)
+      assert_equal({"greeting" => "Hello"}, record.response)
+    end
+  end
 end

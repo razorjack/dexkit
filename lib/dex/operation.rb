@@ -21,8 +21,9 @@ module Dex
     end
 
     def perform(*, **)
-      _record_save! if _record_enabled?
-      super
+      result = super
+      _record_save!(result) if _record_enabled?
+      result
     end
 
     module ClassMethods
@@ -30,7 +31,9 @@ module Dex
         if enabled == false
           set :record, enabled: false
         elsif enabled == true || enabled.nil?
-          set :record, enabled: true, **options
+          # Default: record both params and response
+          merged = {enabled: true, params: true, response: true}.merge(options)
+          set :record, **merged
         end
       end
     end
@@ -45,23 +48,39 @@ module Dex
       record_settings.fetch(:enabled, true)
     end
 
-    def _record_save!
-      Dex.record_backend.create_record(_record_attributes)
+    def _record_save!(result)
+      Dex.record_backend.create_record(_record_attributes(result))
     rescue => e
       _record_handle_error(e)
     end
 
-    def _record_attributes
-      {
-        name: self.class.name,
-        params: _record_params,
-        performed_at: Time.now
-      }
+    def _record_attributes(result)
+      attrs = {name: self.class.name, performed_at: Time.now}
+      attrs[:params] = _record_params? ? _record_params : nil
+      attrs[:response] = _record_response? ? _record_response(result) : nil
+      attrs
     end
 
     def _record_params
       return {} unless respond_to?(:params) && params
       params.as_json
+    end
+
+    def _record_params?
+      self.class.settings_for(:record).fetch(:params, true)
+    end
+
+    def _record_response?
+      self.class.settings_for(:record).fetch(:response, true)
+    end
+
+    def _record_response(result)
+      case result
+      when nil then nil
+      when Dex::Parameters then result.to_h
+      when Hash then result
+      else {value: result}
+      end
     end
 
     def _record_handle_error(error)

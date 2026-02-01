@@ -15,6 +15,7 @@ module DatabaseHelpers
         create_table :operation_records, force: true do |t|
           t.string :name, null: false
           t.json :params, default: {}
+          t.json :response
           t.datetime :performed_at
           t.timestamps
         end
