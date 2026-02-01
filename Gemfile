@@ -9,4 +9,6 @@ gem "rake", "~> 13.0"
 
 gem "minitest", "~> 5.16"
 
-gem "rubocop", "~> 1.21"
+gem "standard", "~> 1.0"
+gem "ruby-next", ">= 1.0"
+gem "rubocop-md", "~> 2.0"

@@ -1,8 +1,24 @@
 module Dex
   module RecordWrapper
+    def self.prepended(base)
+      class << base
+        prepend ClassMethods
+      end
+    end
+
     def perform(*, **)
       _record_save! if _record_enabled?
       super
+    end
+
+    module ClassMethods
+      def record(enabled = nil, **options)
+        if enabled == false
+          set :record, enabled: false
+        elsif enabled == true || enabled.nil?
+          set :record, enabled: true, **options
+        end
+      end
     end
 
     private
@@ -39,30 +55,34 @@ module Dex
         Rails.logger.warn "[Dex] Failed to record operation: #{error.message}"
       end
     end
+  end
 
-    module ClassMethods
-      def record(enabled = nil, **options)
-        if enabled == false
-          set :record, enabled: false
-        elsif enabled == true || enabled.nil?
-          set :record, enabled: true, **options
-        end
-      end
-    end
-
+  module TransactionWrapper
     def self.prepended(base)
       class << base
         prepend ClassMethods
       end
     end
-  end
 
-  module TransactionWrapper
     def perform(*, **)
       if _transaction_enabled?
         _transaction_execute { super }
       else
         super
+      end
+    end
+
+    module ClassMethods
+      def transaction(enabled_or_options = nil, **options)
+        case enabled_or_options
+        when false
+          set :transaction, enabled: false
+        when true, nil
+          set :transaction, enabled: true, **options
+        when Symbol
+          # Shorthand: `transaction :mongoid`
+          set :transaction, enabled: true, adapter: enabled_or_options, **options
+        end
       end
     end
 
@@ -81,26 +101,6 @@ module Dex
 
     def _transaction_execute(&block)
       _transaction_adapter.wrap(&block)
-    end
-
-    module ClassMethods
-      def transaction(enabled_or_options = nil, **options)
-        case enabled_or_options
-        when false
-          set :transaction, enabled: false
-        when true, nil
-          set :transaction, enabled: true, **options
-        when Symbol
-          # Shorthand: `transaction :mongoid`
-          set :transaction, enabled: true, adapter: enabled_or_options, **options
-        end
-      end
-    end
-
-    def self.prepended(base)
-      class << base
-        prepend ClassMethods
-      end
     end
   end
 
@@ -179,8 +179,11 @@ module Dex
   end
 
   class Operation
-    def initialize(*, **); end
-    def perform(*, **); end
+    def initialize(*, **)
+    end
+
+    def perform(*, **)
+    end
 
     def self.inherited(base)
       base.prepend RecordWrapper

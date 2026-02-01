@@ -1,8 +1,36 @@
+require:
+  - standard/cop/block_single_line_braces
+  - ruby-next/rubocop
+
+inherit_gem:
+  standard: config/base.yml
+
 AllCops:
   TargetRubyVersion: 3.1
+  DisplayCopNames: true
+  SuggestExtensions: false
+  Exclude:
+    - bin/*
+    - tmp/**/*
+    - vendor/**/*
+    - Gemfile
 
+# Keep project preference for double quotes
 Style/StringLiterals:
   EnforcedStyle: double_quotes
 
 Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
+
+# Disable this standard cop for compatibility
+Standard/BlockSingleLineBraces:
+  Enabled: false
+
+Naming/FileName:
+  Exclude:
+    - "**/*.md"
+
+# Allow nested method definitions in tests for defining test-specific operation classes
+Lint/NestedMethodDefinition:
+  Exclude:
+    - "test/**/*"

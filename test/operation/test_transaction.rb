@@ -133,12 +133,12 @@ class TestOperationTransaction < Minitest::Test
     op = build_operation do
       def perform
         TestModel.create!(name: "Test")
-        { status: "success", count: TestModel.count }
+        {status: "success", count: TestModel.count}
       end
     end
 
     result = op.new.perform
-    assert_equal({ status: "success", count: 1 }, result)
+    assert_equal({status: "success", count: 1}, result)
   end
 
   def test_record_save_inside_transaction

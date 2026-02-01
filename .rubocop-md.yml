@@ -1,0 +1,10 @@
+inherit_from: ".rubocop.yml"
+
+plugins:
+  - rubocop-md
+
+AllCops:
+  Include:
+    - "**/*.md"
+  Exclude:
+    - "README.md"  # Contains placeholder code snippets

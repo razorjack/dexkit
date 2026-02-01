@@ -126,6 +126,22 @@ When you're done adding a new feature or significantly modifying existing one, u
 
 Tests can be scoped per-area, each area in a separate file. Example: test/operation/test_params.rb for testing params.
 
+### Code Quality
+
+**Rubocop is mandatory.** After modifying any Ruby files (`.rb`), always run:
+
+```bash
+bundle exec rubocop
+```
+
+To auto-fix issues: `bundle exec rubocop -a`
+
+For markdown files with Ruby code snippets:
+
+```bash
+bundle exec rubocop -c .rubocop-md.yml
+```
+
 ### Future plans
 
 - Ability to define params contract (using dry-validation)

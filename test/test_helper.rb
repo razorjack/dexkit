@@ -13,7 +13,7 @@ ActiveJob::Base.logger = nil
 require "active_record"
 ActiveRecord::Base.logger = nil
 
-require 'dry/types'
+require "dry/types"
 module Types
   include Dry.Types(default: :nominal)
 end

@@ -40,7 +40,7 @@ class TestOperationAsync < Minitest::Test
     end
 
     # Directly test the job execution (avoids Rails 8 tagged_logger issues)
-    Dex::Operation::Job.new.perform(class_name: "TestSpyOperation", params: { name: "Test", spy: spy })
+    Dex::Operation::Job.new.perform(class_name: "TestSpyOperation", params: {name: "Test", spy: spy})
 
     assert_mock spy
   end
@@ -81,7 +81,8 @@ class TestOperationAsync < Minitest::Test
         attribute :name, Types::String
       end
 
-      def perform; end
+      def perform
+      end
     end
 
     assert_enqueued_with(job: Dex::Operation::Job, queue: "background") do
@@ -97,7 +98,8 @@ class TestOperationAsync < Minitest::Test
         attribute :name, Types::String
       end
 
-      def perform; end
+      def perform
+      end
     end
 
     assert_enqueued_with(job: Dex::Operation::Job, queue: "urgent") do
@@ -126,7 +128,7 @@ class TestOperationAsync < Minitest::Test
       async priority: 10
     end
 
-    assert_equal({ queue: "default", priority: 10 }, child.settings_for(:async))
+    assert_equal({queue: "default", priority: 10}, child.settings_for(:async))
   end
 
   private
@@ -138,7 +140,8 @@ class TestOperationAsync < Minitest::Test
         attribute :name, Types::String
       end
 
-      def perform; end
+      def perform
+      end
     end
   end
 end

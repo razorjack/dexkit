@@ -10,7 +10,8 @@ class TestOperationRecording < Minitest::Test
   def test_recording_disabled_when_not_configured
     op = define_operation(:TestRecordingDisabled) do
       params { attribute :name, Types::String }
-      def perform; end
+      def perform
+      end
     end
 
     op.new(name: "Test").perform
@@ -22,7 +23,8 @@ class TestOperationRecording < Minitest::Test
     with_recording do
       op = define_operation(:TestRecordingEnabled) do
         params { attribute :name, Types::String }
-        def perform; end
+        def perform
+        end
       end
 
       op.new(name: "Test").perform
@@ -35,7 +37,8 @@ class TestOperationRecording < Minitest::Test
     with_recording do
       op = define_operation(:NamedOperation) do
         params { attribute :name, Types::String }
-        def perform; end
+        def perform
+        end
       end
 
       op.new(name: "Test").perform
@@ -48,12 +51,13 @@ class TestOperationRecording < Minitest::Test
     with_recording do
       op = define_operation(:TestRecordsParams) do
         params { attribute :name, Types::String }
-        def perform; end
+        def perform
+        end
       end
 
       op.new(name: "TestValue").perform
 
-      assert_equal({ "name" => "TestValue" }, OperationRecord.last.params)
+      assert_equal({"name" => "TestValue"}, OperationRecord.last.params)
     end
   end
 
@@ -62,7 +66,8 @@ class TestOperationRecording < Minitest::Test
       op = define_operation(:TestRecordFalseOp) do
         record false
         params { attribute :name, Types::String }
-        def perform; end
+        def perform
+        end
       end
 
       op.new(name: "Test").perform
@@ -76,7 +81,8 @@ class TestOperationRecording < Minitest::Test
       op = define_operation(:TestSetRecordFalseOp) do
         set :record, enabled: false
         params { attribute :name, Types::String }
-        def perform; end
+        def perform
+        end
       end
 
       op.new(name: "Test").perform
@@ -89,7 +95,8 @@ class TestOperationRecording < Minitest::Test
     with_recording(record_class: MinimalOperationRecord) do
       op = define_operation(:TestMinimalFieldsOp) do
         params { attribute :name, Types::String }
-        def perform; end
+        def perform
+        end
       end
 
       op.new(name: "Test").perform
@@ -124,7 +131,8 @@ class TestOperationRecording < Minitest::Test
 
       child = define_operation(:TestChildInheritsNoRecord, parent: parent) do
         params { attribute :name, Types::String }
-        def perform; end
+        def perform
+        end
       end
 
       child.new(name: "Test").perform
@@ -142,7 +150,8 @@ class TestOperationRecording < Minitest::Test
       child = define_operation(:TestChildReenabled, parent: parent) do
         record true
         params { attribute :name, Types::String }
-        def perform; end
+        def perform
+        end
       end
 
       child.new(name: "Test").perform
