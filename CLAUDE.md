@@ -10,10 +10,30 @@ base classes for patterns such as services/operations or forms objects.
 3. Batteries should always be included by default but possible to opt out.
 4. Tests should read like examples. Avoid bloated test files. Test files should be succinct.
 
+## File Structure
+
+```
+lib/
+  dexkit.rb              # Entry point, configuration, Zeitwerk loader
+  dex/
+    version.rb           # Version constant
+    parameters.rb        # Dex::Parameters (Dry::Struct subclass)
+    operation.rb         # All operation logic and wrapper modules
+
+test/
+  test_helper.rb         # Minitest setup, Types module
+  support/
+    operation_helpers.rb # define_operation(), with_recording()
+    database_helpers.rb  # setup_test_database()
+  operation/
+    test_*.rb            # Per-feature test files
+```
+
 ## Core dependencies
 
-1. dry-rb: dry-struct, dry-types, dry-validations, dry-monads.
-2. Development dependency: Rails / ActiveRecord. The library is supposed to integrate well with Rails, so some tests will use Rails to test the integration.
+**Runtime:** `dry-struct`, `zeitwerk`
+
+**Development:** `activejob`, `activerecord` (for testing Rails integration)
 
 ## Operations
 
@@ -56,14 +76,47 @@ class TestMyOperation < Dex::Operation
 end
 ```
 
+### Wrapper Modules
+
+| Module | Purpose | Default |
+|--------|---------|---------|
+| Settings | Class-level configuration via `set`/`settings_for` | Active |
+| ParamsWrapper | Typed parameters via `params` block | Active |
+| AsyncWrapper | Background execution via `.async.perform` | Opt-in |
+| TransactionWrapper | Wraps `perform` in DB transaction | Enabled |
+| RecordWrapper | Logs operation calls to database | Requires config |
 
 ### Development
 
-So far, everything is kept in one file: lib/dex/operation.rb. Keep it this way.
-But still, even though we have one file, we need to be modular and clean. These modules will be eventually extracted to separate files,
-once the API of the library matures.
+All operation logic is in `lib/dex/operation.rb`. Keep it this way until the API matures. Each behavior is modularized via prepended modules.
 
 Modularity: when it makes sense, keep existing pattern of modularizing each type of behavior and prepending the module on the base class.
+
+#### Module Pattern
+
+The standard pattern for adding new wrapper functionality:
+
+```ruby
+module SomeWrapper
+  def self.prepended(base)
+    class << base
+      prepend ClassMethods
+    end
+  end
+
+  module ClassMethods
+    def some_dsl(**opts)
+      set(:key, **opts)
+    end
+  end
+end
+```
+
+#### Adapter Pattern
+
+Use `.for()` factory methods for adapters:
+- `RecordBackend.for(record_class)` - Returns appropriate backend for the model
+- `TransactionAdapter.for(adapter_name)` - Returns DB-specific transaction logic
 
 ### Process
 
@@ -76,8 +129,7 @@ Tests can be scoped per-area, each area in a separate file. Example: test/operat
 ### Future plans
 
 - Ability to define params contract (using dry-validation)
-- Wrapping operation response hash into params-like object (basically a dry-struct) so that result objects can be accessed in dot notation, not hash notation.
-- Recording operation calls to the database.
-  - Also ability to save the response in that record. Possibly connected to wrapping operation response
-- Performing an operation with nonce token (connected to recording, as used nonce tokens need to be saved somewhere)
+- Wrapping operation response hash into params-like object (basically a dry-struct) so that result objects can be accessed in dot notation, not hash notation
+- Ability to save the operation response in the database record (connected to wrapping operation response)
+- Performing an operation with nonce token (as used nonce tokens need to be saved somewhere)
 - Monad-like result objects. Success or Failure. Option to swallow Operation::Error exceptions and return Failure with error code
