@@ -28,15 +28,8 @@ class TestOperationAsync < Minitest::Test
     spy = Minitest::Mock.new
     spy.expect :call, nil, ["Test"]
 
-    define_operation(:TestSpyOperation) do
-      params do
-        attribute :name, Types::String
-        attribute :spy, Types::Any
-      end
-
-      def perform
-        params.spy.call(params.name)
-      end
+    operation(name: :TestSpyOperation, params: {name: Types::String, spy: Types::Any}) do
+      params.spy.call(params.name)
     end
 
     # Directly test the job execution (avoids Rails 8 tagged_logger issues)
@@ -74,15 +67,8 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_class_level_async_sets_defaults
-    op_class = Class.new(Dex::Operation) do
+    op_class = build_operation do
       async queue: "background"
-
-      params do
-        attribute :name, Types::String
-      end
-
-      def perform
-      end
     end
 
     assert_enqueued_with(job: Dex::Operation::Job, queue: "background") do
@@ -91,15 +77,8 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_runtime_options_override_class_defaults
-    op_class = Class.new(Dex::Operation) do
+    op_class = build_operation do
       async queue: "low"
-
-      params do
-        attribute :name, Types::String
-      end
-
-      def perform
-      end
     end
 
     assert_enqueued_with(job: Dex::Operation::Job, queue: "urgent") do
@@ -108,11 +87,11 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_set_async_equivalent_to_shortcut
-    op1 = Class.new(Dex::Operation) do
+    op1 = build_operation do
       async queue: "low"
     end
 
-    op2 = Class.new(Dex::Operation) do
+    op2 = build_operation do
       set :async, queue: "low"
     end
 
@@ -120,11 +99,11 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_settings_inheritance_for_async
-    parent = Class.new(Dex::Operation) do
+    parent = build_operation do
       async queue: "default", priority: 5
     end
 
-    child = Class.new(parent) do
+    child = build_operation(parent: parent) do
       async priority: 10
     end
 
@@ -134,13 +113,17 @@ class TestOperationAsync < Minitest::Test
   private
 
   # Override the global helper with test-specific defaults
-  def build_operation
+  def build_operation(parent: Dex::Operation, &block)
     super do
       params do
         attribute :name, Types::String
       end
 
-      def perform
+      class_eval(&block) if block
+
+      unless method_defined?(:perform, false)
+        def perform
+        end
       end
     end
   end

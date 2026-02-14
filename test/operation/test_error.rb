@@ -8,10 +8,8 @@ class TestOperationError < Minitest::Test
   end
 
   def test_error_raises_dex_error
-    op = Class.new(Dex::Operation) do
-      def perform
-        error!(:invalid_input, "Name cannot be blank")
-      end
+    op = operation do
+      error!(:invalid_input, "Name cannot be blank")
     end
 
     err = assert_raises(Dex::Error) do
@@ -23,10 +21,8 @@ class TestOperationError < Minitest::Test
   end
 
   def test_error_with_code_only
-    op = Class.new(Dex::Operation) do
-      def perform
-        error!(:not_found)
-      end
+    op = operation do
+      error!(:not_found)
     end
 
     err = assert_raises(Dex::Error) do
@@ -38,10 +34,8 @@ class TestOperationError < Minitest::Test
   end
 
   def test_error_with_details
-    op = Class.new(Dex::Operation) do
-      def perform
-        error!(:validation_failed, "Invalid data", details: {field: "email", issue: "format"})
-      end
+    op = operation do
+      error!(:validation_failed, "Invalid data", details: {field: "email", issue: "format"})
     end
 
     err = assert_raises(Dex::Error) do

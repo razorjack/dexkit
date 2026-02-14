@@ -30,6 +30,30 @@ module OperationHelpers
     Class.new(parent, &block)
   end
 
+  # Builds an operation class with optional params/result schemas and perform body
+  # @param name [Symbol, nil] Optional constant name for operations requiring a class name
+  # @param parent [Class] Optional parent class (defaults to Dex::Operation)
+  # @param params [Hash, Proc, nil] Params schema definition
+  # @param result [Hash, Proc, nil] Result schema definition
+  # @param block [Proc] Perform implementation
+  # @return [Class] The created operation class
+  def operation(name: nil, parent: Dex::Operation, params: nil, result: nil, &block)
+    op_class = if name
+      define_operation(name, parent: parent)
+    else
+      build_operation(parent: parent)
+    end
+
+    _define_schema(op_class, :params, params)
+    _define_schema(op_class, :result, result)
+
+    op_class.class_eval do
+      define_method(:perform, &block) if block
+    end
+
+    op_class
+  end
+
   # Configures Dex.record_class for the duration of the block
   # @param record_class [Class] The ActiveRecord class to use for recording
   # @param block [Proc] Block to execute with recording enabled
@@ -55,5 +79,22 @@ module OperationHelpers
       Object.send(:remove_const, const_name) if Object.const_defined?(const_name)
     end
     @_tracked_operation_constants.clear
+  end
+
+  def _define_schema(op_class, schema_type, definition)
+    return if definition.nil?
+
+    case definition
+    when Hash
+      op_class.public_send(schema_type) do
+        definition.each do |name, type|
+          attribute name, type
+        end
+      end
+    when Proc
+      op_class.public_send(schema_type, &definition)
+    else
+      raise ArgumentError, "#{schema_type} must be a Hash or Proc"
+    end
   end
 end

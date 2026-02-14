@@ -8,15 +8,8 @@ class TestOperationResult < Minitest::Test
   end
 
   def test_result_schema_definition
-    op = Class.new(Dex::Operation) do
-      result do
-        attribute :id, Types::Integer
-        attribute :name, Types::String
-      end
-
-      def perform
-        {id: 1, name: "Test"}
-      end
+    op = operation(result: {id: Types::Integer, name: Types::String}) do
+      {id: 1, name: "Test"}
     end
 
     result = op.new.perform
@@ -26,14 +19,8 @@ class TestOperationResult < Minitest::Test
   end
 
   def test_result_wraps_hash_only
-    op = Class.new(Dex::Operation) do
-      result do
-        attribute :value, Types::String
-      end
-
-      def perform
-        "raw string"
-      end
+    op = operation(result: {value: Types::String}) do
+      "raw string"
     end
 
     result = op.new.perform
@@ -41,10 +28,8 @@ class TestOperationResult < Minitest::Test
   end
 
   def test_result_without_schema
-    op = Class.new(Dex::Operation) do
-      def perform
-        {id: 1, name: "Test"}
-      end
+    op = operation do
+      {id: 1, name: "Test"}
     end
 
     result = op.new.perform
@@ -54,15 +39,8 @@ class TestOperationResult < Minitest::Test
   end
 
   def test_result_with_nested_attributes
-    op = Class.new(Dex::Operation) do
-      result do
-        attribute :user, Types::Hash
-        attribute :status, Types::String
-      end
-
-      def perform
-        {user: {name: "John"}, status: "active"}
-      end
+    op = operation(result: {user: Types::Hash, status: Types::String}) do
+      {user: {name: "John"}, status: "active"}
     end
 
     result = op.new.perform

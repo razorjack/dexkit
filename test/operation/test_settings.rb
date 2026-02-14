@@ -4,7 +4,7 @@ require "test_helper"
 
 class TestOperationSettings < Minitest::Test
   def test_set_stores_settings
-    op = Class.new(Dex::Operation) do
+    op = build_operation do
       set :async, queue: "low"
     end
 
@@ -12,7 +12,7 @@ class TestOperationSettings < Minitest::Test
   end
 
   def test_set_merges_settings
-    op = Class.new(Dex::Operation) do
+    op = build_operation do
       set :async, queue: "low"
       set :async, priority: 5
     end
@@ -21,7 +21,7 @@ class TestOperationSettings < Minitest::Test
   end
 
   def test_different_keys_are_independent
-    op = Class.new(Dex::Operation) do
+    op = build_operation do
       set :async, queue: "low"
       set :record, enabled: true
     end
@@ -31,27 +31,27 @@ class TestOperationSettings < Minitest::Test
   end
 
   def test_unset_key_returns_empty_hash
-    op = Class.new(Dex::Operation)
+    op = build_operation
 
     assert_equal({}, op.settings_for(:async))
   end
 
   def test_settings_inherit_from_parent
-    parent = Class.new(Dex::Operation) do
+    parent = build_operation do
       set :async, queue: "default"
     end
 
-    child = Class.new(parent)
+    child = build_operation(parent: parent)
 
     assert_equal({queue: "default"}, child.settings_for(:async))
   end
 
   def test_child_settings_override_parent
-    parent = Class.new(Dex::Operation) do
+    parent = build_operation do
       set :async, queue: "default", priority: 5
     end
 
-    child = Class.new(parent) do
+    child = build_operation(parent: parent) do
       set :async, queue: "urgent"
     end
 

@@ -18,15 +18,8 @@ class TestOperationParams < Minitest::Test
   end
 
   def test_parameters_and_perform
-    op = Class.new(Dex::Operation) do
-      params do
-        attribute :name, Types::String
-        attribute :spy, Types::Any
-      end
-
-      def perform
-        params.spy.puts params.name
-      end
+    op = operation(params: {name: Types::String, spy: Types::Any}) do
+      params.spy.puts params.name
     end
 
     logger = Minitest::Mock.new

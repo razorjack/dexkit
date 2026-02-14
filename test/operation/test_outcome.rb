@@ -98,10 +98,8 @@ class TestOperationOutcome < Minitest::Test
 
   # Safe modifier tests
   def test_safe_returns_ok_on_success
-    op = Class.new(Dex::Operation) do
-      def perform
-        {status: "success"}
-      end
+    op = operation do
+      {status: "success"}
     end
 
     outcome = op.new.safe.perform
@@ -111,10 +109,8 @@ class TestOperationOutcome < Minitest::Test
   end
 
   def test_safe_returns_err_on_error
-    op = Class.new(Dex::Operation) do
-      def perform
-        error!(:failure, "Something went wrong")
-      end
+    op = operation do
+      error!(:failure, "Something went wrong")
     end
 
     outcome = op.new.safe.perform
@@ -125,15 +121,8 @@ class TestOperationOutcome < Minitest::Test
   end
 
   def test_safe_with_result_schema
-    op = Class.new(Dex::Operation) do
-      result do
-        attribute :id, Types::Integer
-        attribute :status, Types::String
-      end
-
-      def perform
-        {id: 1, status: "completed"}
-      end
+    op = operation(result: {id: Types::Integer, status: Types::String}) do
+      {id: 1, status: "completed"}
     end
 
     outcome = op.new.safe.perform
@@ -144,14 +133,8 @@ class TestOperationOutcome < Minitest::Test
   end
 
   def test_safe_pattern_matching_success
-    op = Class.new(Dex::Operation) do
-      result do
-        attribute :user_id, Types::Integer
-      end
-
-      def perform
-        {user_id: 42}
-      end
+    op = operation(result: {user_id: Types::Integer}) do
+      {user_id: 42}
     end
 
     outcome = op.new.safe.perform
@@ -165,10 +148,8 @@ class TestOperationOutcome < Minitest::Test
   end
 
   def test_safe_pattern_matching_failure
-    op = Class.new(Dex::Operation) do
-      def perform
-        error!(:unauthorized, "Access denied")
-      end
+    op = operation do
+      error!(:unauthorized, "Access denied")
     end
 
     outcome = op.new.safe.perform
@@ -199,21 +180,11 @@ class TestOperationOutcome < Minitest::Test
 
   # Integration test
   def test_safe_with_params_and_result
-    op = Class.new(Dex::Operation) do
-      params do
-        attribute :value, Types::Integer
-      end
-
-      result do
-        attribute :doubled, Types::Integer
-      end
-
-      def perform
-        if params.value < 0
-          error!(:invalid_value, "Value must be positive")
-        else
-          {doubled: params.value * 2}
-        end
+    op = operation(params: {value: Types::Integer}, result: {doubled: Types::Integer}) do
+      if params.value < 0
+        error!(:invalid_value, "Value must be positive")
+      else
+        {doubled: params.value * 2}
       end
     end
 
