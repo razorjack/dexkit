@@ -8,3 +8,4 @@ AllCops:
     - "**/*.md"
   Exclude:
     - "README.md"  # Contains placeholder code snippets
+    - "guides/llm/**/*.md"  # LLM documentation with example snippets

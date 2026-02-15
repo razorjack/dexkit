@@ -131,6 +131,24 @@ When you're done adding a new feature or significantly modifying existing one, u
 
 Tests can be scoped per-area, each area in a separate file. Example: test/operation/test_params.rb for testing params.
 
+### LLM Documentation (`guides/llm/`)
+
+**CRITICAL:** This library provides LLM-optimized documentation in `guides/llm/` for use by AI coding agents.
+
+**Purpose:** Files in `guides/llm/` are designed to be copied into applications that use dexkit (e.g., `app/operations/CLAUDE.md` or `app/operations/AGENTS.md`). When developers work on operations in their apps, coding agents automatically load these instructions and know the complete API.
+
+**Maintenance rule:** Whenever you add a new feature or significantly modify an existing feature in any of the library's major components (Operation, etc.), you MUST update the corresponding file in `guides/llm/` to reflect the changes. These files must remain:
+
+1. **Thorough** — Document EVERY feature, DSL method, option, and behavior
+2. **Compact** — Optimize for information density; avoid unnecessary prose
+3. **LLM-optimized** — Use clear headings, code examples, tables, and structured lists that LLMs parse well
+4. **Accurate** — Keep in sync with implementation; test examples work
+
+**Current files:**
+- `guides/llm/OPERATION.md` — Complete reference for Dex::Operation
+
+As new major features are added (e.g., Forms, Validators), create corresponding files like `guides/llm/FORM.md`.
+
 ### Code Quality
 
 **Rubocop is mandatory.** After modifying any Ruby files (`.rb`), always run:

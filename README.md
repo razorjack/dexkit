@@ -320,6 +320,25 @@ When recording to database, Record types serialize as IDs (not full objects):
 # Keeps your operation_records table clean and efficient
 ```
 
+## AI Coding Assistant Setup
+
+Dexkit provides LLM-optimized documentation for AI coding agents. Copy the guide to your operations directory so agents automatically know the complete API when working on operations.
+
+**Setup:**
+
+```bash
+cp $(bundle show dexkit)/guides/llm/OPERATION.md app/operations/CLAUDE.md
+# or for other AI assistants:
+cp $(bundle show dexkit)/guides/llm/OPERATION.md app/operations/AGENTS.md
+```
+
+The guide contains comprehensive documentation of all Operation features, optimized for AI comprehension. Commit it to your repository and customize with project-specific conventions.
+
+**Benefits:**
+- Agents automatically load Operation knowledge when working in `app/operations/`
+- Documentation matches your installed dexkit version
+- Extend with project-specific patterns and conventions
+
 ## License
 
 MIT
