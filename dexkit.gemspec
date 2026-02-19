@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.authors = ["Jacek Galanciak"]
   spec.email = ["jacek.galanciak@gmail.com"]
 
-  spec.summary = "Dexkit: Rails Patterns Toolbelt. Equip to gain +10 DEX"
+  spec.summary = "Dexkit: Rails Patterns Toolbelt. Equip to gain +4 DEX"
   spec.description = "A toolbelt of patterns for your Rails applications: Operation, Event, Form"
   spec.homepage = "https://github.com/razorjack/dexkit"
   spec.license = "MIT"
