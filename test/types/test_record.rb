@@ -102,7 +102,7 @@ class TestTypesRecord < Minitest::Test
 
     params = params_class.new(model: model)
 
-    assert_equal({"model" => model.id}, params.as_json)
+    assert_equal({ "model" => model.id }, params.as_json)
   end
 
   def test_non_record_attributes_serialize_normally
@@ -151,7 +151,7 @@ class TestTypesRecord < Minitest::Test
       end
 
       define_method(:perform) do
-        {model: model_id}
+        { model: model_id }
       end
     end
 
@@ -174,15 +174,15 @@ class TestTypesRecord < Minitest::Test
         end
 
         def perform
-          {model: params.model}
+          { model: params.model }
         end
       end
 
       op.new(model: model.id).perform
 
       record = OperationRecord.last
-      assert_equal({"model" => model.id}, record.params)
-      assert_equal({"model" => model.id}, record.response)
+      assert_equal({ "model" => model.id }, record.params)
+      assert_equal({ "model" => model.id }, record.response)
     end
   end
 
@@ -227,6 +227,6 @@ class TestTypesRecord < Minitest::Test
     end
 
     params = params_class.new(model: nil)
-    assert_equal({"model" => nil}, params.as_json)
+    assert_equal({ "model" => nil }, params.as_json)
   end
 end

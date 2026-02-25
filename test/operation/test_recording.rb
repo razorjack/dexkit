@@ -57,7 +57,7 @@ class TestOperationRecording < Minitest::Test
 
       op.new(name: "TestValue").perform
 
-      assert_equal({"name" => "TestValue"}, OperationRecord.last.params)
+      assert_equal({ "name" => "TestValue" }, OperationRecord.last.params)
     end
   end
 
@@ -179,13 +179,13 @@ class TestOperationRecording < Minitest::Test
       op = define_operation(:TestRecordsResponseHash) do
         params { attribute :name, Types::String }
         def perform
-          {greeting: "Hello #{params.name}"}
+          { greeting: "Hello #{params.name}" }
         end
       end
 
       op.new(name: "World").perform
 
-      assert_equal({"greeting" => "Hello World"}, OperationRecord.last.response)
+      assert_equal({ "greeting" => "Hello World" }, OperationRecord.last.response)
     end
   end
 
@@ -198,13 +198,13 @@ class TestOperationRecording < Minitest::Test
         end
 
         def perform
-          {greeting: "Hello #{params.name}"}
+          { greeting: "Hello #{params.name}" }
         end
       end
 
       op.new(name: "World").perform
 
-      assert_equal({"greeting" => "Hello World"}, OperationRecord.last.response)
+      assert_equal({ "greeting" => "Hello World" }, OperationRecord.last.response)
     end
   end
 
@@ -234,7 +234,7 @@ class TestOperationRecording < Minitest::Test
 
       op.new(name: "Test").perform
 
-      assert_equal({"value" => 42}, OperationRecord.last.response)
+      assert_equal({ "value" => 42 }, OperationRecord.last.response)
     end
   end
 
@@ -243,7 +243,7 @@ class TestOperationRecording < Minitest::Test
       op = define_operation(:TestMissingResponseColumn) do
         params { attribute :name, Types::String }
         def perform
-          {result: "success"}
+          { result: "success" }
         end
       end
 
@@ -277,14 +277,14 @@ class TestOperationRecording < Minitest::Test
         record response: false
         params { attribute :name, Types::String }
         def perform
-          {greeting: "Hello"}
+          { greeting: "Hello" }
         end
       end
 
       op.new(name: "Test").perform
 
       record = OperationRecord.last
-      assert_equal({"name" => "Test"}, record.params)
+      assert_equal({ "name" => "Test" }, record.params)
       assert_nil record.response
     end
   end
@@ -295,7 +295,7 @@ class TestOperationRecording < Minitest::Test
         record params: false
         params { attribute :name, Types::String }
         def perform
-          {greeting: "Hello"}
+          { greeting: "Hello" }
         end
       end
 
@@ -303,7 +303,7 @@ class TestOperationRecording < Minitest::Test
 
       record = OperationRecord.last
       assert_nil record.params
-      assert_equal({"greeting" => "Hello"}, record.response)
+      assert_equal({ "greeting" => "Hello" }, record.response)
     end
   end
 
@@ -313,15 +313,15 @@ class TestOperationRecording < Minitest::Test
         record true
         params { attribute :name, Types::String }
         def perform
-          {greeting: "Hello"}
+          { greeting: "Hello" }
         end
       end
 
       op.new(name: "Test").perform
 
       record = OperationRecord.last
-      assert_equal({"name" => "Test"}, record.params)
-      assert_equal({"greeting" => "Hello"}, record.response)
+      assert_equal({ "name" => "Test" }, record.params)
+      assert_equal({ "greeting" => "Hello" }, record.response)
     end
   end
 end

@@ -9,11 +9,11 @@ class TestOperationOutcome < Minitest::Test
 
   # Ok tests
   def test_ok_wraps_value
-    ok = Dex::Operation::Ok.new({id: 1, name: "Test"})
+    ok = Dex::Operation::Ok.new({ id: 1, name: "Test" })
     assert ok.ok?
     refute ok.error?
-    assert_equal({id: 1, name: "Test"}, ok.value)
-    assert_equal({id: 1, name: "Test"}, ok.value!)
+    assert_equal({ id: 1, name: "Test" }, ok.value)
+    assert_equal({ id: 1, name: "Test" }, ok.value!)
   end
 
   def test_ok_delegates_to_value
@@ -31,10 +31,10 @@ class TestOperationOutcome < Minitest::Test
   end
 
   def test_ok_deconstruct_keys_with_hash
-    ok = Dex::Operation::Ok.new({id: 1, name: "Test"})
+    ok = Dex::Operation::Ok.new({ id: 1, name: "Test" })
 
     case ok
-    in {id: 1, name:}
+    in { id: 1, name: }
       assert_equal "Test", name
     else
       flunk "Pattern matching failed"
@@ -46,7 +46,7 @@ class TestOperationOutcome < Minitest::Test
     ok = Dex::Operation::Ok.new(result_struct.new(id: 1, name: "Test"))
 
     case ok
-    in {id: 1, name:}
+    in { id: 1, name: }
       assert_equal "Test", name
     else
       flunk "Pattern matching failed"
@@ -75,22 +75,22 @@ class TestOperationOutcome < Minitest::Test
   end
 
   def test_err_accessors
-    error = Dex::Error.new(:validation_failed, "Invalid input", details: {field: "email"})
+    error = Dex::Error.new(:validation_failed, "Invalid input", details: { field: "email" })
     err = Dex::Operation::Err.new(error)
 
     assert_equal :validation_failed, err.code
     assert_equal "Invalid input", err.message
-    assert_equal({field: "email"}, err.details)
+    assert_equal({ field: "email" }, err.details)
   end
 
   def test_err_deconstruct_keys
-    error = Dex::Error.new(:duplicate, "Already exists", details: {id: 123})
+    error = Dex::Error.new(:duplicate, "Already exists", details: { id: 123 })
     err = Dex::Operation::Err.new(error)
 
     case err
-    in {code: :duplicate, message:, details:}
+    in { code: :duplicate, message:, details: }
       assert_equal "Already exists", message
-      assert_equal({id: 123}, details)
+      assert_equal({ id: 123 }, details)
     else
       flunk "Pattern matching failed"
     end
@@ -99,13 +99,13 @@ class TestOperationOutcome < Minitest::Test
   # Safe modifier tests
   def test_safe_returns_ok_on_success
     op = operation do
-      {status: "success"}
+      { status: "success" }
     end
 
     outcome = op.new.safe.perform
     assert_instance_of Dex::Operation::Ok, outcome
     assert outcome.ok?
-    assert_equal({status: "success"}, outcome.value)
+    assert_equal({ status: "success" }, outcome.value)
   end
 
   def test_safe_returns_err_on_error
@@ -121,8 +121,8 @@ class TestOperationOutcome < Minitest::Test
   end
 
   def test_safe_with_result_schema
-    op = operation(result: {id: Types::Integer, status: Types::String}) do
-      {id: 1, status: "completed"}
+    op = operation(result: { id: Types::Integer, status: Types::String }) do
+      { id: 1, status: "completed" }
     end
 
     outcome = op.new.safe.perform
@@ -133,8 +133,8 @@ class TestOperationOutcome < Minitest::Test
   end
 
   def test_safe_pattern_matching_success
-    op = operation(result: {user_id: Types::Integer}) do
-      {user_id: 42}
+    op = operation(result: { user_id: Types::Integer }) do
+      { user_id: 42 }
     end
 
     outcome = op.new.safe.perform
@@ -180,11 +180,11 @@ class TestOperationOutcome < Minitest::Test
 
   # Integration test
   def test_safe_with_params_and_result
-    op = operation(params: {value: Types::Integer}, result: {doubled: Types::Integer}) do
+    op = operation(params: { value: Types::Integer }, result: { doubled: Types::Integer }) do
       if params.value < 0
         error!(:invalid_value, "Value must be positive")
       else
-        {doubled: params.value * 2}
+        { doubled: params.value * 2 }
       end
     end
 

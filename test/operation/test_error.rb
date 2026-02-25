@@ -35,7 +35,7 @@ class TestOperationError < Minitest::Test
 
   def test_error_with_details
     op = operation do
-      error!(:validation_failed, "Invalid data", details: {field: "email", issue: "format"})
+      error!(:validation_failed, "Invalid data", details: { field: "email", issue: "format" })
     end
 
     err = assert_raises(Dex::Error) do
@@ -44,16 +44,16 @@ class TestOperationError < Minitest::Test
 
     assert_equal :validation_failed, err.code
     assert_equal "Invalid data", err.message
-    assert_equal({field: "email", issue: "format"}, err.details)
+    assert_equal({ field: "email", issue: "format" }, err.details)
   end
 
   def test_error_deconstruct_keys
-    error = Dex::Error.new(:duplicate, "Record already exists", details: {id: 123})
+    error = Dex::Error.new(:duplicate, "Record already exists", details: { id: 123 })
 
     case error
-    in {code: :duplicate, message:, details:}
+    in { code: :duplicate, message:, details: }
       assert_equal "Record already exists", message
-      assert_equal({id: 123}, details)
+      assert_equal({ id: 123 }, details)
     else
       flunk "Pattern matching failed"
     end

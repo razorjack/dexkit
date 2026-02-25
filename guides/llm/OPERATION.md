@@ -21,7 +21,7 @@ class CreateUser < Dex::Operation
 
   def perform
     user = User.create!(email: params.email, name: params.name)
-    {user_id: user.id}
+    { user_id: user.id }
   end
 end
 
@@ -75,7 +75,7 @@ class MyOperation < Dex::Operation
   end
 
   def perform
-    {user_id: 1, status: "created"}  # Hash return
+    { user_id: 1, status: "created" }  # Hash return
   end
 end
 
@@ -99,7 +99,7 @@ Signal failures with `error!(code, message = nil, details: nil)`. Raises a `Dex:
 ```ruby
 def perform
   error!(:not_found, "User not found")
-  error!(:validation_failed, "Invalid input", details: {field: "email"})
+  error!(:validation_failed, "Invalid input", details: { field: "email" })
   error!(:unauthorized)  # message defaults to "unauthorized"
 end
 ```
@@ -327,7 +327,7 @@ end
 **Response serialization:**
 - Result with schema → calls `.as_json` on Result struct
 - Hash without schema → stored as-is
-- Primitive (Integer, String) → wrapped as `{value: result}`
+- Primitive (Integer, String) → wrapped as `{ value: result }`
 - `nil` → stored as nil
 - `Types::Record` attributes → serialized as IDs (not full objects)
 
@@ -349,7 +349,7 @@ class MyOp < Dex::Operation
   set :custom_key, option1: "value", option2: 123
 
   def self.my_custom_config
-    settings_for(:custom_key)  # => {option1: "value", option2: 123}
+    settings_for(:custom_key)  # => { option1: "value", option2: 123 }
   end
 end
 ```
@@ -358,7 +358,7 @@ end
 ```ruby
 set :async, queue: "low"
 set :async, priority: 5
-# settings_for(:async) => {queue: "low", priority: 5}
+# settings_for(:async) => { queue: "low", priority: 5 }
 ```
 
 **Inheritance:** Child classes inherit parent settings. Child can override:
@@ -370,7 +370,7 @@ end
 class Child < Parent
   set :async, queue: "urgent"  # Overrides queue, inherits priority
 end
-# Child.settings_for(:async) => {queue: "urgent", priority: 5}
+# Child.settings_for(:async) => { queue: "urgent", priority: 5 }
 ```
 
 **Key facts:**
@@ -407,7 +407,7 @@ class SendEmail < Dex::Operation
   def perform
     # params.user is a User instance (coerced from ID if passed as ID)
     EmailService.send(params.user.email)
-    {user: params.user}
+    { user: params.user }
   end
 end
 
@@ -528,7 +528,7 @@ class CreateOrder < Dex::Operation
 
     error!(:insufficient_stock) if order.line_items.empty?
 
-    {order_id: order.id, status: "pending"}
+    { order_id: order.id, status: "pending" }
   end
 end
 

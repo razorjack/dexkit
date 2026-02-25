@@ -18,7 +18,7 @@ class TestOperationParams < Minitest::Test
   end
 
   def test_parameters_and_perform
-    op = operation(params: {name: Types::String, spy: Types::Any}) do
+    op = operation(params: { name: Types::String, spy: Types::Any }) do
       params.spy.puts params.name
     end
 

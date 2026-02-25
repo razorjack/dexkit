@@ -9,7 +9,7 @@ module Dex
     end
 
     def deconstruct_keys(keys)
-      {code: @code, message: message, details: @details}
+      { code: @code, message: message, details: @details }
     end
   end
 
@@ -32,7 +32,7 @@ module Dex
           set :record, enabled: false
         elsif enabled == true || enabled.nil?
           # Default: record both params and response
-          merged = {enabled: true, params: true, response: true}.merge(options)
+          merged = { enabled: true, params: true, response: true }.merge(options)
           set :record, **merged
         end
       end
@@ -55,7 +55,7 @@ module Dex
     end
 
     def _record_attributes(result)
-      attrs = {name: self.class.name, performed_at: Time.now}
+      attrs = { name: self.class.name, performed_at: Time.now }
       attrs[:params] = _record_params? ? _record_params : nil
       attrs[:response] = _record_response? ? _record_response(result) : nil
       attrs
@@ -85,7 +85,7 @@ module Dex
         else
           result
         end
-      else {value: result}
+      else { value: result }
       end
     end
 
@@ -340,7 +340,7 @@ module Dex
       end
 
       def deconstruct_keys(keys)
-        return {value: @value} unless @value.respond_to?(:deconstruct_keys)
+        return { value: @value } unless @value.respond_to?(:deconstruct_keys)
         @value.deconstruct_keys(keys)
       end
     end
@@ -363,7 +363,7 @@ module Dex
       def details = @error.details
 
       def deconstruct_keys(keys)
-        {code: @error.code, message: @error.message, details: @error.details}
+        { code: @error.code, message: @error.message, details: @error.details }
       end
     end
 

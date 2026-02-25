@@ -8,8 +8,8 @@ class TestOperationResult < Minitest::Test
   end
 
   def test_result_schema_definition
-    op = operation(result: {id: Types::Integer, name: Types::String}) do
-      {id: 1, name: "Test"}
+    op = operation(result: { id: Types::Integer, name: Types::String }) do
+      { id: 1, name: "Test" }
     end
 
     result = op.new.perform
@@ -19,7 +19,7 @@ class TestOperationResult < Minitest::Test
   end
 
   def test_result_wraps_hash_only
-    op = operation(result: {value: Types::String}) do
+    op = operation(result: { value: Types::String }) do
       "raw string"
     end
 
@@ -29,7 +29,7 @@ class TestOperationResult < Minitest::Test
 
   def test_result_without_schema
     op = operation do
-      {id: 1, name: "Test"}
+      { id: 1, name: "Test" }
     end
 
     result = op.new.perform
@@ -39,12 +39,12 @@ class TestOperationResult < Minitest::Test
   end
 
   def test_result_with_nested_attributes
-    op = operation(result: {user: Types::Hash, status: Types::String}) do
-      {user: {name: "John"}, status: "active"}
+    op = operation(result: { user: Types::Hash, status: Types::String }) do
+      { user: { name: "John" }, status: "active" }
     end
 
     result = op.new.perform
-    assert_equal({name: "John"}, result.user)
+    assert_equal({ name: "John" }, result.user)
     assert_equal "active", result.status
   end
 end

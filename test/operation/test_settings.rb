@@ -8,7 +8,7 @@ class TestOperationSettings < Minitest::Test
       set :async, queue: "low"
     end
 
-    assert_equal({queue: "low"}, op.settings_for(:async))
+    assert_equal({ queue: "low" }, op.settings_for(:async))
   end
 
   def test_set_merges_settings
@@ -17,7 +17,7 @@ class TestOperationSettings < Minitest::Test
       set :async, priority: 5
     end
 
-    assert_equal({queue: "low", priority: 5}, op.settings_for(:async))
+    assert_equal({ queue: "low", priority: 5 }, op.settings_for(:async))
   end
 
   def test_different_keys_are_independent
@@ -26,8 +26,8 @@ class TestOperationSettings < Minitest::Test
       set :record, enabled: true
     end
 
-    assert_equal({queue: "low"}, op.settings_for(:async))
-    assert_equal({enabled: true}, op.settings_for(:record))
+    assert_equal({ queue: "low" }, op.settings_for(:async))
+    assert_equal({ enabled: true }, op.settings_for(:record))
   end
 
   def test_unset_key_returns_empty_hash
@@ -43,7 +43,7 @@ class TestOperationSettings < Minitest::Test
 
     child = build_operation(parent: parent)
 
-    assert_equal({queue: "default"}, child.settings_for(:async))
+    assert_equal({ queue: "default" }, child.settings_for(:async))
   end
 
   def test_child_settings_override_parent
@@ -55,6 +55,6 @@ class TestOperationSettings < Minitest::Test
       set :async, queue: "urgent"
     end
 
-    assert_equal({queue: "urgent", priority: 5}, child.settings_for(:async))
+    assert_equal({ queue: "urgent", priority: 5 }, child.settings_for(:async))
   end
 end

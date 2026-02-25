@@ -15,6 +15,10 @@ AllCops:
     - vendor/**/*
     - Gemfile
 
+# Enforce spaces inside hash braces: { a: 1 } not {a: 1}
+Layout/SpaceInsideHashLiteralBraces:
+  EnforcedStyle: space
+
 # Keep project preference for double quotes
 Style/StringLiterals:
   EnforcedStyle: double_quotes
