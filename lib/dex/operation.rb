@@ -265,6 +265,88 @@ module Dex
     end
   end
 
+  module CallbackWrapper
+    def self.prepended(base)
+      class << base
+        prepend ClassMethods
+      end
+    end
+
+    module ClassMethods
+      def before_perform(callable = nil, &block)
+        entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
+        _callback_own(:before) << entry
+      end
+
+      def after_perform(callable = nil, &block)
+        entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
+        _callback_own(:after) << entry
+      end
+
+      def around_perform(callable = nil, &block)
+        entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
+        _callback_own(:around) << entry
+      end
+
+      def _callback_list(type)
+        parent_callbacks = superclass.respond_to?(:_callback_list) ? superclass._callback_list(type) : []
+        parent_callbacks + _callback_own(type)
+      end
+
+      private
+
+      def _callback_own(type)
+        @_callbacks ||= { before: [], after: [], around: [] }
+        @_callbacks[type]
+      end
+    end
+
+    def perform(*, **)
+      return super if @_callback_active
+      @_callback_active = true
+      _callback_run_around(self.class._callback_list(:around)) do
+        _callback_run_before
+        result = super
+        _callback_run_after
+        result
+      end
+    ensure
+      @_callback_active = false
+    end
+
+    private
+
+    def _callback_run_before
+      self.class._callback_list(:before).each { |cb| _callback_invoke(cb) }
+    end
+
+    def _callback_run_after
+      self.class._callback_list(:after).each { |cb| _callback_invoke(cb) }
+    end
+
+    def _callback_invoke(cb)
+      kind, callable = cb
+      case kind
+      when :method then send(callable)
+      when :proc then instance_exec(&callable)
+      end
+    end
+
+    def _callback_run_around(chain, &core)
+      if chain.empty?
+        core.call
+      else
+        kind, callable = chain.first
+        rest = chain[1..]
+        continuation = -> { _callback_run_around(rest, &core) }
+        case kind
+        when :method then send(callable) { continuation.call }
+        when :proc then instance_exec(continuation, &callable)
+        end
+      end
+    end
+  end
+
   class Operation
     def initialize(*, **)
     end
@@ -273,6 +355,7 @@ module Dex
     end
 
     def self.inherited(base)
+      base.prepend CallbackWrapper
       base.prepend RecordWrapper
       base.prepend TransactionWrapper
       base.prepend ResultWrapper

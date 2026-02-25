@@ -233,6 +233,68 @@ SendEmailOp.new(...).async(queue: "urgent").perform  # Overrides to "urgent"
 
 ---
 
+## Callbacks
+
+Hook into the operation lifecycle. Callbacks run **inside** the transaction boundary (errors rollback).
+
+```ruby
+class ProcessOrder < Dex::Operation
+  before_perform :validate_stock           # symbol — calls method on instance
+  before_perform -> { log("starting") }    # lambda — instance_exec'd
+  before_perform { log("starting") }       # block — instance_exec'd
+
+  after_perform :send_confirmation         # runs after perform succeeds
+  after_perform -> { notify }
+
+  around_perform :with_timing              # symbol — method uses yield
+  around_perform ->(cont) { cont.call }    # proc — receives continuation callable
+
+  def validate_stock
+    error!(:out_of_stock) unless in_stock?  # has access to params, error!, etc.
+  end
+
+  def with_timing
+    start = Time.now
+    yield
+    puts Time.now - start
+  end
+end
+```
+
+**DSL methods:**
+
+| Method | Accepts | Description |
+|--------|---------|-------------|
+| `before_perform(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Runs before `perform` |
+| `after_perform(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Runs after `perform` succeeds |
+| `around_perform(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Wraps the full lifecycle |
+
+**Execution order:** `around` wraps everything → `before` callbacks → user `perform` → `after` callbacks
+
+**Key behaviors:**
+- `before_perform` calling `error!` stops execution — `perform` and `after_perform` never run
+- `after_perform` is skipped if `perform` raises any exception
+- `around_perform` with a symbol: the method receives a block, call `yield` to proceed
+- `around_perform` with a proc/lambda: receives continuation as first argument, call `cont.call` to proceed
+- If `around_perform` callback doesn't yield/call continuation, `perform` never runs (circuit breaker pattern)
+- Multiple around callbacks nest (first registered = outermost)
+- Inheritance: parent callbacks run first, then child callbacks
+- Child class callbacks don't affect parent class
+
+**Inheritance example:**
+```ruby
+class Base < Dex::Operation
+  before_perform { log("base") }
+end
+
+class Child < Base
+  before_perform { log("child") }
+  # Order: base → child → perform
+end
+```
+
+---
+
 ## Transactions
 
 Operations run inside database transactions by default. All changes rollback on any error.
@@ -444,6 +506,9 @@ params.as_json  # => {"user" => 123}  (not full User object)
 |--------|---------|---------|
 | `params { ... }` | Define typed input parameters | `params do attribute :name, Types::String end` |
 | `result { ... }` | Define typed result schema | `result do attribute :id, Types::Integer end` |
+| `before_perform(sym_or_callable = nil, &block)` | Register before callback | `before_perform :validate` / `before_perform { error!(:x) }` |
+| `after_perform(sym_or_callable = nil, &block)` | Register after callback | `after_perform :notify` / `after_perform -> { log }` |
+| `around_perform(sym_or_callable = nil, &block)` | Register around callback | `around_perform :with_timing` / `around_perform { \|c\| c.call }` |
 | `async(**opts)` | Set default async options | `async queue: "mailers"` |
 | `transaction(arg)` | Configure transactions | `transaction false` / `transaction :mongoid` |
 | `record(arg)` | Configure recording | `record false` / `record params: false` |
@@ -472,19 +537,21 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 3. **Ok delegates to value** — `ok.user_id` works if `ok.value` responds to `user_id`. No need to unwrap explicitly.
 
-4. **Recording happens inside transaction** — When both are enabled, the operation record is rolled back if `perform` raises.
+4. **Callbacks run inside transaction** — Errors in callbacks trigger rollback.
 
-5. **`error!` prevents recording** — Since `error!` raises before recording save, failed operations are never recorded.
+5. **Recording happens inside transaction** — When both are enabled, the operation record is rolled back if `perform` raises.
 
-6. **Nested operations share transaction** — If outer operation calls inner operation, both share the transaction. Outer rollback rolls back inner changes.
+6. **`error!` prevents recording** — Since `error!` raises before recording save, failed operations are never recorded.
 
-7. **Missing record columns OK** — Recording filters to only existing columns. A minimal table with just `name` and timestamps works.
+7. **Nested operations share transaction** — If outer operation calls inner operation, both share the transaction. Outer rollback rolls back inner changes.
 
-8. **Async serializes params** — Background jobs convert params via `to_h`, so custom objects in params must be serializable.
+8. **Missing record columns OK** — Recording filters to only existing columns. A minimal table with just `name` and timestamps works.
 
-9. **Anonymous classes cannot record** — Operation class must have a name for recording to work.
+9. **Async serializes params** — Background jobs convert params via `to_h`, so custom objects in params must be serializable.
 
-10. **Settings inherit and merge** — Child classes inherit parent settings. Multiple `set` calls for same key merge (not replace).
+10. **Anonymous classes cannot record** — Operation class must have a name for recording to work.
+
+11. **Settings inherit and merge** — Child classes inherit parent settings. Multiple `set` calls for same key merge (not replace).
 
 ---
 

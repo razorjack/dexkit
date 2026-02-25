@@ -90,6 +90,7 @@ end
 | SafeWrapper | Safe execution via `.safe` returning `Ok`/`Err` | Active |
 | TransactionWrapper | Wraps `perform` in DB transaction | Enabled |
 | RecordWrapper | Logs operation calls to database | Requires config |
+| CallbackWrapper | Lifecycle hooks via `before_perform`, `after_perform`, `around_perform` | Active |
 
 ### Development
 
@@ -173,6 +174,7 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ Pattern matching support for errors and outcomes
 - ✅ Operation response recording to database with granular control (`record params: false, response: false`)
 - ✅ `Types::Record(Model)` - parameterized type for model instances with ID coercion and serialization
+- ✅ Lifecycle callbacks (`before_perform`, `after_perform`, `around_perform`) with symbol, lambda, and block support
 
 ### Future plans
 

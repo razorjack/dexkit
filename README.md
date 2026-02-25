@@ -187,6 +187,41 @@ class AuditOperation < Dex::Operation
 end
 ```
 
+### Callbacks
+
+Hook into the operation lifecycle with `before_perform`, `after_perform`, and `around_perform`. Callbacks run inside the transaction boundary, so errors trigger rollback.
+
+```ruby
+class ProcessOrder < Dex::Operation
+  before_perform :validate_stock          # symbol — calls method
+  before_perform -> { log("starting") }   # lambda
+  before_perform { log("starting") }      # block
+
+  after_perform :send_confirmation        # runs after perform succeeds
+  after_perform -> { log("done") }
+
+  around_perform :with_timing             # symbol — method uses yield
+  around_perform ->(cont) { cont.call }   # proc — receives continuation
+
+  def validate_stock
+    error!(:out_of_stock) unless in_stock?
+  end
+
+  def with_timing
+    start = Time.now
+    yield
+    puts Time.now - start
+  end
+end
+```
+
+**Behavior:**
+- `before_perform` callbacks run in order before `perform`. Calling `error!` stops execution.
+- `after_perform` callbacks run in order after `perform` succeeds. Skipped if `perform` raises.
+- `around_perform` wraps the entire before/perform/after sequence. If the callback doesn't yield/call the continuation, `perform` is never invoked.
+- Callbacks inherit from parent classes (parent runs first).
+- Blocks and lambdas execute via `instance_exec`, giving access to `params`, `error!`, etc.
+
 ### Transactions
 
 Operations run inside database transactions by default. Changes are rolled back on errors.
