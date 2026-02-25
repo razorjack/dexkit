@@ -104,6 +104,29 @@ Add details to errors:
 error!(:validation_failed, "Invalid data", details: {field: "email", issue: "format"})
 ```
 
+### Rescue Mapping
+
+Map third-party exceptions to structured `Dex::Error` codes declaratively, eliminating boilerplate `begin/rescue/error!` blocks.
+
+```ruby
+class ChargeCard < Dex::Operation
+  rescue_from Stripe::CardError,      as: :card_declined
+  rescue_from Stripe::RateLimitError, as: :rate_limited
+  rescue_from Stripe::APIError,       as: :provider_error, message: "Stripe is down"
+  rescue_from Net::OpenTimeout, Net::ReadTimeout, as: :timeout  # multiple classes
+
+  def perform
+    Stripe::Charge.create(amount: params.amount, source: params.token)
+  end
+end
+```
+
+Options:
+- `as:` (required) — the `Dex::Error` code
+- `message:` (optional) — overrides the original exception's message; uses exception's message by default
+
+The original exception is always available in `details[:original]`. `Dex::Error` (from `error!`) passes through untouched. Unregistered exceptions propagate normally. Works naturally with `.safe`, pattern matching, transactions, and recording.
+
 ### Outcome Handling
 
 Use `.safe` to return `Ok`/`Err` instead of raising exceptions. Perfect for pattern matching.

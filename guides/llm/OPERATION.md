@@ -130,6 +130,68 @@ end
 
 ---
 
+## Rescue Mapping
+
+Map third-party exceptions to structured `Dex::Error` codes via `rescue_from`. Eliminates `begin/rescue/error!` boilerplate.
+
+```ruby
+class ChargeCard < Dex::Operation
+  rescue_from Stripe::CardError,      as: :card_declined
+  rescue_from Stripe::RateLimitError, as: :rate_limited
+  rescue_from Stripe::APIError,       as: :provider_error, message: "Stripe is down"
+  rescue_from Net::OpenTimeout, Net::ReadTimeout, as: :timeout  # multiple classes in one call
+
+  def perform
+    Stripe::Charge.create(amount: params.amount, source: params.token)
+  end
+end
+```
+
+**Options:**
+
+| Option | Required | Description |
+|--------|----------|-------------|
+| `as:` | Yes | Symbol code for the resulting `Dex::Error` |
+| `message:` | No | Overrides original exception message; defaults to exception's own message |
+
+**Behavior:**
+- Original exception preserved in `err.details[:original]`
+- `Dex::Error` (from `error!`) passes through untouched — never re-wrapped
+- Unregistered exceptions propagate normally
+- Later `rescue_from` declarations take precedence (more specific wins)
+- Subclass exceptions match a handler registered for a parent class
+- Exceptions from `before_perform`/`around_perform` callbacks are also caught
+
+**Inheritance:**
+```ruby
+class Base < Dex::Operation
+  rescue_from StandardError, as: :general_error
+end
+
+class Child < Base
+  rescue_from ArgumentError, as: :bad_argument  # inherits Base handlers, adds own
+end
+```
+Parent handlers run first; child's more specific handlers shadow them for matching types.
+
+**Integration with `.safe`:**
+```ruby
+result = ChargeCard.new(amount: 100, token: "tok_xxx").safe.perform
+case result
+in Dex::Err(code: :card_declined, details: {original:})
+  puts "Card declined: #{original.message}"
+in Dex::Err(code: :timeout)
+  puts "Provider timed out"
+end
+```
+
+**Key facts:**
+- Converted `Dex::Error` triggers transaction rollback (correct — operation failed)
+- Recording is skipped (consistent with `error!` behavior)
+- `rescue_from` with no exception classes raises `ArgumentError`
+
+---
+
 ## Safe Execution (Ok/Err)
 
 Use `.safe.perform` to wrap results in monadic `Ok`/`Err` types instead of raising exceptions. Enables functional error handling and pattern matching.
@@ -512,6 +574,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 | `async(**opts)` | Set default async options | `async queue: "mailers"` |
 | `transaction(arg)` | Configure transactions | `transaction false` / `transaction :mongoid` |
 | `record(arg)` | Configure recording | `record false` / `record params: false` |
+| `rescue_from(*classes, as:, message: nil)` | Map exceptions to Dex::Error | `rescue_from Stripe::CardError, as: :card_declined` |
 | `set(key, **opts)` | Store arbitrary settings | `set :custom, value: 123` |
 | `settings_for(key)` | Retrieve settings | `settings_for(:async)` |
 
@@ -552,6 +615,10 @@ params.as_json  # => {"user" => 123}  (not full User object)
 10. **Anonymous classes cannot record** — Operation class must have a name for recording to work.
 
 11. **Settings inherit and merge** — Child classes inherit parent settings. Multiple `set` calls for same key merge (not replace).
+
+12. **`rescue_from` converts to `Dex::Error`** — Mapped exceptions become structured errors, so `.safe`, pattern matching, transactions, and recording all behave consistently with `error!`.
+
+13. **`rescue_from` inheritance** — Child classes inherit parent rescue handlers. Later declarations (child's own) take precedence for the same exception class.
 
 ---
 
