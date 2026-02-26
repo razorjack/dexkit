@@ -1,6 +1,6 @@
 # Dexkit
 
-Rails patterns toolbelt. Equip to gain +10 DEX.
+Rails patterns toolbelt. Equip to gain +4 DEX.
 
 ## Installation
 
