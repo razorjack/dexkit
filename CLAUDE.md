@@ -91,7 +91,7 @@ end
 | TransactionWrapper | Wraps `perform` in DB transaction | Enabled |
 | RecordWrapper | Logs operation calls to database | Requires config |
 | RescueWrapper | Maps exceptions to `Dex::Error` via `rescue_from` | Active |
-| CallbackWrapper | Lifecycle hooks via `before_perform`, `after_perform`, `around_perform` | Active |
+| CallbackWrapper | Lifecycle hooks via `before`, `after`, `around` | Active |
 
 ### Development
 
@@ -175,7 +175,7 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ Pattern matching support for errors and outcomes
 - ✅ Operation response recording to database with granular control (`record params: false, response: false`)
 - ✅ `Types::Record(Model)` - parameterized type for model instances with ID coercion and serialization
-- ✅ Lifecycle callbacks (`before_perform`, `after_perform`, `around_perform`) with symbol, lambda, and block support
+- ✅ Lifecycle callbacks (`before`, `after`, `around`) with symbol, lambda, and block support
 - ✅ Exception mapping via `rescue_from` — converts third-party exceptions to `Dex::Error` with inheritance support
 - ✅ `.call` as public entry point, `perform` is private (user-implemented); double-prepend guard for multi-level inheritance
 

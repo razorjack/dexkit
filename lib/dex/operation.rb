@@ -327,17 +327,17 @@ module Dex
     end
 
     module ClassMethods
-      def before_perform(callable = nil, &block)
+      def before(callable = nil, &block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:before) << entry
       end
 
-      def after_perform(callable = nil, &block)
+      def after(callable = nil, &block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:after) << entry
       end
 
-      def around_perform(callable = nil, &block)
+      def around(callable = nil, &block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:around) << entry
       end

@@ -193,7 +193,7 @@ class TestOperationRescue < Minitest::Test
   def test_catches_exceptions_from_before_callback
     op = build_operation do
       rescue_from RuntimeError, as: :callback_failure
-      before_perform { raise "before failed" }
+      before { raise "before failed" }
       def perform = "ok"
     end
     err = assert_raises(Dex::Error) { op.new.call }

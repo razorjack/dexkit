@@ -13,7 +13,7 @@ class TestOperationInheritance < Minitest::Test
     # Child defines its own perform — wrappers must still apply
     op = build_operation(parent: build_operation) do
       rescue_from RuntimeError, as: :runtime_error
-      def perform = raise(RuntimeError, "boom")
+      def perform = raise(RuntimeError)
     end
     err = assert_raises(Dex::Error) { op.new.call }
     assert_equal :runtime_error, err.code
@@ -22,7 +22,7 @@ class TestOperationInheritance < Minitest::Test
   def test_callbacks_run_once_in_multi_level_inheritance
     log = []
     parent = build_operation do
-      before_perform { log << :callback }
+      before { log << :callback }
       def perform = nil
     end
     child = build_operation(parent: parent)

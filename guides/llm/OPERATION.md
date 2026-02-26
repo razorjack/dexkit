@@ -160,7 +160,7 @@ end
 - Unregistered exceptions propagate normally
 - Later `rescue_from` declarations take precedence (more specific wins)
 - Subclass exceptions match a handler registered for a parent class
-- Exceptions from `before_perform`/`around_perform` callbacks are also caught
+- Exceptions from `before`/`around` callbacks are also caught
 
 **Inheritance:**
 ```ruby
@@ -301,15 +301,15 @@ Hook into the operation lifecycle. Callbacks run **inside** the transaction boun
 
 ```ruby
 class ProcessOrder < Dex::Operation
-  before_perform :validate_stock           # symbol — calls method on instance
-  before_perform -> { log("starting") }    # lambda — instance_exec'd
-  before_perform { log("starting") }       # block — instance_exec'd
+  before :validate_stock           # symbol — calls method on instance
+  before -> { log("starting") }    # lambda — instance_exec'd
+  before { log("starting") }       # block — instance_exec'd
 
-  after_perform :send_confirmation         # runs after perform succeeds
-  after_perform -> { notify }
+  after :send_confirmation         # runs after perform succeeds
+  after -> { notify }
 
-  around_perform :with_timing              # symbol — method uses yield
-  around_perform ->(cont) { cont.call }    # proc — receives continuation callable
+  around :with_timing              # symbol — method uses yield
+  around ->(cont) { cont.call }    # proc — receives continuation callable
 
   def validate_stock
     error!(:out_of_stock) unless in_stock?  # has access to params, error!, etc.
@@ -327,18 +327,18 @@ end
 
 | Method | Accepts | Description |
 |--------|---------|-------------|
-| `before_perform(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Runs before `perform` |
-| `after_perform(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Runs after `perform` succeeds |
-| `around_perform(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Wraps the full lifecycle |
+| `before(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Runs before `perform` |
+| `after(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Runs after `perform` succeeds |
+| `around(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Wraps the full lifecycle |
 
 **Execution order:** `around` wraps everything → `before` callbacks → user `perform` → `after` callbacks
 
 **Key behaviors:**
-- `before_perform` calling `error!` stops execution — `perform` and `after_perform` never run
-- `after_perform` is skipped if `perform` raises any exception
-- `around_perform` with a symbol: the method receives a block, call `yield` to proceed
-- `around_perform` with a proc/lambda: receives continuation as first argument, call `cont.call` to proceed
-- If `around_perform` callback doesn't yield/call continuation, `perform` never runs (circuit breaker pattern)
+- `before` calling `error!` stops execution — `perform` and `after` never run
+- `after` is skipped if `perform` raises any exception
+- `around` with a symbol: the method receives a block, call `yield` to proceed
+- `around` with a proc/lambda: receives continuation as first argument, call `cont.call` to proceed
+- If `around` callback doesn't yield/call continuation, `perform` never runs (circuit breaker pattern)
 - Multiple around callbacks nest (first registered = outermost)
 - Inheritance: parent callbacks run first, then child callbacks
 - Child class callbacks don't affect parent class
@@ -346,11 +346,11 @@ end
 **Inheritance example:**
 ```ruby
 class Base < Dex::Operation
-  before_perform { log("base") }
+  before { log("base") }
 end
 
 class Child < Base
-  before_perform { log("child") }
+  before { log("child") }
   # Order: base → child → perform
 end
 ```
@@ -568,9 +568,9 @@ params.as_json  # => {"user" => 123}  (not full User object)
 |--------|---------|---------|
 | `params { ... }` | Define typed input parameters | `params do attribute :name, Types::String end` |
 | `result { ... }` | Define typed result schema | `result do attribute :id, Types::Integer end` |
-| `before_perform(sym_or_callable = nil, &block)` | Register before callback | `before_perform :validate` / `before_perform { error!(:x) }` |
-| `after_perform(sym_or_callable = nil, &block)` | Register after callback | `after_perform :notify` / `after_perform -> { log }` |
-| `around_perform(sym_or_callable = nil, &block)` | Register around callback | `around_perform :with_timing` / `around_perform { \|c\| c.call }` |
+| `before(sym_or_callable = nil, &block)` | Register before callback | `before :validate` / `before { error!(:x) }` |
+| `after(sym_or_callable = nil, &block)` | Register after callback | `after :notify` / `after -> { log }` |
+| `around(sym_or_callable = nil, &block)` | Register around callback | `around :with_timing` / `around { \|c\| c.call }` |
 | `async(**opts)` | Set default async options | `async queue: "mailers"` |
 | `transaction(arg)` | Configure transactions | `transaction false` / `transaction :mongoid` |
 | `record(arg)` | Configure recording | `record false` / `record params: false` |
