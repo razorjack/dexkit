@@ -21,7 +21,7 @@ class TestOperationTransaction < Minitest::Test
       end
     end
 
-    assert_raises(RuntimeError) { op.new.perform }
+    assert_raises(RuntimeError) { op.new.call }
     assert_equal 0, TestModel.count
   end
 
@@ -33,7 +33,7 @@ class TestOperationTransaction < Minitest::Test
       end
     end
 
-    result = op.new.perform
+    result = op.new.call
     assert_equal "result", result
     assert_equal 1, TestModel.count
     assert_equal "Success", TestModel.last.name
@@ -49,7 +49,7 @@ class TestOperationTransaction < Minitest::Test
       end
     end
 
-    assert_raises(RuntimeError) { op.new.perform }
+    assert_raises(RuntimeError) { op.new.call }
     assert_equal 1, TestModel.count # Record was created despite error
   end
 
@@ -63,7 +63,7 @@ class TestOperationTransaction < Minitest::Test
       end
     end
 
-    assert_raises(RuntimeError) { op.new.perform }
+    assert_raises(RuntimeError) { op.new.call }
     assert_equal 0, TestModel.count
   end
 
@@ -79,7 +79,7 @@ class TestOperationTransaction < Minitest::Test
       end
     end
 
-    assert_raises(RuntimeError) { child.new.perform }
+    assert_raises(RuntimeError) { child.new.call }
     assert_equal 1, TestModel.count # Inherited disabled state
   end
 
@@ -97,7 +97,7 @@ class TestOperationTransaction < Minitest::Test
       end
     end
 
-    assert_raises(RuntimeError) { child.new.perform }
+    assert_raises(RuntimeError) { child.new.call }
     assert_equal 0, TestModel.count # Child re-enabled transaction
   end
 
@@ -111,7 +111,7 @@ class TestOperationTransaction < Minitest::Test
       end
     end
 
-    assert_raises(RuntimeError) { op.new.perform }
+    assert_raises(RuntimeError) { op.new.call }
     assert_equal 0, TestModel.count
   end
 
@@ -125,7 +125,7 @@ class TestOperationTransaction < Minitest::Test
       end
     end
 
-    assert_raises(RuntimeError) { op.new.perform }
+    assert_raises(RuntimeError) { op.new.call }
     assert_equal 0, TestModel.count
   end
 
@@ -137,7 +137,7 @@ class TestOperationTransaction < Minitest::Test
       end
     end
 
-    result = op.new.perform
+    result = op.new.call
     assert_equal({ status: "success", count: 1 }, result)
   end
 
@@ -151,7 +151,7 @@ class TestOperationTransaction < Minitest::Test
         end
       end
 
-      assert_raises(RuntimeError) { op.new(name: "Test").perform }
+      assert_raises(RuntimeError) { op.new(name: "Test").call }
 
       # Both operation record and test model should be rolled back
       assert_equal 0, OperationRecord.count
@@ -169,7 +169,7 @@ class TestOperationTransaction < Minitest::Test
       end
     end
 
-    assert_raises(RuntimeError) { op.new.perform }
+    assert_raises(RuntimeError) { op.new.call }
     assert_equal 0, TestModel.count
   end
 
@@ -183,12 +183,12 @@ class TestOperationTransaction < Minitest::Test
     outer_op = build_operation do
       define_method(:perform) do
         TestModel.create!(name: "Outer")
-        inner_op.new.perform
+        inner_op.new.call
         raise "Error in outer"
       end
     end
 
-    assert_raises(RuntimeError) { outer_op.new.perform }
+    assert_raises(RuntimeError) { outer_op.new.call }
     assert_equal 0, TestModel.count # Both should be rolled back
   end
 
@@ -202,7 +202,7 @@ class TestOperationTransaction < Minitest::Test
       end
     end
 
-    assert_raises(RuntimeError) { op.new.perform }
+    assert_raises(RuntimeError) { op.new.call }
     assert_equal 0, TestModel.count
   end
 
@@ -210,7 +210,7 @@ class TestOperationTransaction < Minitest::Test
     error = assert_raises(ArgumentError) do
       build_operation do
         transaction :unknown_adapter
-      end.new.perform
+      end.new.call
     end
 
     assert_match(/Unknown transaction adapter/, error.message)

@@ -12,7 +12,7 @@ class TestOperationResult < Minitest::Test
       { id: 1, name: "Test" }
     end
 
-    result = op.new.perform
+    result = op.new.call
     assert_instance_of op::Result, result
     assert_equal 1, result.id
     assert_equal "Test", result.name
@@ -23,7 +23,7 @@ class TestOperationResult < Minitest::Test
       "raw string"
     end
 
-    result = op.new.perform
+    result = op.new.call
     assert_equal "raw string", result
   end
 
@@ -32,7 +32,7 @@ class TestOperationResult < Minitest::Test
       { id: 1, name: "Test" }
     end
 
-    result = op.new.perform
+    result = op.new.call
     assert_instance_of Hash, result
     assert_equal 1, result[:id]
     assert_equal "Test", result[:name]
@@ -43,7 +43,7 @@ class TestOperationResult < Minitest::Test
       { user: { name: "John" }, status: "active" }
     end
 
-    result = op.new.perform
+    result = op.new.call
     assert_equal({ name: "John" }, result.user)
     assert_equal "active", result.status
   end

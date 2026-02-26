@@ -26,7 +26,7 @@ class CreateUser < Dex::Operation
 end
 
 # Call it
-CreateUser.new(email: "test@example.com", name: "Test").perform
+CreateUser.new(email: "test@example.com", name: "Test").call
 # => #<CreateUser::Result user_id=123>
 ```
 
@@ -52,7 +52,7 @@ class MyOperation < Dex::Operation
 end
 
 # Call with keyword arguments
-MyOperation.new(name: "test", count: 5).perform
+MyOperation.new(name: "test", count: 5).call
 ```
 
 **Key facts:**
@@ -79,7 +79,7 @@ class MyOperation < Dex::Operation
   end
 end
 
-result = MyOperation.new.perform
+result = MyOperation.new.call
 result.user_id  # => 1
 result.status   # => "created"
 result.class    # => MyOperation::Result (Dry::Struct)
@@ -112,7 +112,7 @@ end
 **Pattern matching supported:**
 ```ruby
 begin
-  MyOperation.new.perform
+  MyOperation.new.call
 rescue Dex::Error => e
   case e
   in {code: :not_found, message:}
@@ -176,7 +176,7 @@ Parent handlers run first; child's more specific handlers shadow them for matchi
 
 **Integration with `.safe`:**
 ```ruby
-result = ChargeCard.new(amount: 100, token: "tok_xxx").safe.perform
+result = ChargeCard.new(amount: 100, token: "tok_xxx").safe.call
 case result
 in Dex::Err(code: :card_declined, details: {original:})
   puts "Card declined: #{original.message}"
@@ -194,10 +194,10 @@ end
 
 ## Safe Execution (Ok/Err)
 
-Use `.safe.perform` to wrap results in monadic `Ok`/`Err` types instead of raising exceptions. Enables functional error handling and pattern matching.
+Use `.safe.call` to wrap results in monadic `Ok`/`Err` types instead of raising exceptions. Enables functional error handling and pattern matching.
 
 ```ruby
-outcome = MyOperation.new(value: 5).safe.perform
+outcome = MyOperation.new(value: 5).safe.call
 
 if outcome.ok?
   outcome.value      # Access result
@@ -226,7 +226,7 @@ end
 
 **Pattern matching:**
 ```ruby
-case MyOperation.new(id: 123).safe.perform
+case MyOperation.new(id: 123).safe.call
 in Dex::Ok(user_id: id)
   puts "Created user #{id}"
 in Dex::Err(code: :not_found)
@@ -257,18 +257,18 @@ end
 
 ## Async Execution
 
-Enqueue operations as background jobs via `.async.perform`. Requires ActiveJob.
+Enqueue operations as background jobs via `.async.call`. Requires ActiveJob.
 
 ```ruby
 # Enqueue immediately
-MyOperation.new(user_id: 123).async.perform
+MyOperation.new(user_id: 123).async.call
 
 # With queue
-MyOperation.new(user_id: 123).async(queue: "mailers").perform
+MyOperation.new(user_id: 123).async(queue: "mailers").call
 
 # Delayed execution
-MyOperation.new(user_id: 123).async(in: 5.minutes).perform
-MyOperation.new(user_id: 123).async(at: 1.hour.from_now).perform
+MyOperation.new(user_id: 123).async(in: 5.minutes).call
+MyOperation.new(user_id: 123).async(at: 1.hour.from_now).call
 ```
 
 **Class-level defaults:**
@@ -278,8 +278,8 @@ class SendEmailOp < Dex::Operation
   # Equivalent to: set :async, queue: "mailers"
 end
 
-SendEmailOp.new(...).async.perform  # Uses "mailers" queue
-SendEmailOp.new(...).async(queue: "urgent").perform  # Overrides to "urgent"
+SendEmailOp.new(...).async.call  # Uses "mailers" queue
+SendEmailOp.new(...).async(queue: "urgent").call  # Overrides to "urgent"
 ```
 
 **Supported options:**
@@ -289,7 +289,7 @@ SendEmailOp.new(...).async(queue: "urgent").perform  # Overrides to "urgent"
 
 **Key facts:**
 - Params must be serializable (converted via `params.to_h`)
-- Job instantiates operation class and calls `perform` synchronously in worker
+- Job instantiates operation class and calls `call` synchronously in worker
 - Runtime options merge with and override class-level defaults
 - Raises `LoadError` if ActiveJob is not available
 
@@ -536,10 +536,10 @@ class SendEmail < Dex::Operation
 end
 
 # All of these work:
-SendEmail.new(user: User.find(1)).perform   # Instance
-SendEmail.new(user: 1).perform              # Integer ID
-SendEmail.new(user: "1").perform            # String ID
-SendEmail.new(user: user_instance, avatar: nil).perform  # Optional
+SendEmail.new(user: User.find(1)).call   # Instance
+SendEmail.new(user: 1).call              # Integer ID
+SendEmail.new(user: "1").call            # String ID
+SendEmail.new(user: user_instance, avatar: nil).call  # Optional
 ```
 
 **Coercion behavior:**
@@ -585,16 +585,17 @@ params.as_json  # => {"user" => 123}  (not full User object)
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `params` | Typed params object | Access input parameters |
-| `perform` | Result | Override this to implement logic |
+| `call` | Result | Public entry point — invokes `perform` through the wrapper chain |
+| `perform` | Result | Implement this — private, called by `call` |
 | `error!(code, msg, details:)` | (raises) | Signal failure, raise Dex::Error |
-| `safe` | SafeProxy | Returns proxy for Ok/Err execution |
-| `async(**opts)` | AsyncProxy | Returns proxy for background execution |
+| `safe` | SafeProxy | Returns proxy for Ok/Err execution via `.safe.call` |
+| `async(**opts)` | AsyncProxy | Returns proxy for background execution via `.async.call` |
 
 ---
 
 ## Key Behaviors (Non-Obvious)
 
-1. **Safe only catches `Dex::Error`** — Other exceptions (RuntimeError, ActiveRecord errors) propagate through `.safe.perform` without wrapping.
+1. **Safe only catches `Dex::Error`** — Other exceptions (RuntimeError, ActiveRecord errors) propagate through `.safe.call` without wrapping.
 
 2. **Result wrapping only for Hashes** — If `perform` returns a non-Hash (String, Integer, nil) and a result schema exists, the value passes through unwrapped.
 
@@ -667,7 +668,7 @@ class CreateOrder < Dex::Operation
 end
 
 # Sync execution with error handling
-case CreateOrder.new(user: 123, items: [...], total: 99.99).safe.perform
+case CreateOrder.new(user: 123, items: [...], total: 99.99).safe.call
 in Ok(order_id: id)
   puts "Order #{id} created"
 in Err(code: :insufficient_stock)
@@ -675,7 +676,7 @@ in Err(code: :insufficient_stock)
 end
 
 # Async execution
-CreateOrder.new(user: 123, items: [...], total: 99.99).async.perform
+CreateOrder.new(user: 123, items: [...], total: 99.99).async.call
 ```
 
 ---

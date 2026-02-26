@@ -137,7 +137,7 @@ class TestTypesRecord < Minitest::Test
       end
     end
 
-    result = op.new(model: model.id).perform
+    result = op.new(model: model.id).call
     assert result
   end
 
@@ -155,7 +155,7 @@ class TestTypesRecord < Minitest::Test
       end
     end
 
-    result = op.new.perform
+    result = op.new.call
     assert_instance_of TestModel, result.model
     assert_equal model.id, result.model.id
   end
@@ -178,7 +178,7 @@ class TestTypesRecord < Minitest::Test
         end
       end
 
-      op.new(model: model.id).perform
+      op.new(model: model.id).call
 
       record = OperationRecord.last
       assert_equal({ "model" => model.id }, record.params)

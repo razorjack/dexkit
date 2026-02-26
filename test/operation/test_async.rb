@@ -20,7 +20,7 @@ class TestOperationAsync < Minitest::Test
     op = build_operation.new(name: "Test")
 
     assert_enqueued_with(job: Dex::Operation::Job) do
-      op.async.perform
+      op.async.call
     end
   end
 
@@ -42,7 +42,7 @@ class TestOperationAsync < Minitest::Test
     op = build_operation.new(name: "Test")
 
     assert_enqueued_with(job: Dex::Operation::Job, queue: "low") do
-      op.async(queue: "low").perform
+      op.async(queue: "low").call
     end
   end
 
@@ -52,7 +52,7 @@ class TestOperationAsync < Minitest::Test
       op = build_operation.new(name: "Test")
 
       assert_enqueued_with(job: Dex::Operation::Job) do
-        op.async(in: 300).perform # 5 minutes in seconds
+        op.async(in: 300).call # 5 minutes in seconds
       end
     end
   end
@@ -62,7 +62,7 @@ class TestOperationAsync < Minitest::Test
     op = build_operation.new(name: "Test")
 
     assert_enqueued_with(job: Dex::Operation::Job, at: scheduled_time) do
-      op.async(at: scheduled_time).perform
+      op.async(at: scheduled_time).call
     end
   end
 
@@ -72,7 +72,7 @@ class TestOperationAsync < Minitest::Test
     end
 
     assert_enqueued_with(job: Dex::Operation::Job, queue: "background") do
-      op_class.new(name: "Test").async.perform
+      op_class.new(name: "Test").async.call
     end
   end
 
@@ -82,7 +82,7 @@ class TestOperationAsync < Minitest::Test
     end
 
     assert_enqueued_with(job: Dex::Operation::Job, queue: "urgent") do
-      op_class.new(name: "Test").async(queue: "urgent").perform
+      op_class.new(name: "Test").async(queue: "urgent").call
     end
   end
 

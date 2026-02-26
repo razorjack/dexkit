@@ -25,7 +25,7 @@ class TestOperationParams < Minitest::Test
     logger = Minitest::Mock.new
     logger.expect :puts, nil, ["Test test"]
 
-    op.new(name: "Test test", spy: logger).perform
+    op.new(name: "Test test", spy: logger).call
     assert_mock logger
   end
 end

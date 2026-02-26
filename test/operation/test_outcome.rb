@@ -102,7 +102,7 @@ class TestOperationOutcome < Minitest::Test
       { status: "success" }
     end
 
-    outcome = op.new.safe.perform
+    outcome = op.new.safe.call
     assert_instance_of Dex::Operation::Ok, outcome
     assert outcome.ok?
     assert_equal({ status: "success" }, outcome.value)
@@ -113,7 +113,7 @@ class TestOperationOutcome < Minitest::Test
       error!(:failure, "Something went wrong")
     end
 
-    outcome = op.new.safe.perform
+    outcome = op.new.safe.call
     assert_instance_of Dex::Operation::Err, outcome
     assert outcome.error?
     assert_equal :failure, outcome.code
@@ -125,7 +125,7 @@ class TestOperationOutcome < Minitest::Test
       { id: 1, status: "completed" }
     end
 
-    outcome = op.new.safe.perform
+    outcome = op.new.safe.call
     assert outcome.ok?
     assert_instance_of op::Result, outcome.value
     assert_equal 1, outcome.id
@@ -137,7 +137,7 @@ class TestOperationOutcome < Minitest::Test
       { user_id: 42 }
     end
 
-    outcome = op.new.safe.perform
+    outcome = op.new.safe.call
 
     case outcome
     in Dex::Ok(user_id: id)
@@ -152,7 +152,7 @@ class TestOperationOutcome < Minitest::Test
       error!(:unauthorized, "Access denied")
     end
 
-    outcome = op.new.safe.perform
+    outcome = op.new.safe.call
 
     case outcome
     in Dex::Ok
@@ -189,12 +189,12 @@ class TestOperationOutcome < Minitest::Test
     end
 
     # Success case
-    success = op.new(value: 5).safe.perform
+    success = op.new(value: 5).safe.call
     assert success.ok?
     assert_equal 10, success.doubled
 
     # Failure case
-    failure = op.new(value: -1).safe.perform
+    failure = op.new(value: -1).safe.call
     assert failure.error?
     assert_equal :invalid_value, failure.code
   end

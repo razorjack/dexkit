@@ -25,7 +25,7 @@ class SendWelcomeEmail < Dex::Operation
   end
 end
 
-SendWelcomeEmail.new(user_id: 123).perform
+SendWelcomeEmail.new(user_id: 123).call
 ```
 
 ### Async Execution
@@ -34,12 +34,12 @@ Requires ActiveJob. Enqueue operations as background jobs.
 
 ```ruby
 # Enqueue immediately
-SendWelcomeEmail.new(user_id: 123).async.perform
+SendWelcomeEmail.new(user_id: 123).async.call
 
 # With options
-SendWelcomeEmail.new(user_id: 123).async(queue: "low").perform
-SendWelcomeEmail.new(user_id: 123).async(in: 5.minutes).perform
-SendWelcomeEmail.new(user_id: 123).async(at: 1.hour.from_now).perform
+SendWelcomeEmail.new(user_id: 123).async(queue: "low").call
+SendWelcomeEmail.new(user_id: 123).async(in: 5.minutes).call
+SendWelcomeEmail.new(user_id: 123).async(at: 1.hour.from_now).call
 
 # Class-level defaults
 class SendWelcomeEmail < Dex::Operation
@@ -70,7 +70,7 @@ class CreateUser < Dex::Operation
   end
 end
 
-result = CreateUser.new(email: "user@example.com", name: "John").perform
+result = CreateUser.new(email: "user@example.com", name: "John").call
 result.user_id  # => 1
 result.status   # => "created"
 ```
@@ -94,7 +94,7 @@ class ProcessPayment < Dex::Operation
   end
 end
 
-ProcessPayment.new(amount: -100).perform
+ProcessPayment.new(amount: -100).call
 # raises Dex::Error with code: :invalid_amount
 ```
 
@@ -152,7 +152,7 @@ end
 # Include Dex::Match for cleaner pattern matching syntax
 include Dex::Match
 
-outcome = FindUser.new(user_id: 123).safe.perform
+outcome = FindUser.new(user_id: 123).safe.call
 
 case outcome
 in Ok(user:)
@@ -333,8 +333,8 @@ class SendEmail < Dex::Operation
 end
 
 # Both work - pass instance or ID
-SendEmail.new(user: User.find(123)).perform
-SendEmail.new(user: 123).perform
+SendEmail.new(user: User.find(123)).call
+SendEmail.new(user: 123).call
 ```
 
 Works in result blocks too:
@@ -354,7 +354,7 @@ class FindUser < Dex::Operation
   end
 end
 
-result = FindUser.new(user_id: 123).perform
+result = FindUser.new(user_id: 123).call
 result.user.name  # => "John Doe" (actual User instance)
 ```
 
@@ -368,7 +368,7 @@ class UpdateProfile < Dex::Operation
   end
 end
 
-UpdateProfile.new(user: 1, avatar: nil).perform  # avatar can be nil
+UpdateProfile.new(user: 1, avatar: nil).call  # avatar can be nil
 ```
 
 When recording to database, Record types serialize as IDs (not full objects):

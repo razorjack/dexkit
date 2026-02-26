@@ -16,7 +16,7 @@ class TestOperationCallbacks < Minitest::Test
       define_method(:setup_step) { log << :setup }
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:setup, :perform], log
   end
 
@@ -27,7 +27,7 @@ class TestOperationCallbacks < Minitest::Test
       before_perform callable
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:before, :perform], log
   end
 
@@ -37,7 +37,7 @@ class TestOperationCallbacks < Minitest::Test
       before_perform { log << :before }
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:before, :perform], log
   end
 
@@ -48,7 +48,7 @@ class TestOperationCallbacks < Minitest::Test
       before_perform { log << :second }
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:first, :second, :perform], log
   end
 
@@ -58,8 +58,8 @@ class TestOperationCallbacks < Minitest::Test
       before_perform { error!(:invalid) if params.name == "bad" }
       def perform = "ok"
     end
-    assert_raises(Dex::Error) { op.new(name: "bad").perform }
-    assert_equal "ok", op.new(name: "good").perform
+    assert_raises(Dex::Error) { op.new(name: "bad").call }
+    assert_equal "ok", op.new(name: "good").call
   end
 
   def test_before_perform_error_prevents_perform
@@ -68,7 +68,7 @@ class TestOperationCallbacks < Minitest::Test
       before_perform { error!(:stopped) }
       define_method(:perform) { log << :performed }
     end
-    assert_raises(Dex::Error) { op.new.perform }
+    assert_raises(Dex::Error) { op.new.call }
     assert_empty log
   end
 
@@ -81,7 +81,7 @@ class TestOperationCallbacks < Minitest::Test
       define_method(:finish_step) { log << :finish }
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:perform, :finish], log
   end
 
@@ -92,7 +92,7 @@ class TestOperationCallbacks < Minitest::Test
       after_perform callable
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:perform, :after], log
   end
 
@@ -102,7 +102,7 @@ class TestOperationCallbacks < Minitest::Test
       after_perform { log << :after }
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:perform, :after], log
   end
 
@@ -113,7 +113,7 @@ class TestOperationCallbacks < Minitest::Test
       after_perform { log << :second }
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:perform, :first, :second], log
   end
 
@@ -123,7 +123,7 @@ class TestOperationCallbacks < Minitest::Test
       after_perform { log << :after }
       define_method(:perform) { raise "boom" }
     end
-    assert_raises(RuntimeError) { op.new.perform }
+    assert_raises(RuntimeError) { op.new.call }
     assert_empty log
   end
 
@@ -140,7 +140,7 @@ class TestOperationCallbacks < Minitest::Test
       }
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:before, :perform, :after], log
   end
 
@@ -155,7 +155,7 @@ class TestOperationCallbacks < Minitest::Test
       around_perform callable
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:before, :perform, :after], log
   end
 
@@ -174,7 +174,7 @@ class TestOperationCallbacks < Minitest::Test
       }
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:outer_start, :inner_start, :perform, :inner_end, :outer_end], log
   end
 
@@ -184,7 +184,7 @@ class TestOperationCallbacks < Minitest::Test
       around_perform { |_cont| log << :short_circuit }
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:short_circuit], log
   end
 
@@ -199,7 +199,7 @@ class TestOperationCallbacks < Minitest::Test
     child = build_operation(parent: parent) do
       before_perform { log << :child }
     end
-    child.new.perform
+    child.new.call
     assert_equal [:parent, :child, :perform], log
   end
 
@@ -212,9 +212,9 @@ class TestOperationCallbacks < Minitest::Test
     child = build_operation(parent: parent) do
       before_perform { log << :child }
     end
-    parent.new.perform
+    parent.new.call
     assert_equal [:parent, :perform], log
-    child.new.perform
+    child.new.call
     assert_equal [:parent, :perform, :parent, :child, :perform], log
   end
 
@@ -234,7 +234,7 @@ class TestOperationCallbacks < Minitest::Test
       after_perform { log << :after2 }
       define_method(:perform) { log << :perform }
     end
-    op.new.perform
+    op.new.call
     assert_equal [:around_start, :before1, :before2, :perform, :after1, :after2, :around_end], log
   end
 
@@ -245,7 +245,7 @@ class TestOperationCallbacks < Minitest::Test
       before_perform { error!(:aborted) }
       define_method(:perform) { TestModel.create!(name: "Should not exist") }
     end
-    assert_raises(Dex::Error) { op.new.perform }
+    assert_raises(Dex::Error) { op.new.call }
     assert_equal 0, TestModel.count
   end
 
@@ -254,7 +254,7 @@ class TestOperationCallbacks < Minitest::Test
       before_perform { error!(:stopped) }
       def perform = "ok"
     end
-    result = op.new.safe.perform
+    result = op.new.safe.call
     assert result.error?
     assert_equal :stopped, result.code
   end

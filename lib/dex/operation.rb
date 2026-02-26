@@ -408,7 +408,21 @@ module Dex
     def perform(*, **)
     end
 
+    def call
+      perform
+    end
+
+    def self.method_added(method_name)
+      super
+      return unless method_name == :perform
+
+      private :perform
+    end
+
+    private :perform
+
     def self.inherited(base)
+      super
       base.prepend CallbackWrapper
       base.prepend RescueWrapper
       base.prepend RecordWrapper
@@ -426,7 +440,7 @@ module Dex
         @runtime_options = runtime_options
       end
 
-      def perform
+      def call
         ensure_active_job_loaded!
         job = Operation::Job
         job = job.set(queue: queue) if queue
@@ -510,8 +524,8 @@ module Dex
         @operation = operation
       end
 
-      def perform
-        result = @operation.perform
+      def call
+        result = @operation.call
         Operation::Ok.new(result)
       rescue Dex::Error => e
         Operation::Err.new(e)
@@ -524,7 +538,7 @@ module Dex
         const_set(:Job, Class.new(ActiveJob::Base) do
           def perform(class_name:, params:)
             klass = class_name.constantize
-            klass.new(**params.deep_symbolize_keys).perform
+            klass.new(**params.deep_symbolize_keys).call
           end
         end)
       else

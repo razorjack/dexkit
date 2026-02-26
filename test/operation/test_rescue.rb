@@ -14,7 +14,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from RuntimeError, as: :runtime_failure
       def perform = raise("something broke")
     end
-    err = assert_raises(Dex::Error) { op.new.perform }
+    err = assert_raises(Dex::Error) { op.new.call }
     assert_equal :runtime_failure, err.code
   end
 
@@ -23,7 +23,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from RuntimeError, as: :runtime_failure
       def perform = raise("original message")
     end
-    err = assert_raises(Dex::Error) { op.new.perform }
+    err = assert_raises(Dex::Error) { op.new.call }
     assert_equal "original message", err.message
   end
 
@@ -32,7 +32,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from RuntimeError, as: :runtime_failure, message: "custom message"
       def perform = raise("original message")
     end
-    err = assert_raises(Dex::Error) { op.new.perform }
+    err = assert_raises(Dex::Error) { op.new.call }
     assert_equal "custom message", err.message
   end
 
@@ -42,7 +42,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from RuntimeError, as: :runtime_failure
       define_method(:perform) { raise original }
     end
-    err = assert_raises(Dex::Error) { op.new.perform }
+    err = assert_raises(Dex::Error) { op.new.call }
     assert_same original, err.details[:original]
   end
 
@@ -53,14 +53,14 @@ class TestOperationRescue < Minitest::Test
       rescue_from ArgumentError, TypeError, as: :type_problem
       def perform = raise(ArgumentError, "bad arg")
     end
-    err = assert_raises(Dex::Error) { op.new.perform }
+    err = assert_raises(Dex::Error) { op.new.call }
     assert_equal :type_problem, err.code
 
     op2 = build_operation do
       rescue_from ArgumentError, TypeError, as: :type_problem
       def perform = raise(TypeError, "bad type")
     end
-    err2 = assert_raises(Dex::Error) { op2.new.perform }
+    err2 = assert_raises(Dex::Error) { op2.new.call }
     assert_equal :type_problem, err2.code
   end
 
@@ -70,7 +70,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from TypeError, as: :bad_type
       define_method(:perform) { raise ArgumentError }
     end
-    err = assert_raises(Dex::Error) { op.new.perform }
+    err = assert_raises(Dex::Error) { op.new.call }
     assert_equal :bad_argument, err.code
 
     op2 = build_operation do
@@ -78,7 +78,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from TypeError, as: :bad_type
       def perform = raise(TypeError)
     end
-    err2 = assert_raises(Dex::Error) { op2.new.perform }
+    err2 = assert_raises(Dex::Error) { op2.new.call }
     assert_equal :bad_type, err2.code
   end
 
@@ -89,7 +89,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from RuntimeError, as: :runtime_failure
       def perform = error!(:my_error, "explicit failure")
     end
-    err = assert_raises(Dex::Error) { op.new.perform }
+    err = assert_raises(Dex::Error) { op.new.call }
     assert_equal :my_error, err.code
     assert_equal "explicit failure", err.message
   end
@@ -99,7 +99,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from ArgumentError, as: :bad_argument
       def perform = raise("unhandled")
     end
-    err = assert_raises(RuntimeError) { op.new.perform }
+    err = assert_raises(RuntimeError) { op.new.call }
     assert_equal "unhandled", err.message
   end
 
@@ -111,7 +111,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from RuntimeError, as: :specific
       def perform = raise(RuntimeError)
     end
-    err = assert_raises(Dex::Error) { op.new.perform }
+    err = assert_raises(Dex::Error) { op.new.call }
     assert_equal :specific, err.code
   end
 
@@ -120,7 +120,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from StandardError, as: :any_standard
       def perform = raise(ArgumentError)
     end
-    err = assert_raises(Dex::Error) { op.new.perform }
+    err = assert_raises(Dex::Error) { op.new.call }
     assert_equal :any_standard, err.code
   end
 
@@ -132,7 +132,7 @@ class TestOperationRescue < Minitest::Test
       def perform = raise(ArgumentError)
     end
     child = build_operation(parent: parent)
-    err = assert_raises(Dex::Error) { child.new.perform }
+    err = assert_raises(Dex::Error) { child.new.call }
     assert_equal :bad_argument, err.code
   end
 
@@ -144,7 +144,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from TypeError, as: :bad_type
       def perform = raise(TypeError)
     end
-    err = assert_raises(Dex::Error) { child.new.perform }
+    err = assert_raises(Dex::Error) { child.new.call }
     assert_equal :bad_type, err.code
   end
 
@@ -157,11 +157,11 @@ class TestOperationRescue < Minitest::Test
       rescue_from TypeError, as: :bad_type
     end
     begin
-      child.new.perform
+      child.new.call
     rescue
       nil
     end
-    assert_raises(TypeError) { parent.new.perform }
+    assert_raises(TypeError) { parent.new.call }
   end
 
   # Integration
@@ -172,7 +172,7 @@ class TestOperationRescue < Minitest::Test
       rescue_from RuntimeError, as: :runtime_failure
       define_method(:perform) { raise original }
     end
-    result = op.new.safe.perform
+    result = op.new.safe.call
     assert result.error?
     assert_equal :runtime_failure, result.code
     assert_same original, result.details[:original]
@@ -186,7 +186,7 @@ class TestOperationRescue < Minitest::Test
         raise RuntimeError
       end
     end
-    assert_raises(Dex::Error) { op.new.perform }
+    assert_raises(Dex::Error) { op.new.call }
     assert_equal 0, TestModel.count
   end
 
@@ -196,7 +196,7 @@ class TestOperationRescue < Minitest::Test
       before_perform { raise "before failed" }
       def perform = "ok"
     end
-    err = assert_raises(Dex::Error) { op.new.perform }
+    err = assert_raises(Dex::Error) { op.new.call }
     assert_equal :callback_failure, err.code
   end
 

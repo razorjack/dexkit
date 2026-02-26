@@ -56,15 +56,15 @@ end
 
 
 # Call
-TestMyOperation.new(name: "Test Test!").perform
+TestMyOperation.new(name: "Test Test!").call
 ```
 
 ### Async operations
 
 ```Ruby
-TestMyOperation.new(name: "Test Test!").async.perform
-TestMyOperation.new(name: "Test Test!").async(at: 3.days.from.now).perform
-TestMyOperation.new(name: "Test Test!").async(in: 3.minutes, queue: "low").perform
+TestMyOperation.new(name: "Test Test!").async.call
+TestMyOperation.new(name: "Test Test!").async(at: 3.days.from.now).call
+TestMyOperation.new(name: "Test Test!").async(in: 3.minutes, queue: "low").call
 ```
 
 ### Settings
@@ -86,7 +86,7 @@ end
 | Settings | Class-level configuration via `set`/`settings_for` | Active |
 | ParamsWrapper | Typed parameters via `params` block | Active |
 | ResultWrapper | Typed results via `result` block, `error!` method | Active |
-| AsyncWrapper | Background execution via `.async.perform` | Opt-in |
+| AsyncWrapper | Background execution via `.async.call` | Opt-in |
 | SafeWrapper | Safe execution via `.safe` returning `Ok`/`Err` | Active |
 | TransactionWrapper | Wraps `perform` in DB transaction | Enabled |
 | RecordWrapper | Logs operation calls to database | Requires config |
@@ -177,6 +177,7 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ `Types::Record(Model)` - parameterized type for model instances with ID coercion and serialization
 - ✅ Lifecycle callbacks (`before_perform`, `after_perform`, `around_perform`) with symbol, lambda, and block support
 - ✅ Exception mapping via `rescue_from` — converts third-party exceptions to `Dex::Error` with inheritance support
+- ✅ `.call` as public entry point, `perform` is private (user-implemented); double-prepend guard for multi-level inheritance
 
 ### Future plans
 

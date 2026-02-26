@@ -13,7 +13,7 @@ class TestOperationError < Minitest::Test
     end
 
     err = assert_raises(Dex::Error) do
-      op.new.perform
+      op.new.call
     end
 
     assert_equal :invalid_input, err.code
@@ -26,7 +26,7 @@ class TestOperationError < Minitest::Test
     end
 
     err = assert_raises(Dex::Error) do
-      op.new.perform
+      op.new.call
     end
 
     assert_equal :not_found, err.code
@@ -39,7 +39,7 @@ class TestOperationError < Minitest::Test
     end
 
     err = assert_raises(Dex::Error) do
-      op.new.perform
+      op.new.call
     end
 
     assert_equal :validation_failed, err.code

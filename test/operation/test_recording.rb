@@ -14,7 +14,7 @@ class TestOperationRecording < Minitest::Test
       end
     end
 
-    op.new(name: "Test").perform
+    op.new(name: "Test").call
 
     assert_equal 0, OperationRecord.count
   end
@@ -27,7 +27,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").perform
+      op.new(name: "Test").call
 
       assert_equal 1, OperationRecord.count
     end
@@ -41,7 +41,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").perform
+      op.new(name: "Test").call
 
       assert_equal "NamedOperation", OperationRecord.last.name
     end
@@ -55,7 +55,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "TestValue").perform
+      op.new(name: "TestValue").call
 
       assert_equal({ "name" => "TestValue" }, OperationRecord.last.params)
     end
@@ -70,7 +70,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").perform
+      op.new(name: "Test").call
 
       assert_equal 0, OperationRecord.count
     end
@@ -85,7 +85,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").perform
+      op.new(name: "Test").call
 
       assert_equal 0, OperationRecord.count
     end
@@ -99,7 +99,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").perform
+      op.new(name: "Test").call
 
       assert_equal 1, MinimalOperationRecord.count
       assert_equal "TestMinimalFieldsOp", MinimalOperationRecord.last.name
@@ -116,7 +116,7 @@ class TestOperationRecording < Minitest::Test
 
       # Simulate database error by stubbing create!
       OperationRecord.stub :create!, ->(*) { raise ActiveRecord::StatementInvalid, "DB Error" } do
-        op.new(name: "Test").perform
+        op.new(name: "Test").call
       end
 
       assert_equal [:executed], result
@@ -135,7 +135,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      child.new(name: "Test").perform
+      child.new(name: "Test").call
 
       assert_equal 0, OperationRecord.count
     end
@@ -154,7 +154,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      child.new(name: "Test").perform
+      child.new(name: "Test").call
 
       assert_equal 1, OperationRecord.count
     end
@@ -183,7 +183,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "World").perform
+      op.new(name: "World").call
 
       assert_equal({ "greeting" => "Hello World" }, OperationRecord.last.response)
     end
@@ -202,7 +202,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "World").perform
+      op.new(name: "World").call
 
       assert_equal({ "greeting" => "Hello World" }, OperationRecord.last.response)
     end
@@ -217,7 +217,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").perform
+      op.new(name: "Test").call
 
       assert_nil OperationRecord.last.response
     end
@@ -232,7 +232,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").perform
+      op.new(name: "Test").call
 
       assert_equal({ "value" => 42 }, OperationRecord.last.response)
     end
@@ -247,7 +247,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").perform
+      op.new(name: "Test").call
 
       assert_equal 1, MinimalOperationRecord.count
       assert_equal "TestMissingResponseColumn", MinimalOperationRecord.last.name
@@ -264,7 +264,7 @@ class TestOperationRecording < Minitest::Test
       end
 
       assert_raises(Dex::Error) do
-        op.new(name: "Test").perform
+        op.new(name: "Test").call
       end
 
       assert_equal 0, OperationRecord.count
@@ -281,7 +281,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").perform
+      op.new(name: "Test").call
 
       record = OperationRecord.last
       assert_equal({ "name" => "Test" }, record.params)
@@ -299,7 +299,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").perform
+      op.new(name: "Test").call
 
       record = OperationRecord.last
       assert_nil record.params
@@ -317,7 +317,7 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").perform
+      op.new(name: "Test").call
 
       record = OperationRecord.last
       assert_equal({ "name" => "Test" }, record.params)
