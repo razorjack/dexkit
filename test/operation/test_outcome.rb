@@ -181,10 +181,10 @@ class TestOperationOutcome < Minitest::Test
   # Integration test
   def test_safe_with_params_and_result
     op = operation(params: { value: Types::Integer }, result: { doubled: Types::Integer }) do
-      if params.value < 0
+      if value < 0
         error!(:invalid_value, "Value must be positive")
       else
-        { doubled: params.value * 2 }
+        { doubled: value * 2 }
       end
     end
 

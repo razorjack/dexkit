@@ -20,12 +20,38 @@ class SendWelcomeEmail < Dex::Operation
   end
 
   def perform
-    user = User.find(params.user_id)
-    Mailer.welcome(user, template: params.template).deliver_later
+    user = User.find(user_id)
+    Mailer.welcome(user, template: template).deliver_later
   end
 end
 
 SendWelcomeEmail.new(user_id: 123).call
+```
+
+### Parameter Delegation
+
+By default, all params are accessible directly in `perform` without the `params.` prefix:
+
+```ruby
+class CreateUser < Dex::Operation
+  params do
+    attribute :email, Types::String
+    attribute :name, Types::String
+  end
+
+  def perform
+    User.create!(email: email, name: name)  # direct access
+    params.email  # params accessor still available too
+  end
+end
+```
+
+Control delegation with the `delegate:` option:
+
+```ruby
+params(delegate: false) { ... }              # no delegation
+params(delegate: :email) { ... }             # delegate only :email
+params(delegate: [:email, :name]) { ... }    # delegate specific list
 ```
 
 ### Async Execution
@@ -65,7 +91,7 @@ class CreateUser < Dex::Operation
   end
 
   def perform
-    user = User.create!(email: params.email, name: params.name)
+    user = User.create!(email: email, name: name)
     {user_id: user.id, status: "created"}
   end
 end
@@ -86,7 +112,7 @@ class ProcessPayment < Dex::Operation
   end
 
   def perform
-    if params.amount < 0
+    if amount < 0
       error!(:invalid_amount, "Amount must be positive")
     end
 
@@ -116,7 +142,7 @@ class ChargeCard < Dex::Operation
   rescue_from Net::OpenTimeout, Net::ReadTimeout, as: :timeout  # multiple classes
 
   def perform
-    Stripe::Charge.create(amount: params.amount, source: params.token)
+    Stripe::Charge.create(amount: amount, source: token)
   end
 end
 ```
@@ -142,7 +168,7 @@ class FindUser < Dex::Operation
   end
 
   def perform
-    user = User.find_by(id: params.user_id)
+    user = User.find_by(id: user_id)
     error!(:not_found, "User not found") unless user
 
     {user: user.as_json}
@@ -327,8 +353,8 @@ class SendEmail < Dex::Operation
   end
 
   def perform
-    # params.user is an actual User instance
-    Mailer.welcome(params.user).deliver_later
+    # user is an actual User instance
+    Mailer.welcome(user).deliver_later
   end
 end
 
@@ -347,7 +373,7 @@ class FindUser < Dex::Operation
   end
 
   def perform
-    user = User.find_by(id: params.user_id)
+    user = User.find_by(id: user_id)
     error!(:not_found) unless user
 
     { user: user, status: 'active' }

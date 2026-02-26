@@ -8,7 +8,7 @@ class TestMyOperation < Dex::Operation
   end
 
   def perform
-    puts "Welome #{params.name}"
+    puts "Welome #{name}"
   end
 end
 
@@ -19,7 +19,7 @@ class TestOperationParams < Minitest::Test
 
   def test_parameters_and_perform
     op = operation(params: { name: Types::String, spy: Types::Any }) do
-      params.spy.puts params.name
+      spy.puts name
     end
 
     logger = Minitest::Mock.new

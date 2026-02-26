@@ -179,7 +179,7 @@ class TestOperationRecording < Minitest::Test
       op = define_operation(:TestRecordsResponseHash) do
         params { attribute :name, Types::String }
         def perform
-          { greeting: "Hello #{params.name}" }
+          { greeting: "Hello #{name}" }
         end
       end
 
@@ -198,7 +198,7 @@ class TestOperationRecording < Minitest::Test
         end
 
         def perform
-          { greeting: "Hello #{params.name}" }
+          { greeting: "Hello #{name}" }
         end
       end
 

@@ -154,14 +154,33 @@ module Dex
     end
 
     module ClassMethods
-      def params(&block)
+      def params(delegate: true, &block)
         klass = Class.new(Dex::Parameters, &block)
         const_set(:Params, klass)
         @_params_schema = klass
+        _params_define_delegates(klass, delegate)
       end
 
       def _params_schema
-        @_params_schema
+        @_params_schema || (superclass.respond_to?(:_params_schema) ? superclass._params_schema : nil)
+      end
+
+      private
+
+      def _params_define_delegates(schema_class, delegate_option)
+        _params_delegated_names(schema_class, delegate_option).each do |name|
+          define_method(name) { params.public_send(name) }
+        end
+      end
+
+      def _params_delegated_names(schema_class, delegate_option)
+        case delegate_option
+        when true then schema_class.attribute_names
+        when false, nil then []
+        when Symbol then [delegate_option]
+        when Array then delegate_option
+        else []
+        end
       end
     end
 

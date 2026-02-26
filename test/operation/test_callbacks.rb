@@ -55,7 +55,7 @@ class TestOperationCallbacks < Minitest::Test
   def test_before_accesses_params
     op = build_operation do
       params { attribute :name, Types::String }
-      before { error!(:invalid) if params.name == "bad" }
+      before { error!(:invalid) if name == "bad" }
       def perform = "ok"
     end
     assert_raises(Dex::Error) { op.new(name: "bad").call }

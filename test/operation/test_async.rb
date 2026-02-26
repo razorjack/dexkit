@@ -29,7 +29,7 @@ class TestOperationAsync < Minitest::Test
     spy.expect :call, nil, ["Test"]
 
     operation(name: :TestSpyOperation, params: { name: Types::String, spy: Types::Any }) do
-      params.spy.call(params.name)
+      spy.call(name)
     end
 
     # Directly test the job execution (avoids Rails 8 tagged_logger issues)

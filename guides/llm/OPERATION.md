@@ -20,7 +20,7 @@ class CreateUser < Dex::Operation
   end
 
   def perform
-    user = User.create!(email: params.email, name: params.name)
+    user = User.create!(email: email, name: name)
     { user_id: user.id }
   end
 end
@@ -46,8 +46,9 @@ class MyOperation < Dex::Operation
   end
 
   def perform
-    params.name    # Access via params.<attribute>
-    params.count
+    name    # Direct access (delegated by default)
+    count
+    params.name  # params accessor also available
   end
 end
 
@@ -57,9 +58,19 @@ MyOperation.new(name: "test", count: 5).call
 
 **Key facts:**
 - Parameters are validated and coerced on initialization
-- Access via `params.<attribute>` in your `perform` method
+- Access directly via attribute name (e.g., `name`) — delegated by default
+- `params` accessor also available for explicit access or struct methods (`.as_json`, `.to_h`)
 - Supports all Dry::Types features (defaults, optional, constraints)
 - Invalid params raise `Dry::Struct::Error` on initialization
+
+**Delegation options:**
+```ruby
+params { ... }                              # delegates all (default)
+params(delegate: true) { ... }             # delegates all (explicit)
+params(delegate: false) { ... }            # no delegation
+params(delegate: :email) { ... }           # delegate only :email
+params(delegate: [:email, :name]) { ... }  # delegate specific list
+```
 
 ---
 
@@ -142,7 +153,7 @@ class ChargeCard < Dex::Operation
   rescue_from Net::OpenTimeout, Net::ReadTimeout, as: :timeout  # multiple classes in one call
 
   def perform
-    Stripe::Charge.create(amount: params.amount, source: params.token)
+    Stripe::Charge.create(amount: amount, source: token)
   end
 end
 ```
@@ -312,7 +323,7 @@ class ProcessOrder < Dex::Operation
   around ->(cont) { cont.call }    # proc — receives continuation callable
 
   def validate_stock
-    error!(:out_of_stock) unless in_stock?  # has access to params, error!, etc.
+    error!(:out_of_stock) unless in_stock?  # has access to params, delegated attrs, error!, etc.
   end
 
   def with_timing
@@ -529,9 +540,9 @@ class SendEmail < Dex::Operation
   end
 
   def perform
-    # params.user is a User instance (coerced from ID if passed as ID)
-    EmailService.send(params.user.email)
-    { user: params.user }
+    # user is a User instance (coerced from ID if passed as ID)
+    EmailService.send(user.email)
+    { user: user }
   end
 end
 
@@ -566,7 +577,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 | Method | Purpose | Example |
 |--------|---------|---------|
-| `params { ... }` | Define typed input parameters | `params do attribute :name, Types::String end` |
+| `params(delegate: true) { ... }` | Define typed input parameters; delegates attrs as methods by default | `params do attribute :name, Types::String end` |
 | `result { ... }` | Define typed result schema | `result do attribute :id, Types::Integer end` |
 | `before(sym_or_callable = nil, &block)` | Register before callback | `before :validate` / `before { error!(:x) }` |
 | `after(sym_or_callable = nil, &block)` | Register after callback | `after :notify` / `after -> { log }` |
@@ -584,7 +595,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `params` | Typed params object | Access input parameters |
+| `params` | Typed params object | Access input parameters (also available as direct methods by default) |
 | `call` | Result | Public entry point — invokes `perform` through the wrapper chain |
 | `perform` | Result | Implement this — private, called by `call` |
 | `error!(code, msg, details:)` | (raises) | Signal failure, raise Dex::Error |
@@ -595,31 +606,33 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 ## Key Behaviors (Non-Obvious)
 
-1. **Safe only catches `Dex::Error`** — Other exceptions (RuntimeError, ActiveRecord errors) propagate through `.safe.call` without wrapping.
+1. **Params delegated by default** — All param attributes are accessible directly (e.g., `name` instead of `params.name`). The `params` accessor is still available. Disable with `params(delegate: false)` or delegate selectively with `params(delegate: :field)` or `params(delegate: [:a, :b])`.
 
-2. **Result wrapping only for Hashes** — If `perform` returns a non-Hash (String, Integer, nil) and a result schema exists, the value passes through unwrapped.
+2. **Safe only catches `Dex::Error`** — Other exceptions (RuntimeError, ActiveRecord errors) propagate through `.safe.call` without wrapping.
 
-3. **Ok delegates to value** — `ok.user_id` works if `ok.value` responds to `user_id`. No need to unwrap explicitly.
+3. **Result wrapping only for Hashes** — If `perform` returns a non-Hash (String, Integer, nil) and a result schema exists, the value passes through unwrapped.
 
-4. **Callbacks run inside transaction** — Errors in callbacks trigger rollback.
+4. **Ok delegates to value** — `ok.user_id` works if `ok.value` responds to `user_id`. No need to unwrap explicitly.
 
-5. **Recording happens inside transaction** — When both are enabled, the operation record is rolled back if `perform` raises.
+5. **Callbacks run inside transaction** — Errors in callbacks trigger rollback.
 
-6. **`error!` prevents recording** — Since `error!` raises before recording save, failed operations are never recorded.
+6. **Recording happens inside transaction** — When both are enabled, the operation record is rolled back if `perform` raises.
 
-7. **Nested operations share transaction** — If outer operation calls inner operation, both share the transaction. Outer rollback rolls back inner changes.
+7. **`error!` prevents recording** — Since `error!` raises before recording save, failed operations are never recorded.
 
-8. **Missing record columns OK** — Recording filters to only existing columns. A minimal table with just `name` and timestamps works.
+8. **Nested operations share transaction** — If outer operation calls inner operation, both share the transaction. Outer rollback rolls back inner changes.
 
-9. **Async serializes params** — Background jobs convert params via `to_h`, so custom objects in params must be serializable.
+9. **Missing record columns OK** — Recording filters to only existing columns. A minimal table with just `name` and timestamps works.
 
-10. **Anonymous classes cannot record** — Operation class must have a name for recording to work.
+10. **Async serializes params** — Background jobs convert params via `to_h`, so custom objects in params must be serializable.
 
-11. **Settings inherit and merge** — Child classes inherit parent settings. Multiple `set` calls for same key merge (not replace).
+11. **Anonymous classes cannot record** — Operation class must have a name for recording to work.
 
-12. **`rescue_from` converts to `Dex::Error`** — Mapped exceptions become structured errors, so `.safe`, pattern matching, transactions, and recording all behave consistently with `error!`.
+12. **Settings inherit and merge** — Child classes inherit parent settings. Multiple `set` calls for same key merge (not replace).
 
-13. **`rescue_from` inheritance** — Child classes inherit parent rescue handlers. Later declarations (child's own) take precedence for the same exception class.
+13. **`rescue_from` converts to `Dex::Error`** — Mapped exceptions become structured errors, so `.safe`, pattern matching, transactions, and recording all behave consistently with `error!`.
+
+14. **`rescue_from` inheritance** — Child classes inherit parent rescue handlers. Later declarations (child's own) take precedence for the same exception class.
 
 ---
 
@@ -655,9 +668,9 @@ class CreateOrder < Dex::Operation
   end
 
   def perform
-    order = Order.create!(user: params.user, total: params.total)
+    order = Order.create!(user: user, total: total)
 
-    params.items.each do |item|
+    items.each do |item|
       order.line_items.create!(item)
     end
 
