@@ -110,6 +110,169 @@ class TestOperationAsync < Minitest::Test
     assert_equal({ queue: "default", priority: 10 }, child.settings_for(:async))
   end
 
+  # --- Round-trip serialization tests ---
+
+  def test_async_round_trip_date
+    define_operation(:TestDateOp) do
+      params { attribute :due, Types::Strict::Date }
+      def perform = due
+    end
+
+    result = Dex::Operation::Job.new.perform(
+      class_name: "TestDateOp", params: { "due" => "2025-06-15" }
+    )
+
+    assert_equal Date.new(2025, 6, 15), result
+  end
+
+  def test_async_round_trip_time
+    define_operation(:TestTimeOp) do
+      params { attribute :at, Types::Strict::Time }
+      def perform = at
+    end
+
+    result = Dex::Operation::Job.new.perform(
+      class_name: "TestTimeOp", params: { "at" => "2025-06-15 10:30:00 UTC" }
+    )
+
+    assert_instance_of Time, result
+    assert_equal 2025, result.year
+    assert_equal 6, result.month
+    assert_equal 15, result.day
+  end
+
+  def test_async_round_trip_symbol
+    define_operation(:TestSymbolOp) do
+      params { attribute :status, Types::Strict::Symbol }
+      def perform = status
+    end
+
+    result = Dex::Operation::Job.new.perform(
+      class_name: "TestSymbolOp", params: { "status" => "active" }
+    )
+
+    assert_equal :active, result
+  end
+
+  def test_async_round_trip_optional_date_nil
+    define_operation(:TestOptDateNilOp) do
+      params { attribute :due, Types::Strict::Date.optional }
+      def perform = due
+    end
+
+    result = Dex::Operation::Job.new.perform(
+      class_name: "TestOptDateNilOp", params: { "due" => nil }
+    )
+
+    assert_nil result
+  end
+
+  def test_async_round_trip_optional_date_present
+    define_operation(:TestOptDateOp) do
+      params { attribute :due, Types::Strict::Date.optional }
+      def perform = due
+    end
+
+    result = Dex::Operation::Job.new.perform(
+      class_name: "TestOptDateOp", params: { "due" => "2025-06-15" }
+    )
+
+    assert_equal Date.new(2025, 6, 15), result
+  end
+
+  def test_async_round_trip_array_of_dates
+    define_operation(:TestArrayDatesOp) do
+      params { attribute :dates, Types::Array.of(Types::Strict::Date) }
+      def perform = dates
+    end
+
+    result = Dex::Operation::Job.new.perform(
+      class_name: "TestArrayDatesOp", params: { "dates" => ["2025-01-01", "2025-12-31"] }
+    )
+
+    assert_equal [Date.new(2025, 1, 1), Date.new(2025, 12, 31)], result
+  end
+
+  def test_async_round_trip_record
+    model = TestModel.create!(name: "Alice")
+
+    define_operation(:TestRecordOp) do
+      params { attribute :model, Types::Record(TestModel) }
+      def perform = model
+    end
+
+    result = Dex::Operation::Job.new.perform(
+      class_name: "TestRecordOp", params: { "model" => model.id }
+    )
+
+    assert_equal model, result
+  end
+
+  def test_async_serializes_with_as_json
+    model = TestModel.create!(name: "Bob")
+
+    define_operation(:TestSerializeOp) do
+      params do
+        attribute :model, Types::Record(TestModel)
+        attribute :due, Types::Nominal::Date
+      end
+      def perform = nil
+    end
+
+    op = TestSerializeOp.new(model: model, due: Date.new(2025, 6, 15))
+    proxy = op.async
+
+    serialized = proxy.send(:serialized_params)
+
+    assert_equal model.id, serialized["model"]
+    assert_equal "2025-06-15", serialized["due"]
+  end
+
+  def test_async_raises_for_non_serializable_params
+    non_serializable_class = Class.new do
+      def as_json(*) = self
+    end
+
+    define_operation(:TestNonSerOp) do
+      params { attribute :data, Types::Any }
+      def perform = nil
+    end
+
+    op = TestNonSerOp.new(data: non_serializable_class.new)
+
+    assert_raises(ArgumentError) { op.async.call }
+  end
+
+  def test_async_full_round_trip
+    op_class = define_operation(:TestFullRoundTripOp) do
+      params do
+        attribute :due, Types::Nominal::Date
+        attribute :label, Types::String
+      end
+
+      def perform
+        { due: due, label: label }
+      end
+    end
+
+    op = op_class.new(due: Date.new(2025, 6, 15), label: "test")
+
+    perform_enqueued_jobs do
+      op.async.call
+    end
+  end
+
+  def test_direct_call_still_strict
+    define_operation(:TestStrictOp) do
+      params { attribute :due, Types::Strict::Date }
+      def perform = due
+    end
+
+    assert_raises(Dry::Struct::Error) do
+      TestStrictOp.new(due: "2025-06-15").call
+    end
+  end
+
   private
 
   # Override the global helper with test-specific defaults

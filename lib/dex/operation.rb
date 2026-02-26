@@ -483,7 +483,34 @@ module Dex
       def scheduled_at = merged_options[:at]
       def scheduled_in = merged_options[:in]
       def operation_class_name = @operation.class.name
-      def serialized_params = @operation.params&.to_h || {}
+
+      def serialized_params
+        @serialized_params ||= begin
+          hash = @operation.params&.as_json || {}
+          _async_validate_serializable!(hash)
+          hash
+        end
+      end
+
+      def _async_validate_serializable!(hash, path: "")
+        hash.each do |key, value|
+          current = path.empty? ? key.to_s : "#{path}.#{key}"
+          case value
+          when String, Integer, Float, NilClass, TrueClass, FalseClass
+            next
+          when Hash
+            _async_validate_serializable!(value, path: current)
+          when Array
+            value.each_with_index do |v, i|
+              _async_validate_serializable!({ i => v }, path: current)
+            end
+          else
+            raise ArgumentError,
+              "Param '#{current}' (#{value.class}) is not JSON-serializable. " \
+              "Async operations require all params to be serializable."
+          end
+        end
+      end
     end
 
     class Ok
@@ -557,7 +584,16 @@ module Dex
         const_set(:Job, Class.new(ActiveJob::Base) do
           def perform(class_name:, params:)
             klass = class_name.constantize
-            klass.new(**params.deep_symbolize_keys).call
+            klass.new(**_dex_coerce_params(klass, params)).call
+          end
+
+          private
+
+          def _dex_coerce_params(klass, params)
+            schema = klass._params_schema
+            return params.deep_symbolize_keys unless schema && schema < Dex::Parameters
+
+            schema._dex_coerce_serialized_hash(params)
           end
         end)
       else

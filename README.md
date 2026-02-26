@@ -74,6 +74,8 @@ class SendWelcomeEmail < Dex::Operation
 end
 ```
 
+Typed params (`Date`, `Time`, `BigDecimal`, `Symbol`, `Record`) automatically survive the JSON round-trip — no need to switch types. Direct calls remain strict. Non-serializable params raise `ArgumentError` at enqueue time.
+
 ### Result Objects
 
 Define typed result structs for your operations.

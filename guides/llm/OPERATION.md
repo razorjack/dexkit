@@ -298,8 +298,22 @@ SendEmailOp.new(...).async(queue: "urgent").call  # Overrides to "urgent"
 - `in:` — Delay in seconds
 - `at:` — Schedule at specific Time
 
+**Type-safe serialization:** Params are serialized via `as_json` and automatically coerced back to typed equivalents on deserialization. No need to change types when adding `.async`.
+
+| Type | Serialized as | Deserialized via |
+|------|--------------|-----------------|
+| `Date` | `"2025-06-15"` | `Date.parse` |
+| `Time` | `"2025-06-15 10:30:00 UTC"` | `Time.parse` |
+| `DateTime` | `"2025-06-15T10:30:00+00:00"` | `DateTime.parse` |
+| `BigDecimal` | `"99.99"` | `BigDecimal()` |
+| `Symbol` | `"active"` | `String#to_sym` |
+| `Record(Model)` | `123` (ID) | `Model.find(id)` |
+
+Works with `.optional` and `Array.of(...)` types. Direct (non-async) calls remain strict — no implicit coercion.
+
 **Key facts:**
-- Params must be serializable (converted via `params.to_h`)
+- Params serialized via `as_json` (Record → ID, Date → string, etc.)
+- Non-serializable params raise `ArgumentError` at enqueue time
 - Job instantiates operation class and calls `call` synchronously in worker
 - Runtime options merge with and override class-level defaults
 - Raises `LoadError` if ActiveJob is not available
@@ -624,7 +638,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 9. **Missing record columns OK** — Recording filters to only existing columns. A minimal table with just `name` and timestamps works.
 
-10. **Async serializes params** — Background jobs convert params via `to_h`, so custom objects in params must be serializable.
+10. **Async serializes and coerces params** — Params are serialized via `as_json` and transparently coerced back (Date, Time, BigDecimal, Symbol, Record). Non-serializable params raise `ArgumentError` at enqueue time.
 
 11. **Anonymous classes cannot record** — Operation class must have a name for recording to work.
 
