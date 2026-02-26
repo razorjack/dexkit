@@ -1,0 +1,346 @@
+# frozen_string_literal: true
+
+require "test_helper"
+
+class TestOperationAsyncRecord < Minitest::Test
+  include ActiveJob::TestHelper
+
+  def setup
+    setup_test_database
+  end
+
+  # --- Strategy detection ---
+
+  def test_uses_record_job_when_recording_enabled
+    with_recording do
+      op_class = define_operation(:TestRecordJobStrategy) do
+        params { attribute :name, Types::String }
+        def perform = nil
+      end
+
+      assert_enqueued_with(job: Dex::Operation::RecordJob) do
+        op_class.new(name: "Test").async.call
+      end
+    end
+  end
+
+  def test_falls_back_to_direct_job_when_no_recording
+    op_class = define_operation(:TestDirectJobFallback) do
+      params { attribute :name, Types::String }
+      def perform = nil
+    end
+
+    assert_enqueued_with(job: Dex::Operation::DirectJob) do
+      op_class.new(name: "Test").async.call
+    end
+  end
+
+  def test_falls_back_to_direct_job_when_record_false
+    with_recording do
+      op_class = define_operation(:TestRecordFalseDirectJob) do
+        record false
+        params { attribute :name, Types::String }
+        def perform = nil
+      end
+
+      assert_enqueued_with(job: Dex::Operation::DirectJob) do
+        op_class.new(name: "Test").async.call
+      end
+    end
+  end
+
+  def test_falls_back_to_direct_job_when_record_params_false
+    with_recording do
+      op_class = define_operation(:TestParamsFalseDirectJob) do
+        record params: false
+        params { attribute :name, Types::String }
+        def perform = nil
+      end
+
+      assert_enqueued_with(job: Dex::Operation::DirectJob) do
+        op_class.new(name: "Test").async.call
+      end
+    end
+  end
+
+  def test_falls_back_to_direct_job_for_anonymous_class
+    with_recording do
+      op_class = build_operation do
+        params { attribute :name, Types::String }
+        def perform = nil
+      end
+
+      assert_enqueued_with(job: Dex::Operation::DirectJob) do
+        op_class.new(name: "Test").async.call
+      end
+    end
+  end
+
+  # --- Pending record creation ---
+
+  def test_creates_pending_record_at_enqueue
+    with_recording do
+      op_class = define_operation(:TestPendingRecord) do
+        params { attribute :name, Types::String }
+        def perform = nil
+      end
+
+      op_class.new(name: "Test").async.call
+
+      record = OperationRecord.last
+      assert_equal "pending", record.status
+      assert_equal "TestPendingRecord", record.name
+      assert_equal({ "name" => "Test" }, record.params)
+    end
+  end
+
+  # --- RecordJob round-trip ---
+
+  def test_record_job_basic_round_trip
+    with_recording do
+      op_class = define_operation(:TestRecordRoundTrip) do
+        params { attribute :name, Types::String }
+        result { attribute :greeting, Types::String }
+        def perform = { greeting: "Hello #{name}" }
+      end
+
+      op_class.new(name: "World").async.call
+      record = OperationRecord.last
+      assert_equal "pending", record.status
+
+      Dex::Operation::RecordJob.new.perform(
+        class_name: "TestRecordRoundTrip",
+        record_id: record.id
+      )
+
+      record.reload
+      assert_equal "done", record.status
+      assert_equal({ "greeting" => "Hello World" }, record.response)
+      refute_nil record.performed_at
+    end
+  end
+
+  def test_record_job_typed_params_round_trip
+    with_recording do
+      op_class = define_operation(:TestRecordTypedParams) do
+        params do
+          attribute :due, Types::Strict::Date
+          attribute :status, Types::Strict::Symbol
+        end
+        def perform = { due: due, status: status }
+      end
+
+      op_class.new(due: Date.new(2025, 6, 15), status: :active).async.call
+      record = OperationRecord.last
+
+      result = Dex::Operation::RecordJob.new.perform(
+        class_name: "TestRecordTypedParams",
+        record_id: record.id
+      )
+
+      assert_equal Date.new(2025, 6, 15), result[:due]
+      assert_equal :active, result[:status]
+    end
+  end
+
+  def test_record_job_with_record_type
+    with_recording do
+      model = TestModel.create!(name: "Alice")
+
+      op_class = define_operation(:TestRecordJobRecordType) do
+        params { attribute :model, Types::Record(TestModel) }
+        def perform = model
+      end
+
+      op_class.new(model: model).async.call
+      record = OperationRecord.last
+
+      result = Dex::Operation::RecordJob.new.perform(
+        class_name: "TestRecordJobRecordType",
+        record_id: record.id
+      )
+
+      assert_equal model, result
+    end
+  end
+
+  def test_record_job_full_active_job_round_trip
+    with_recording do
+      op_class = define_operation(:TestRecordFullRoundTrip) do
+        params { attribute :name, Types::String }
+        def perform = { name: name }
+      end
+
+      perform_enqueued_jobs do
+        op_class.new(name: "FullTrip").async.call
+      end
+
+      record = OperationRecord.last
+      assert_equal "done", record.status
+      assert_equal({ "name" => "FullTrip" }, record.response)
+    end
+  end
+
+  # --- Status transitions ---
+
+  def test_status_transitions_success
+    with_recording do
+      define_operation(:TestStatusSuccess) do
+        params { attribute :name, Types::String }
+        def perform = nil
+      end
+
+      TestStatusSuccess.new(name: "Test").async.call
+
+      record = OperationRecord.last
+      assert_equal "pending", record.status
+
+      Dex::Operation::RecordJob.new.perform(
+        class_name: "TestStatusSuccess",
+        record_id: record.id
+      )
+
+      record.reload
+      assert_equal "done", record.status
+    end
+  end
+
+  def test_status_transitions_dex_error
+    with_recording do
+      define_operation(:TestStatusDexError) do
+        params { attribute :name, Types::String }
+        def perform = error!(:bad_input, "Invalid")
+      end
+
+      TestStatusDexError.new(name: "Test").async.call
+      record = OperationRecord.last
+
+      assert_raises(Dex::Error) do
+        Dex::Operation::RecordJob.new.perform(
+          class_name: "TestStatusDexError",
+          record_id: record.id
+        )
+      end
+
+      record.reload
+      assert_equal "failed", record.status
+      assert_equal "bad_input", record.error
+    end
+  end
+
+  def test_status_transitions_unhandled_exception
+    with_recording do
+      define_operation(:TestStatusException) do
+        params { attribute :name, Types::String }
+        def perform = raise "boom"
+      end
+
+      TestStatusException.new(name: "Test").async.call
+      record = OperationRecord.last
+
+      assert_raises(RuntimeError) do
+        Dex::Operation::RecordJob.new.perform(
+          class_name: "TestStatusException",
+          record_id: record.id
+        )
+      end
+
+      record.reload
+      assert_equal "failed", record.status
+      assert_equal "RuntimeError", record.error
+    end
+  end
+
+  # --- Edge cases ---
+
+  def test_record_deleted_before_job_runs
+    with_recording do
+      define_operation(:TestRecordDeleted) do
+        params { attribute :name, Types::String }
+        def perform = nil
+      end
+
+      TestRecordDeleted.new(name: "Test").async.call
+      record = OperationRecord.last
+      deleted_id = record.id
+      record.destroy!
+
+      assert_raises(ActiveRecord::RecordNotFound) do
+        Dex::Operation::RecordJob.new.perform(
+          class_name: "TestRecordDeleted",
+          record_id: deleted_id
+        )
+      end
+    end
+  end
+
+  def test_record_response_false_skips_response_on_done
+    with_recording do
+      define_operation(:TestRecordResponseFalseAsync) do
+        record response: false
+        params { attribute :name, Types::String }
+        def perform = { greeting: "Hello" }
+      end
+
+      TestRecordResponseFalseAsync.new(name: "Test").async.call
+      record = OperationRecord.last
+
+      Dex::Operation::RecordJob.new.perform(
+        class_name: "TestRecordResponseFalseAsync",
+        record_id: record.id
+      )
+
+      record.reload
+      assert_equal "done", record.status
+      assert_nil record.response
+    end
+  end
+
+  def test_minimal_table_without_status_column
+    with_recording(record_class: MinimalOperationRecord) do
+      define_operation(:TestMinimalTableAsync) do
+        params { attribute :name, Types::String }
+        def perform = nil
+      end
+
+      # Should not raise even though MinimalOperationRecord lacks status/error columns
+      TestMinimalTableAsync.new(name: "Test").async.call
+      assert_equal 1, MinimalOperationRecord.count
+    end
+  end
+
+  # --- Sync path still sets status ---
+
+  def test_sync_call_sets_done_status
+    with_recording do
+      define_operation(:TestSyncDoneStatus) do
+        params { attribute :name, Types::String }
+        def perform = nil
+      end
+
+      TestSyncDoneStatus.new(name: "Test").call
+
+      record = OperationRecord.last
+      assert_equal "done", record.status
+    end
+  end
+
+  # --- Backward compatibility ---
+
+  def test_job_alias_works
+    assert_equal Dex::Operation::DirectJob, Dex::Operation::Job
+  end
+
+  def test_async_options_work_with_record_job
+    with_recording do
+      op_class = define_operation(:TestRecordJobOptions) do
+        params { attribute :name, Types::String }
+        def perform = nil
+      end
+
+      assert_enqueued_with(job: Dex::Operation::RecordJob, queue: "low") do
+        op_class.new(name: "Test").async(queue: "low").call
+      end
+    end
+  end
+end

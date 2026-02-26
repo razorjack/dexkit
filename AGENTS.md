@@ -179,6 +179,7 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ Exception mapping via `rescue_from` — converts third-party exceptions to `Dex::Error` with inheritance support
 - ✅ `.call` as public entry point, `perform` is private (user-implemented); double-prepend guard for multi-level inheritance
 - ✅ Parameter delegation — params accessible directly in `perform` (e.g., `name` instead of `params.name`), configurable via `delegate:` option
+- ✅ Record-based async strategy — when recording is enabled, async jobs store only a record ID in Redis instead of the full params payload; status tracking (`pending` → `running` → `done`/`failed`) with error field
 
 ### Future plans
 

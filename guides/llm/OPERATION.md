@@ -318,6 +318,50 @@ Works with `.optional` and `Array.of(...)` types. Direct (non-async) calls remai
 - Runtime options merge with and override class-level defaults
 - Raises `LoadError` if ActiveJob is not available
 
+### Async + Recording Integration
+
+When both async and recording are enabled (with params recording), Dexkit automatically uses a **record-based strategy** that stores only the record ID in the job payload instead of the full params hash. This reduces Redis memory usage for operations with large payloads.
+
+**Strategy selection (automatic — no new DSL):**
+
+| Condition | Job class | Redis payload |
+|-----------|-----------|---------------|
+| Recording enabled + params recorded | `RecordJob` | `{ class_name:, record_id: }` |
+| Everything else | `DirectJob` | `{ class_name:, params: {} }` |
+
+`DirectJob` is used when: no recording configured, `record false`, `record params: false`, or anonymous class.
+
+**Status tracking:** The record's `status` field tracks the lifecycle:
+
+| Status | Set by | When |
+|--------|--------|------|
+| `pending` | `AsyncProxy` | At enqueue time |
+| `running` | `RecordJob` | Before `op.call` (fail-soft) |
+| `done` | `RecordWrapper` | After successful `perform` |
+| `failed` | `RecordJob` | On exception (fail-soft) |
+
+Sync calls and `DirectJob` calls set `status: "done"` when the column exists.
+
+**Error field:** On failure, the `error` column stores:
+- `Dex::Error` → `error.code.to_s` (e.g., `"not_found"`)
+- Other exceptions → `exception.class.name` (e.g., `"RuntimeError"`)
+
+**Migration columns:**
+```ruby
+t.string :status   # Optional: pending/running/done/failed
+t.string :error    # Optional: error code or exception class name
+```
+
+Both columns are optional — `safe_attributes` silently skips missing columns.
+
+**Key facts:**
+- Strategy selected automatically based on recording config
+- Record created fail-fast (exception propagates if DB down)
+- Status updates are fail-soft (swallowed + logged)
+- If record deleted before job runs → `RecordNotFound` raised
+- If enqueue fails → record cleaned up (best-effort)
+- `Dex::Operation::Job` is a backward-compatible alias for `DirectJob`
+
 ---
 
 ## Callbacks
@@ -447,6 +491,8 @@ create_table :operation_records do |t|
   t.string :name            # Required: operation class name
   t.jsonb :params           # Optional: serialized params
   t.jsonb :response         # Optional: serialized result
+  t.string :status          # Optional: pending/running/done/failed (for async+recording)
+  t.string :error           # Optional: error code on failure (for async+recording)
   t.datetime :performed_at  # Optional: execution timestamp
   t.timestamps
 end
@@ -647,6 +693,8 @@ params.as_json  # => {"user" => 123}  (not full User object)
 13. **`rescue_from` converts to `Dex::Error`** — Mapped exceptions become structured errors, so `.safe`, pattern matching, transactions, and recording all behave consistently with `error!`.
 
 14. **`rescue_from` inheritance** — Child classes inherit parent rescue handlers. Later declarations (child's own) take precedence for the same exception class.
+
+15. **Async + recording auto-optimizes** — When recording is enabled with params, `.async.call` stores only the record ID in Redis (via `RecordJob`) instead of the full params hash. This is automatic — no DSL changes needed. The record tracks `status` (`pending` → `running` → `done`/`failed`) and `error` (code or exception class name).
 
 ---
 

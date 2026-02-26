@@ -22,7 +22,11 @@ module Dex
 
     def perform(*, **)
       result = super
-      _record_save!(result) if _record_enabled?
+      if _record_has_pending_record?
+        _record_update_done!(result)
+      elsif _record_enabled?
+        _record_save!(result)
+      end
       result
     end
 
@@ -48,14 +52,26 @@ module Dex
       record_settings.fetch(:enabled, true)
     end
 
+    def _record_has_pending_record?
+      defined?(@_dex_record_id) && @_dex_record_id
+    end
+
     def _record_save!(result)
       Dex.record_backend.create_record(_record_attributes(result))
     rescue => e
       _record_handle_error(e)
     end
 
+    def _record_update_done!(result)
+      attrs = { status: "done", performed_at: Time.now }
+      attrs[:response] = _record_response(result) if _record_response?
+      Dex.record_backend.update_record(@_dex_record_id, attrs)
+    rescue => e
+      _record_handle_error(e)
+    end
+
     def _record_attributes(result)
-      attrs = { name: self.class.name, performed_at: Time.now }
+      attrs = { name: self.class.name, performed_at: Time.now, status: "done" }
       attrs[:params] = _record_params? ? _record_params : nil
       attrs[:response] = _record_response? ? _record_response(result) : nil
       attrs
@@ -460,32 +476,76 @@ module Dex
       end
 
       def call
-        ensure_active_job_loaded!
-        job = Operation::Job
-        job = job.set(queue: queue) if queue
-        job = job.set(wait_until: scheduled_at) if scheduled_at
-        job = job.set(wait: scheduled_in) if scheduled_in
-        job.perform_later(class_name: operation_class_name, params: serialized_params)
+        _async_ensure_active_job_loaded!
+        if _async_use_record_strategy?
+          _async_enqueue_record_job
+        else
+          _async_enqueue_direct_job
+        end
       end
 
       private
 
-      def ensure_active_job_loaded!
+      def _async_enqueue_direct_job
+        job = _async_apply_options(Operation::DirectJob)
+        job.perform_later(class_name: _async_operation_class_name, params: _async_serialized_params)
+      end
+
+      def _async_enqueue_record_job
+        record = Dex.record_backend.create_record(
+          name: _async_operation_class_name,
+          params: _async_serialized_params,
+          status: "pending"
+        )
+        begin
+          job = _async_apply_options(Operation::RecordJob)
+          job.perform_later(class_name: _async_operation_class_name, record_id: record.id)
+        rescue => e
+          begin
+            record.destroy
+          rescue # best-effort cleanup
+            nil
+          end
+          raise e
+        end
+      end
+
+      def _async_use_record_strategy?
+        return false unless Dex.record_backend
+        return false unless @operation.class.name
+
+        record_settings = @operation.class.settings_for(:record)
+        return false if record_settings[:enabled] == false
+        return false if record_settings[:params] == false
+
+        true
+      end
+
+      def _async_apply_options(job_class)
+        job = job_class
+        job = job.set(queue: _async_queue) if _async_queue
+        job = job.set(wait_until: _async_scheduled_at) if _async_scheduled_at
+        job = job.set(wait: _async_scheduled_in) if _async_scheduled_in
+        job
+      end
+
+      def _async_ensure_active_job_loaded!
         return if defined?(ActiveJob::Base)
+
         raise LoadError, "ActiveJob is required for async operations. Add 'activejob' to your Gemfile."
       end
 
-      def merged_options
+      def _async_merged_options
         @operation.class.settings_for(:async).merge(@runtime_options)
       end
 
-      def queue = merged_options[:queue]
-      def scheduled_at = merged_options[:at]
-      def scheduled_in = merged_options[:in]
-      def operation_class_name = @operation.class.name
+      def _async_queue = _async_merged_options[:queue]
+      def _async_scheduled_at = _async_merged_options[:at]
+      def _async_scheduled_in = _async_merged_options[:in]
+      def _async_operation_class_name = @operation.class.name
 
-      def serialized_params
-        @serialized_params ||= begin
+      def _async_serialized_params
+        @_async_serialized_params ||= begin
           hash = @operation.params&.as_json || {}
           _async_validate_serializable!(hash)
           hash
@@ -578,10 +638,13 @@ module Dex
       end
     end
 
-    # Job class is defined lazily when ActiveJob is loaded
+    # Job classes are defined lazily when ActiveJob is loaded
     def self.const_missing(name)
-      if name == :Job && defined?(ActiveJob::Base)
-        const_set(:Job, Class.new(ActiveJob::Base) do
+      return super unless defined?(ActiveJob::Base)
+
+      case name
+      when :DirectJob
+        const_set(:DirectJob, Class.new(ActiveJob::Base) do
           def perform(class_name:, params:)
             klass = class_name.constantize
             klass.new(**_dex_coerce_params(klass, params)).call
@@ -596,6 +659,56 @@ module Dex
             schema._dex_coerce_serialized_hash(params)
           end
         end)
+      when :RecordJob
+        const_set(:RecordJob, Class.new(ActiveJob::Base) do
+          def perform(class_name:, record_id:)
+            klass = class_name.constantize
+            record = Dex.record_backend.find_record(record_id)
+            params = _dex_coerce_params(klass, record.params || {})
+
+            op = klass.new(**params)
+            op.instance_variable_set(:@_dex_record_id, record_id)
+
+            _dex_update_status(record_id, status: "running")
+            op.call
+          rescue => e
+            _dex_handle_failure(record_id, e)
+            raise
+          end
+
+          private
+
+          def _dex_coerce_params(klass, params)
+            schema = klass._params_schema
+            return params.deep_symbolize_keys unless schema && schema < Dex::Parameters
+
+            schema._dex_coerce_serialized_hash(params)
+          end
+
+          def _dex_update_status(record_id, **attributes)
+            Dex.record_backend.update_record(record_id, attributes)
+          rescue => e
+            _dex_log_warning("Failed to update record status: #{e.message}")
+          end
+
+          def _dex_handle_failure(record_id, exception)
+            error_value = if exception.is_a?(Dex::Error)
+              exception.code.to_s
+            else
+              exception.class.name
+            end
+            _dex_update_status(record_id, status: "failed", error: error_value)
+          end
+
+          def _dex_log_warning(message)
+            if defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
+              Rails.logger.warn "[Dex] #{message}"
+            end
+          end
+        end)
+      when :Job
+        # Backward compatibility alias
+        const_set(:Job, const_get(:DirectJob))
       else
         super
       end
@@ -623,6 +736,14 @@ module Dex
 
         def create_record(attributes)
           record_class.create!(safe_attributes(attributes))
+        end
+
+        def find_record(id)
+          record_class.find(id)
+        end
+
+        def update_record(id, attributes)
+          record_class.find(id).update!(safe_attributes(attributes))
         end
 
         def safe_attributes(attributes)

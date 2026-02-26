@@ -16,6 +16,8 @@ module DatabaseHelpers
           t.string :name, null: false
           t.json :params, default: {}
           t.json :response
+          t.string :status
+          t.string :error
           t.datetime :performed_at
           t.timestamps
         end

@@ -217,6 +217,8 @@ create_table :operation_records do |t|
   t.string :name, null: false      # Required: operation class name
   t.jsonb :params, default: {}     # Optional: operation params
   t.jsonb :response                # Optional: operation response/result
+  t.string :status                 # Optional: pending/running/done/failed (for async+recording)
+  t.string :error                  # Optional: error code on failure (for async+recording)
   t.datetime :performed_at         # Optional: execution timestamp
   t.timestamps
 end
@@ -236,6 +238,27 @@ end
 class AuditOperation < Dex::Operation
   record params: false             # Save response, skip params
 end
+```
+
+### Async + Recording Integration
+
+When both async execution and recording are enabled (with params recording), Dexkit automatically optimizes Redis usage by storing only a record ID in the job payload instead of the full params hash. This is selected automatically — no new DSL needed.
+
+| Condition | Job class | Redis payload |
+|-----------|-----------|---------------|
+| Recording enabled + params recorded | `RecordJob` | `{ class_name:, record_id: }` |
+| Everything else | `DirectJob` | `{ class_name:, params: {} }` |
+
+The record tracks status through its lifecycle: `pending` → `running` → `done` / `failed`. On failure, the `error` field captures the error code (`Dex::Error`) or exception class name.
+
+```ruby
+# Sync calls also set status: "done" when status column exists
+MyOp.new(name: "test").call
+# OperationRecord: status: "done"
+
+# Async with recording: record-based strategy
+MyOp.new(name: "test").async.call
+# OperationRecord: status: "pending" → "running" → "done"/"failed"
 ```
 
 ### Callbacks
