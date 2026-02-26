@@ -422,16 +422,19 @@ module Dex
       def before(callable = nil, &block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:before) << entry
+        _callback_invalidate_cache!
       end
 
       def after(callable = nil, &block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:after) << entry
+        _callback_invalidate_cache!
       end
 
       def around(callable = nil, &block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:around) << entry
+        _callback_invalidate_cache!
       end
 
       def _callback_list(type)
@@ -439,7 +442,17 @@ module Dex
         parent_callbacks + _callback_own(type)
       end
 
+      def _callback_any?
+        return @_callback_any if defined?(@_callback_any)
+
+        @_callback_any = %i[before after around].any? { |type| _callback_list(type).any? }
+      end
+
       private
+
+      def _callback_invalidate_cache!
+        remove_instance_variable(:@_callback_any) if defined?(@_callback_any)
+      end
 
       def _callback_own(type)
         @_callbacks ||= { before: [], after: [], around: [] }
@@ -448,7 +461,9 @@ module Dex
     end
 
     def perform(*, **)
+      return super unless self.class._callback_any?
       return super if @_callback_active
+
       @_callback_active = true
       _callback_run_around(self.class._callback_list(:around)) do
         _callback_run_before
