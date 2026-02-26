@@ -475,6 +475,52 @@ end
 
 ---
 
+## Advisory Locking
+
+Wrap operations in database advisory locks for mutual exclusion. Uses the [`with_advisory_lock`](https://github.com/ClosureTree/with_advisory_lock) gem (optional runtime dependency — not in gemspec).
+
+```ruby
+class ProcessPayment < Dex::Operation
+  params do
+    attribute :charge_id, Types::String
+  end
+
+  advisory_lock { "pay:#{charge_id}" }  # dynamic key
+
+  def perform
+    # Only one instance with same charge_id runs at a time
+  end
+end
+```
+
+**DSL forms:**
+```ruby
+advisory_lock { "pay:#{charge_id}" }           # dynamic block (instance_exec'd)
+advisory_lock(timeout: 5) { "pay:#{charge_id}" } # with timeout (seconds)
+advisory_lock "generate-daily-report"           # static string key
+advisory_lock "report", timeout: 5              # static + timeout
+advisory_lock                                   # class name as key
+advisory_lock :compute_lock_key                 # symbol → calls instance method
+```
+
+**Options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `timeout:` | Integer | Seconds to wait for lock; raises on timeout |
+
+**On timeout:** Raises `Dex::Error.new(:lock_timeout, "Could not acquire advisory lock: <key>")`.
+
+**Key facts:**
+- Opt-in (disabled by default) — must declare `advisory_lock` to enable
+- Wraps **outside** the transaction boundary (lock acquired before transaction starts)
+- Settings inherit from parent class; child can override
+- Raises `LoadError` if `with_advisory_lock` gem is not loaded
+- Works with `.safe` — timeout returns `Err(code: :lock_timeout)`
+- Do **not** add `with_advisory_lock` to your gemspec — it's an optional runtime dependency
+
+---
+
 ## Recording
 
 Record operation execution to database. Requires configuring `Dex.record_class`.
@@ -654,6 +700,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 | `around(sym_or_callable = nil, &block)` | Register around callback | `around :with_timing` / `around { \|c\| c.call }` |
 | `async(**opts)` | Set default async options | `async queue: "mailers"` |
 | `transaction(arg)` | Configure transactions | `transaction false` / `transaction :mongoid` |
+| `advisory_lock(key = nil, **opts, &block)` | Configure advisory locking | `advisory_lock "key"` / `advisory_lock { "pay:#{id}" }` |
 | `record(arg)` | Configure recording | `record false` / `record params: false` |
 | `rescue_from(*classes, as:, message: nil)` | Map exceptions to Dex::Error | `rescue_from Stripe::CardError, as: :card_declined` |
 | `set(key, **opts)` | Store arbitrary settings | `set :custom, value: 123` |
@@ -704,7 +751,9 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 14. **`rescue_from` inheritance** — Child classes inherit parent rescue handlers. Later declarations (child's own) take precedence for the same exception class.
 
-15. **Async + recording auto-optimizes** — When recording is enabled with params, `.async.call` stores only the record ID in Redis (via `RecordJob`) instead of the full params hash. This is automatic — no DSL changes needed. The record tracks `status` (`pending` → `running` → `done`/`failed`) and `error` (code or exception class name).
+15. **Advisory lock wraps outside transaction** — `advisory_lock` acquires the lock before the transaction starts. On timeout, raises `Dex::Error(:lock_timeout)`. Requires `with_advisory_lock` gem (optional, not in gemspec).
+
+16. **Async + recording auto-optimizes** — When recording is enabled with params, `.async.call` stores only the record ID in Redis (via `RecordJob`) instead of the full params hash. This is automatic — no DSL changes needed. The record tracks `status` (`pending` → `running` → `done`/`failed`) and `error` (code or exception class name).
 
 ---
 

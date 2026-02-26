@@ -89,6 +89,7 @@ end
 | AsyncWrapper | Background execution via `.async.call` | Opt-in |
 | SafeWrapper | Safe execution via `.safe` returning `Ok`/`Err` | Active |
 | TransactionWrapper | Wraps `perform` in DB transaction | Enabled |
+| LockWrapper | Advisory locking via `advisory_lock` | Opt-in |
 | RecordWrapper | Logs operation calls to database | Requires config |
 | RescueWrapper | Maps exceptions to `Dex::Error` via `rescue_from` | Active |
 | CallbackWrapper | Lifecycle hooks via `before`, `after`, `around` | Active |
@@ -180,6 +181,7 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ `.call` as public entry point, `perform` is private (user-implemented); double-prepend guard for multi-level inheritance
 - ✅ Parameter delegation — params accessible directly in `perform` (e.g., `name` instead of `params.name`), configurable via `delegate:` option
 - ✅ Record-based async strategy — when recording is enabled, async jobs store only a record ID in Redis instead of the full params payload; status tracking (`pending` → `running` → `done`/`failed`) with error field
+- ✅ Advisory locking via `advisory_lock` DSL — wraps operation in database advisory lock (outside transaction boundary); supports static keys, dynamic blocks, symbol methods, timeout; uses `with_advisory_lock` gem as optional runtime dependency
 
 ### Future plans
 

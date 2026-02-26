@@ -339,6 +339,44 @@ class MongoidOperation < Dex::Operation
 end
 ```
 
+### Advisory Locking
+
+Wrap operations in database advisory locks for mutual exclusion. Requires the [`with_advisory_lock`](https://github.com/ClosureTree/with_advisory_lock) gem (not included — add it to your Gemfile).
+
+```ruby
+class ProcessPayment < Dex::Operation
+  params do
+    attribute :charge_id, Types::String
+  end
+
+  advisory_lock { "pay:#{charge_id}" }
+
+  def perform
+    # Only one instance with same charge_id runs at a time
+  end
+end
+```
+
+Multiple key forms:
+
+```ruby
+advisory_lock { "pay:#{charge_id}" }           # dynamic block
+advisory_lock "generate-daily-report"           # static string
+advisory_lock :compute_lock_key                 # calls instance method
+advisory_lock                                   # uses class name
+advisory_lock "report", timeout: 5              # with timeout (seconds)
+```
+
+On timeout, raises `Dex::Error` with code `:lock_timeout`. Works with `.safe`:
+
+```ruby
+result = ProcessPayment.new(charge_id: "ch_123").safe.call
+case result
+in Dex::Err(code: :lock_timeout)
+  puts "Could not acquire lock"
+end
+```
+
 ### Settings
 
 Generic class-level configuration with inheritance.

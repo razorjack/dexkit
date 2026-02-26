@@ -159,6 +159,63 @@ module Dex
     end
   end
 
+  module LockWrapper
+    def self.prepended(base)
+      class << base
+        prepend ClassMethods
+      end
+    end
+
+    module ClassMethods
+      def advisory_lock(key = nil, **options, &block)
+        lock_key = block || key
+        set(:advisory_lock, enabled: true, key: lock_key, **options)
+      end
+    end
+
+    def perform(*, **)
+      _lock_enabled? ? _lock_execute { super } : super
+    end
+
+    private
+
+    def _lock_enabled?
+      self.class.settings_for(:advisory_lock).fetch(:enabled, false)
+    end
+
+    def _lock_key
+      key = self.class.settings_for(:advisory_lock)[:key]
+      case key
+      when String then key
+      when Symbol then send(key)
+      when Proc then instance_exec(&key)
+      when nil then self.class.name || raise(ArgumentError, "Anonymous classes must provide an explicit lock key")
+      else raise ArgumentError, "Unsupported advisory_lock key type: #{key.class}"
+      end
+    end
+
+    def _lock_options
+      opts = {}
+      timeout = self.class.settings_for(:advisory_lock)[:timeout]
+      opts[:timeout_seconds] = timeout if timeout
+      opts
+    end
+
+    def _lock_execute(&block)
+      _lock_ensure_loaded!
+      ActiveRecord::Base.with_advisory_lock!(_lock_key, **_lock_options, &block)
+    rescue WithAdvisoryLock::FailedToAcquireLock
+      raise Dex::Error.new(:lock_timeout, "Could not acquire advisory lock: #{_lock_key}")
+    end
+
+    def _lock_ensure_loaded!
+      return if ActiveRecord::Base.respond_to?(:with_advisory_lock!)
+
+      raise LoadError,
+        "with_advisory_lock gem is required for advisory locking. Add 'with_advisory_lock' to your Gemfile."
+    end
+  end
+
   module ParamsWrapper
     @_params_schema = Dex::Parameters
 
@@ -462,6 +519,7 @@ module Dex
       base.prepend RescueWrapper
       base.prepend RecordWrapper
       base.prepend TransactionWrapper
+      base.prepend LockWrapper
       base.prepend ResultWrapper
       base.prepend ParamsWrapper
       base.prepend Settings
