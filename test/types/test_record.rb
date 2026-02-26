@@ -186,6 +186,49 @@ class TestTypesRecord < Minitest::Test
     end
   end
 
+  # === Lock option tests ===
+
+  def test_lock_option_calls_lock_on_scope
+    model = TestModel.create!(name: "Test")
+
+    locked_scope = Minitest::Mock.new
+    locked_scope.expect(:find, model, [model.id])
+
+    TestModel.stub(:lock, locked_scope) do
+      type = Types::Record(TestModel, lock: true)
+      result = type[model.id]
+
+      assert_equal model, result
+    end
+    locked_scope.verify
+  end
+
+  def test_lock_option_skips_lock_for_instance
+    model = TestModel.create!(name: "Test")
+    type = Types::Record(TestModel, lock: true)
+    result = type[model]
+
+    assert_equal model, result
+  end
+
+  def test_lock_option_skips_lock_for_nil
+    type = Types::Record(TestModel, lock: true)
+    result = type[nil]
+
+    assert_nil result
+  end
+
+  def test_lock_false_by_default
+    model = TestModel.create!(name: "Test")
+    type = Types::Record(TestModel)
+
+    # Should use model_class.find directly, not lock
+    TestModel.stub(:find, model) do
+      result = type[model.id]
+      assert_equal model, result
+    end
+  end
+
   # === Optional type tests ===
 
   def test_optional_works_with_nil

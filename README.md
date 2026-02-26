@@ -422,6 +422,22 @@ end
 UpdateProfile.new(user: 1, avatar: nil).call  # avatar can be nil
 ```
 
+Lock records on fetch with `lock: true` (uses `SELECT ... FOR UPDATE`):
+
+```ruby
+class TransferFunds < Dex::Operation
+  params do
+    attribute :account, Types::Record(Account, lock: true)
+  end
+
+  def perform
+    account.update!(balance: account.balance - 100)
+  end
+end
+
+TransferFunds.new(account: 42).call  # Account.lock.find(42)
+```
+
 When recording to database, Record types serialize as IDs (not full objects):
 
 ```ruby

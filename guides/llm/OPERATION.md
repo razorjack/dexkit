@@ -613,10 +613,20 @@ SendEmail.new(user: "1").call            # String ID
 SendEmail.new(user: user_instance, avatar: nil).call  # Optional
 ```
 
+**Lock option:** Use `lock: true` to acquire a row lock (`SELECT ... FOR UPDATE`) when coercing from ID. Useful inside transactions to prevent concurrent modifications.
+
+```ruby
+params do
+  attribute :user, Types::Record(User, lock: true)
+end
+```
+
+When an ID is passed, uses `Model.lock.find(id)`. When an instance is passed directly, no re-locking occurs.
+
 **Coercion behavior:**
-- Instance of model class → passes through
+- Instance of model class → passes through (no lock, even with `lock: true`)
 - `nil` → passes through (use `.optional` to allow nil)
-- Integer or String → calls `Model.find(id)`
+- Integer or String → calls `Model.find(id)` (or `Model.lock.find(id)` with `lock: true`)
 - Not found → raises `ActiveRecord::RecordNotFound`
 
 **Serialization:** In `as_json` (used by recording), Record types serialize as the model's ID, not the full object.
