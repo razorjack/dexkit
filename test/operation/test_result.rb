@@ -7,44 +7,127 @@ class TestOperationResult < Minitest::Test
     setup_test_database
   end
 
-  def test_result_schema_definition
-    op = operation(result: { id: Types::Integer, name: Types::String }) do
-      { id: 1, name: "Test" }
-    end
+  # success Type declaration
 
-    result = op.new.call
-    assert_instance_of op::Result, result
-    assert_equal 1, result.id
-    assert_equal "Test", result.name
+  def test_success_type_is_stored
+    op = build_operation {}
+    op.success(Types::String)
+
+    assert_equal Types::String, op._success_type
   end
 
-  def test_result_wraps_hash_only
-    op = operation(result: { value: Types::String }) do
-      "raw string"
-    end
+  def test_success_type_inherits_from_parent
+    parent = build_operation {}
+    parent.success(Types::Integer)
 
-    result = op.new.call
-    assert_equal "raw string", result
+    child = Class.new(parent)
+    assert_equal Types::Integer, child._success_type
   end
 
-  def test_result_without_schema
-    op = operation do
-      { id: 1, name: "Test" }
-    end
+  def test_success_type_child_overrides_parent
+    parent = build_operation {}
+    parent.success(Types::Integer)
 
-    result = op.new.call
-    assert_instance_of Hash, result
-    assert_equal 1, result[:id]
-    assert_equal "Test", result[:name]
+    child = Class.new(parent)
+    child.success(Types::String)
+
+    assert_equal Types::String, child._success_type
+    assert_equal Types::Integer, parent._success_type
   end
 
-  def test_result_with_nested_attributes
-    op = operation(result: { user: Types::Hash, status: Types::String }) do
-      { user: { name: "John" }, status: "active" }
+  def test_success_type_nil_when_not_declared
+    op = build_operation {}
+    assert_nil op._success_type
+  end
+
+  # error :codes declaration
+
+  def test_error_codes_stored
+    op = build_operation {}
+    op.error(:not_found, :invalid)
+
+    assert_equal %i[not_found invalid], op._declared_errors
+  end
+
+  def test_error_codes_inherit_from_parent
+    parent = build_operation {}
+    parent.error(:not_found)
+
+    child = Class.new(parent)
+    child.error(:invalid)
+
+    assert_equal %i[not_found invalid], child._declared_errors
+    assert_equal %i[not_found], parent._declared_errors
+  end
+
+  def test_error_codes_deduplicated_across_inheritance
+    parent = build_operation {}
+    parent.error(:not_found)
+
+    child = Class.new(parent)
+    child.error(:not_found, :invalid)
+
+    assert_equal %i[not_found invalid], child._declared_errors
+  end
+
+  def test_has_declared_errors_false_when_empty
+    op = build_operation {}
+    refute op._has_declared_errors?
+  end
+
+  def test_has_declared_errors_true_when_declared
+    op = build_operation {}
+    op.error(:not_found)
+
+    assert op._has_declared_errors?
+  end
+
+  # error! validation behavior
+
+  def test_error_bang_accepts_declared_code
+    op = build_operation do
+      def perform
+        error!(:not_found, "Missing")
+      end
+    end
+    op.error(:not_found)
+
+    err = assert_raises(Dex::Error) { op.new.call }
+    assert_equal :not_found, err.code
+  end
+
+  def test_error_bang_rejects_undeclared_code
+    op = build_operation do
+      def perform
+        error!(:surprise)
+      end
+    end
+    op.error(:not_found)
+
+    assert_raises(ArgumentError) { op.new.call }
+  end
+
+  def test_error_bang_accepts_any_code_without_declaration
+    op = build_operation do
+      def perform
+        error!(:anything_goes)
+      end
     end
 
+    err = assert_raises(Dex::Error) { op.new.call }
+    assert_equal :anything_goes, err.code
+  end
+
+  # Operations without declarations work unchanged
+
+  def test_operation_without_declarations_returns_value
+    op = operation { "hello" }
+    assert_equal "hello", op.new.call
+  end
+
+  def test_operation_without_declarations_returns_hash
+    op = operation { { id: 1, name: "Test" } }
     result = op.new.call
-    assert_equal({ name: "John" }, result.user)
-    assert_equal "active", result.status
+    assert_equal({ id: 1, name: "Test" }, result)
   end
 end

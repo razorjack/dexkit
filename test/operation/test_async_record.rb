@@ -100,7 +100,6 @@ class TestOperationAsyncRecord < Minitest::Test
     with_recording do
       op_class = define_operation(:TestRecordRoundTrip) do
         params { attribute :name, Types::String }
-        result { attribute :greeting, Types::String }
         def perform = { greeting: "Hello #{name}" }
       end
 

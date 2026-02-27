@@ -68,23 +68,6 @@ class TestOperationSuccess < Minitest::Test
     assert_equal "early exit", op.new.call
   end
 
-  def test_success_with_result_schema
-    op = build_operation do
-      result do
-        attribute :name, Types::String
-        attribute :age, Types::Integer
-      end
-
-      def perform
-        success!(name: "John", age: 30)
-      end
-    end
-
-    result = op.new.call
-    assert_equal "John", result.name
-    assert_equal 30, result.age
-  end
-
   def test_success_with_safe_returns_ok
     op = build_operation do
       def perform

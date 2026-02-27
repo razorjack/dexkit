@@ -19,16 +19,6 @@ class TestOperationClassCall < Minitest::Test
     assert_equal 42, op.call
   end
 
-  def test_class_call_with_result_schema
-    op = operation(
-      params: { n: Types::Integer },
-      result: { doubled: Types::Integer }
-    ) { { doubled: n * 2 } }
-
-    result = op.call(n: 7)
-    assert_equal 14, result.doubled
-  end
-
   def test_class_call_raises_dex_error
     op = operation { error! :boom }
     assert_raises(Dex::Error) { op.call }

@@ -189,22 +189,18 @@ class TestOperationRecording < Minitest::Test
     end
   end
 
-  def test_records_response_with_result_schema
+  def test_records_response_with_success_type
     with_recording do
-      op = define_operation(:TestRecordsResponseWithSchema) do
+      op = define_operation(:TestRecordsResponseWithSuccessType) do
         params { attribute :name, Types::String }
-        result do
-          attribute :greeting, Types::String
-        end
+        success Types::String
 
-        def perform
-          { greeting: "Hello #{name}" }
-        end
+        define_method(:perform) { "Hello #{name}" }
       end
 
       op.new(name: "World").call
 
-      assert_equal({ "greeting" => "Hello World" }, OperationRecord.last.response)
+      assert_equal "Hello World", OperationRecord.last.response
     end
   end
 

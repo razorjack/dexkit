@@ -77,9 +77,9 @@ end
 
 Typed params (`Date`, `Time`, `BigDecimal`, `Symbol`, `Record`) automatically survive the JSON round-trip — no need to switch types. Direct calls remain strict. Non-serializable params raise `ArgumentError` at enqueue time.
 
-### Result Objects
+### Operation Contract
 
-Define typed result structs for your operations.
+Declare what an operation returns and which errors it can raise. Both are optional — they document intent and catch mistakes.
 
 ```ruby
 class CreateUser < Dex::Operation
@@ -88,21 +88,21 @@ class CreateUser < Dex::Operation
     attribute :name, Types::String
   end
 
-  result do
-    attribute :user_id, Types::Integer
-    attribute :status, Types::String
-  end
+  success Types::Record(User)   # what the operation returns on success
+  error :email_taken,           # which error codes error!() may raise
+        :invalid_email
 
   def perform
-    user = User.create!(email: email, name: name)
-    {user_id: user.id, status: "created"}
+    error!(:email_taken) if User.exists?(email: email)
+    User.create!(email: email, name: name)
   end
 end
 
-result = CreateUser.call(email: "user@example.com", name: "John")
-result.user_id  # => 1
-result.status   # => "created"
+user = CreateUser.call(email: "user@example.com", name: "John")
+user.name  # => "John" (actual User instance)
 ```
+
+When `error :codes` is declared, calling `error!` with an undeclared code raises `ArgumentError` immediately — a programming mistake, caught at runtime.
 
 ### Flow Control
 
@@ -132,7 +132,7 @@ error!(:not_found, "User not found")
 error!(:validation_failed, "Invalid data", details: {field: "email", issue: "format"})
 ```
 
-**`success!(value = nil, **attrs)`** — Halt with success. Commits the transaction. Returns the value (wrapped by result schema if defined).
+**`success!(value = nil, **attrs)`** — Halt with success. Commits the transaction. Returns the value as-is.
 
 ```ruby
 success!(42)                          # positional value
@@ -173,9 +173,7 @@ class FindUser < Dex::Operation
     attribute :user_id, Types::Integer
   end
 
-  result do
-    attribute :user, Types::Hash
-  end
+  error :not_found
 
   def perform
     user = User.find_by(id: user_id)
@@ -434,25 +432,21 @@ SendEmail.new(user: User.find(123)).call
 SendEmail.new(user: 123).call
 ```
 
-Works in result blocks too:
+Declare `success Types::Record(Model)` to record just the model ID in the response column (instead of the full serialized object):
 
 ```ruby
 class FindUser < Dex::Operation
-  result do
-    attribute :user, Types::Record(User)
-    attribute :status, Types::String
-  end
+  success Types::Record(User)
 
   def perform
     user = User.find_by(id: user_id)
     error!(:not_found) unless user
-
-    { user: user, status: 'active' }
+    user
   end
 end
 
 result = FindUser.new(user_id: 123).call
-result.user.name  # => "John Doe" (actual User instance)
+result.name  # => "John Doe" (actual User instance)
 ```
 
 Optional records:

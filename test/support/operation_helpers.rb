@@ -30,14 +30,15 @@ module OperationHelpers
     Class.new(parent, &block)
   end
 
-  # Builds an operation class with optional params/result schemas and perform body
+  # Builds an operation class with optional params schema, success type, error codes, and perform body
   # @param name [Symbol, nil] Optional constant name for operations requiring a class name
   # @param parent [Class] Optional parent class (defaults to Dex::Operation)
   # @param params [Hash, Proc, nil] Params schema definition
-  # @param result [Hash, Proc, nil] Result schema definition
+  # @param success [Dry::Types::Type, nil] Success type declaration
+  # @param errors [Array<Symbol>, nil] Declared error codes
   # @param block [Proc] Perform implementation
   # @return [Class] The created operation class
-  def operation(name: nil, parent: Dex::Operation, params: nil, result: nil, &block)
+  def operation(name: nil, parent: Dex::Operation, params: nil, success: nil, errors: nil, &block)
     op_class = if name
       define_operation(name, parent: parent)
     else
@@ -45,7 +46,8 @@ module OperationHelpers
     end
 
     _define_schema(op_class, :params, params)
-    _define_schema(op_class, :result, result)
+    op_class.success(success) if success
+    op_class.error(*errors) if errors
 
     op_class.class_eval do
       define_method(:perform, &block) if block

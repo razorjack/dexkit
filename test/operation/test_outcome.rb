@@ -120,20 +120,18 @@ class TestOperationOutcome < Minitest::Test
     assert_equal "Something went wrong", outcome.message
   end
 
-  def test_safe_with_result_schema
-    op = operation(result: { id: Types::Integer, status: Types::String }) do
+  def test_safe_with_hash_return
+    op = operation do
       { id: 1, status: "completed" }
     end
 
     outcome = op.new.safe.call
     assert outcome.ok?
-    assert_instance_of op::Result, outcome.value
-    assert_equal 1, outcome.id
-    assert_equal "completed", outcome.status
+    assert_equal({ id: 1, status: "completed" }, outcome.value)
   end
 
   def test_safe_pattern_matching_success
-    op = operation(result: { user_id: Types::Integer }) do
+    op = operation do
       { user_id: 42 }
     end
 
@@ -179,8 +177,8 @@ class TestOperationOutcome < Minitest::Test
   end
 
   # Integration test
-  def test_safe_with_params_and_result
-    op = operation(params: { value: Types::Integer }, result: { doubled: Types::Integer }) do
+  def test_safe_with_params
+    op = operation(params: { value: Types::Integer }) do
       if value < 0
         error!(:invalid_value, "Value must be positive")
       else
@@ -191,7 +189,7 @@ class TestOperationOutcome < Minitest::Test
     # Success case
     success = op.new(value: 5).safe.call
     assert success.ok?
-    assert_equal 10, success.doubled
+    assert_equal({ doubled: 10 }, success.value)
 
     # Failure case
     failure = op.new(value: -1).safe.call

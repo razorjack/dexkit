@@ -91,17 +91,27 @@ module Dex
     end
 
     def _record_response(result)
-      case result
-      when nil then nil
-      when Dex::Parameters then result.as_json
-      when Hash
-        # If there's a result schema, wrap the hash to get proper serialization
-        if self.class._result_has_schema?
-          self.class._result_schema.new(result).as_json
-        else
-          result
+      success_type = self.class.respond_to?(:_success_type) && self.class._success_type
+
+      if success_type
+        _record_serialize_typed_result(result, success_type)
+      else
+        case result
+        when nil then nil
+        when Hash then result
+        else { value: result }
         end
-      else { value: result }
+      end
+    end
+
+    def _record_serialize_typed_result(result, type)
+      return nil if result.nil?
+
+      record_class = Dex::Parameters._dex_extract_record_class_from_type(type)
+      if record_class && result.respond_to?(:id)
+        result.id
+      else
+        result.respond_to?(:as_json) ? result.as_json : result
       end
     end
 
@@ -279,18 +289,27 @@ module Dex
 
   module ResultWrapper
     module ClassMethods
-      def result(&block)
-        klass = Class.new(Dex::Parameters, &block)
-        const_set(:Result, klass)
-        @_result_schema = klass
+      def success(type)
+        @_success_type = type
       end
 
-      def _result_schema
-        @_result_schema
+      def error(*codes)
+        @_declared_errors ||= []
+        @_declared_errors.concat(codes)
       end
 
-      def _result_has_schema?
-        !!@_result_schema
+      def _success_type
+        @_success_type || (superclass.respond_to?(:_success_type) ? superclass._success_type : nil)
+      end
+
+      def _declared_errors
+        parent = superclass.respond_to?(:_declared_errors) ? superclass._declared_errors : []
+        own = @_declared_errors || []
+        (parent + own).uniq
+      end
+
+      def _has_declared_errors?
+        _declared_errors.any?
       end
     end
 
@@ -304,31 +323,26 @@ module Dex
       halted = catch(:_dex_halt) { super }
       if halted.is_a?(Operation::Halt)
         if halted.success?
-          _result_wrap(halted.value)
+          halted.value
         else
           raise Dex::Error.new(halted.error_code, halted.error_message, details: halted.error_details)
         end
       else
-        _result_wrap(halted)
+        halted
       end
     end
 
     def error!(code, message = nil, details: nil)
+      if self.class._has_declared_errors? && !self.class._declared_errors.include?(code)
+        raise ArgumentError, "Undeclared error code: #{code.inspect}. Declared: #{self.class._declared_errors.inspect}"
+      end
+
       throw(:_dex_halt, Operation::Halt.new(type: :error, error_code: code, error_message: message,
         error_details: details))
     end
 
     def success!(value = nil, **attrs)
       throw(:_dex_halt, Operation::Halt.new(type: :success, value: attrs.empty? ? value : attrs))
-    end
-
-    private
-
-    def _result_wrap(raw_result)
-      return raw_result unless self.class._result_has_schema?
-      return raw_result unless raw_result.is_a?(Hash)
-
-      self.class._result_schema.new(raw_result)
     end
   end
 

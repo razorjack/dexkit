@@ -2,7 +2,7 @@
 
 **Purpose:** This file documents all features of `Dex::Operation` for AI coding agents. Copy this to your app's operations directory (e.g., `app/operations/CLAUDE.md` or `app/operations/AGENTS.md`) so agents know the full API when implementing operations.
 
-**What it is:** A base class for service objects/operations in Ruby/Rails applications. Provides typed parameters, typed results, error handling, transactions, background jobs, and execution recording.
+**What it is:** A base class for service objects/operations in Ruby/Rails applications. Provides typed parameters, success/error contract declarations, error handling, transactions, background jobs, and execution recording.
 
 ---
 
@@ -15,19 +15,18 @@ class CreateUser < Dex::Operation
     attribute :name, Types::String
   end
 
-  result do
-    attribute :user_id, Types::Integer
-  end
+  success Types::Record(User)  # optional: declare success type
+  error :email_taken           # optional: declare error codes
 
   def perform
-    user = User.create!(email: email, name: name)
-    { user_id: user.id }
+    error!(:email_taken) if User.exists?(email: email)
+    User.create!(email: email, name: name)
   end
 end
 
 # Call it
-CreateUser.call(email: "test@example.com", name: "Test")
-# => #<CreateUser::Result user_id=123>
+user = CreateUser.call(email: "test@example.com", name: "Test")
+# => User instance
 # Use `new(...)` form when chaining modifiers (`.safe.call`, `.async.call`).
 ```
 
@@ -75,32 +74,47 @@ params(delegate: [:email, :name]) { ... }  # delegate specific list
 
 ---
 
-## Typed Results
+## Operation Contract (`success` / `error`)
 
-Define output schema via `result do ... end`. When `perform` returns a Hash and a result schema exists, the Hash is automatically wrapped into a typed Result struct.
+Declare what an operation returns and which errors it can raise. Both are **optional** and purely declarative — they document intent and catch coding mistakes. No wrapping, no struct coercion.
+
+### `success(type)`
+
+Declares the Dry::Type of the value returned by `perform` on success. Used for documentation and affects response serialization in recording (e.g., `Types::Record(Model)` → records ID only).
 
 ```ruby
-class MyOperation < Dex::Operation
-  result do
-    attribute :user_id, Types::Integer
-    attribute :status, Types::String
-  end
+class FindUser < Dex::Operation
+  success Types::Record(User)
 
   def perform
-    { user_id: 1, status: "created" }  # Hash return
+    User.find(user_id)  # Return value passes through as-is
   end
 end
-
-result = MyOperation.new.call
-result.user_id  # => 1
-result.status   # => "created"
-result.class    # => MyOperation::Result (Dry::Struct)
 ```
 
-**Key facts:**
-- Only wraps Hash returns — other types (String, Integer, nil) pass through unchanged
-- Without a result schema, Hash returns remain plain Hashes
-- Result struct supports all Dry::Struct features
+Accessible as `MyOp._success_type`. Inherits from parent class.
+
+### `error(*codes)`
+
+Declares which error codes `error!()` may raise. When declared, calling `error!` with an undeclared code raises `ArgumentError` immediately (programming mistake detection).
+
+```ruby
+class CreateUser < Dex::Operation
+  error :email_taken, :invalid_email
+
+  def perform
+    error!(:email_taken) if User.exists?(email: email)
+    error!(:surprise)     # => ArgumentError: Undeclared error code
+  end
+end
+```
+
+Without any `error` declaration, any code is accepted (backward compatible). Inherits from parent, child codes are merged and deduplicated. Accessible as `MyOp._declared_errors`.
+
+**Class methods:**
+- `MyOp._success_type` — returns declared type or `nil`
+- `MyOp._declared_errors` — returns `[Symbol]` (merged with parent, deduped)
+- `MyOp._has_declared_errors?` — `true` if any error codes declared
 
 ---
 
@@ -122,12 +136,12 @@ end
 
 ### `success!(value = nil, **attrs)`
 
-Halt with success. Commits the transaction. Returns the value (wrapped by result schema if defined).
+Halt with success. Commits the transaction. Returns the value as-is.
 
 ```ruby
 def perform
   success!(42)                        # positional value
-  success!(name: "John", age: 30)    # keyword args → Hash, wrapped by result schema if present
+  success!(name: "John", age: 30)    # keyword args → Hash
   success!                            # returns nil
 end
 ```
@@ -157,7 +171,7 @@ end
 - `error!` skips `after` callbacks and `around` post-yield; `success!` runs both
 - Both skip operation recording
 - Both work from `before` callbacks and helper methods
-- `success!` with kwargs and a result schema wraps the value into the typed Result struct
+- When `error :codes` is declared, `error!` validates the code — undeclared code raises `ArgumentError`
 
 ---
 
@@ -281,7 +295,7 @@ end
 
 **Key facts:**
 - Only catches `Dex::Error` — other exceptions (RuntimeError, ActiveRecord errors) propagate normally
-- Works with result schemas — Ok wraps the typed Result struct
+- Ok wraps the raw return value (whatever `perform` returned)
 - Ok method delegation makes `outcome.field` work without unwrapping
 
 ---
@@ -586,11 +600,11 @@ end
 - `performed_at` — Execution timestamp (if column exists)
 
 **Response serialization:**
-- Result with schema → calls `.as_json` on Result struct
-- Hash without schema → stored as-is
-- Primitive (Integer, String) → wrapped as `{ value: result }`
+- With `success Types::Record(Model)` declared → stored as the model's integer ID
+- With `success SomeType` declared → calls `.as_json` on result if available
+- Hash without `success` declaration → stored as-is
+- Primitive (Integer, String) without `success` → wrapped as `{ value: result }`
 - `nil` → stored as nil
-- `Types::Record` attributes → serialized as IDs (not full objects)
 
 **Key facts:**
 - Recording happens INSIDE transaction (rolled back on error)
@@ -661,14 +675,12 @@ class SendEmail < Dex::Operation
     attribute :avatar, Types::Record(Avatar).optional
   end
 
-  result do
-    attribute :user, Types::Record(User)
-  end
+  success Types::Record(User)  # When recording: stores user.id instead of full object
 
   def perform
     # user is a User instance (coerced from ID if passed as ID)
     EmailService.send(user.email)
-    { user: user }
+    user  # Return value; recording will store user.id
   end
 end
 
@@ -702,9 +714,9 @@ params.as_json  # => {"user" => 123}  (not full User object)
 ```
 
 **Key facts:**
-- Works in both `params` and `result` blocks
+- Works in `params` blocks; use `success Types::Record(Model)` for return type
 - Supports `.optional` for nullable fields
-- Reduces JSON bloat in operation recordings
+- With `success Types::Record(Model)`, recording stores the model ID (not full object)
 - All model methods work directly on coerced value
 
 ---
@@ -715,7 +727,8 @@ params.as_json  # => {"user" => 123}  (not full User object)
 |--------|---------|---------|
 | `.call(**kwargs)` | Create instance and call synchronously (shorthand for `new(**kwargs).call`) | `MyOp.call(name: "Alice")` |
 | `params(delegate: true) { ... }` | Define typed input parameters; delegates attrs as methods by default | `params do attribute :name, Types::String end` |
-| `result { ... }` | Define typed result schema | `result do attribute :id, Types::Integer end` |
+| `success(type)` | Declare success return type (documentation + recording serialization) | `success Types::Record(User)` |
+| `error(*codes)` | Declare valid error codes; undeclared codes raise ArgumentError in `error!` | `error :not_found, :invalid` |
 | `before(sym_or_callable = nil, &block)` | Register before callback | `before :validate` / `before { error!(:x) }` |
 | `after(sym_or_callable = nil, &block)` | Register after callback | `after :notify` / `after -> { log }` |
 | `around(sym_or_callable = nil, &block)` | Register around callback | `around :with_timing` / `around { \|c\| c.call }` |
@@ -749,7 +762,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 2. **Safe only catches `Dex::Error`** — Other exceptions (RuntimeError, ActiveRecord errors) propagate through `.safe.call` without wrapping.
 
-3. **Result wrapping only for Hashes** — If `perform` returns a non-Hash (String, Integer, nil) and a result schema exists, the value passes through unwrapped.
+3. **`success` and `error` are declarative only** — `success(type)` documents the return type and affects recording serialization. `error(*codes)` documents valid error codes and guards against typos in `error!` calls. Neither affects the actual return value of `perform`.
 
 4. **Ok delegates to value** — `ok.user_id` works if `ok.value` responds to `user_id`. No need to unwrap explicitly.
 
@@ -797,7 +810,6 @@ end
 class CreateOrder < Dex::Operation
   async queue: "orders"
   transaction true  # Explicit (default anyway)
-  record response: false  # Don't record large response
 
   params do
     attribute :user, Types::Record(User)
@@ -805,10 +817,7 @@ class CreateOrder < Dex::Operation
     attribute :total, Types::Coercible::Decimal
   end
 
-  result do
-    attribute :order_id, Types::Integer
-    attribute :status, Types::String
-  end
+  error :insufficient_stock
 
   def perform
     order = Order.create!(user: user, total: total)

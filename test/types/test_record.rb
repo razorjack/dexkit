@@ -141,23 +141,18 @@ class TestTypesRecord < Minitest::Test
     assert result
   end
 
-  def test_works_in_result_block
+  def test_success_type_with_record
     model = TestModel.create!(name: "Test")
-    model_id = model.id
 
-    op = define_operation(:TestRecordInResult) do
-      result do
-        attribute :model, Types::Record(TestModel)
-      end
+    op = define_operation(:TestRecordSuccessType) do
+      success Types::Record(TestModel)
 
-      define_method(:perform) do
-        { model: model_id }
-      end
+      define_method(:perform) { model }
     end
 
     result = op.new.call
-    assert_instance_of TestModel, result.model
-    assert_equal model.id, result.model.id
+    assert_instance_of TestModel, result
+    assert_equal model.id, result.id
   end
 
   def test_recording_saves_ids_not_full_objects
@@ -169,20 +164,16 @@ class TestTypesRecord < Minitest::Test
           attribute :model, Types::Record(TestModel)
         end
 
-        result do
-          attribute :model, Types::Record(TestModel)
-        end
+        success Types::Record(TestModel)
 
-        def perform
-          { model: params.model }
-        end
+        define_method(:perform) { params.model }
       end
 
       op.new(model: model.id).call
 
       record = OperationRecord.last
       assert_equal({ "model" => model.id }, record.params)
-      assert_equal({ "model" => model.id }, record.response)
+      assert_equal model.id, record.response
     end
   end
 

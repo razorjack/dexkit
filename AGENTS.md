@@ -85,7 +85,7 @@ end
 |--------|---------|---------|
 | Settings | Class-level configuration via `set`/`settings_for` | Active |
 | ParamsWrapper | Typed parameters via `params` block | Active |
-| ResultWrapper | Typed results via `result` block, `error!` method | Active |
+| ResultWrapper | Contract declarations via `success`/`error`, flow control via `error!`/`success!` | Active |
 | AsyncWrapper | Background execution via `.async.call` | Opt-in |
 | SafeWrapper | Safe execution via `.safe` returning `Ok`/`Err` | Active |
 | TransactionWrapper | Wraps `perform` in DB transaction | Enabled |
@@ -170,7 +170,8 @@ bundle exec rubocop -c .rubocop-md.yml
 
 ### Implemented Features
 
-- ✅ Typed result objects via `result do` block (dry-struct based)
+- ✅ Success type declaration via `success Type` — documents return type, drives recording serialization (e.g., `Types::Record(Model)` → stores ID)
+- ✅ Error code declarations via `error :codes` — documents valid error codes; undeclared codes in `error!` raise `ArgumentError`
 - ✅ Flow control via `error!` and `success!` — both use `throw`/`catch` for immediate halt; `error!` rolls back transaction, `success!` commits
 - ✅ Monad-like result objects (`Ok`/`Err`) via `.safe` modifier
 - ✅ Pattern matching support for errors and outcomes
