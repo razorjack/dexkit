@@ -116,6 +116,39 @@ Without any `error` declaration, any code is accepted (backward compatible). Inh
 - `MyOp._declared_errors` — returns `[Symbol]` (merged with parent, deduped)
 - `MyOp._has_declared_errors?` — `true` if any error codes declared
 
+### `.contract` — introspection
+
+Returns a frozen `Dex::Operation::Contract` value object (`Data.define`) aggregating all declared metadata:
+
+```ruby
+CreateUser.contract
+# => #<data Dex::Operation::Contract
+#      params={email: #<Dry::Types::...>, name: #<Dry::Types::...>},
+#      success=Types::Ref(User),
+#      errors=[:email_taken, :invalid_email]>
+```
+
+**Fields:**
+- `params` → `Hash{Symbol => Dry::Types::Type}` — declared attribute names and their types; `{}` if none
+- `success` → Dry::Types type or `nil`
+- `errors` → `Array<Symbol>`, merged with parent, deduped; `[]` if none
+
+**Behaviour:**
+- Frozen (immutable `Data` object)
+- Supports pattern matching: `CreateUser.contract => { params:, success:, errors: }`
+- `to_h` returns a plain hash
+- Inherits from parent class automatically
+
+```ruby
+# Pattern matching
+CreateUser.contract => { params:, errors: }
+errors  # => [:email_taken, :invalid_email]
+
+# Hash conversion
+CreateUser.contract.to_h
+# => { params: {...}, success: ..., errors: [...] }
+```
+
 ---
 
 ## Flow Control (`error!` / `success!`)

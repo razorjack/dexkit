@@ -184,6 +184,7 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ Record-based async strategy — when recording is enabled, async jobs store only a record ID in Redis instead of the full params payload; status tracking (`pending` → `running` → `done`/`failed`) with error field
 - ✅ Advisory locking via `advisory_lock` DSL — wraps operation in database advisory lock (outside transaction boundary); supports static keys, dynamic blocks, symbol methods, timeout; uses `with_advisory_lock` gem as optional runtime dependency
 - ✅ `assert!` guard — inline nil/false guard: block form `assert!(:code) { expr }` returns value or errors; value form `assert!(value, :code)`; respects declared error codes; rolls back transaction on failure
+- ✅ `.contract` introspection — `MyOp.contract` returns a frozen `Dex::Operation::Contract` (`Data.define`) with `params` (Hash of attribute name → Dry::Types type), `success` (type or nil), `errors` (Array of Symbols); supports pattern matching and `to_h`; inherits from parent class
 
 ### Future plans
 

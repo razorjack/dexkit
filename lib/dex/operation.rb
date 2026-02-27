@@ -588,6 +588,27 @@ module Dex
       def error? = type == :error
     end
 
+    Contract = Data.define(:params, :success, :errors)
+
+    def self.contract
+      Contract.new(
+        params: _contract_params,
+        success: _success_type,
+        errors: _declared_errors
+      )
+    end
+
+    def self._contract_params
+      schema = _params_schema
+      return {} unless schema
+
+      schema.schema.each_with_object({}) do |key, hash|
+        hash[key.name] = key.type
+      end
+    end
+
+    private_class_method :_contract_params
+
     def initialize(*, **)
     end
 

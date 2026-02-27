@@ -104,6 +104,24 @@ user.name  # => "John" (actual User instance)
 
 When `error :codes` is declared, calling `error!` with an undeclared code raises `ArgumentError` immediately — a programming mistake, caught at runtime.
 
+Use `.contract` to introspect an operation's declared interface:
+
+```ruby
+CreateUser.contract
+# => #<data Dex::Operation::Contract
+#      params={email: #<Dry::Types...>, name: #<Dry::Types...>},
+#      success=Types::Ref(User),
+#      errors=[:email_taken, :invalid_email]>
+
+# Pattern matching
+CreateUser.contract => { params:, success:, errors: }
+
+# Hash conversion
+CreateUser.contract.to_h
+```
+
+The returned object is frozen and inherits from parent classes automatically.
+
 ### Flow Control
 
 `error!` and `success!` provide early return from `perform` (and any methods it calls). Both halt execution immediately — code after them is never reached.
