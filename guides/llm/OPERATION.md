@@ -26,8 +26,9 @@ class CreateUser < Dex::Operation
 end
 
 # Call it
-CreateUser.new(email: "test@example.com", name: "Test").call
+CreateUser.call(email: "test@example.com", name: "Test")
 # => #<CreateUser::Result user_id=123>
+# Use `new(...)` form when chaining modifiers (`.safe.call`, `.async.call`).
 ```
 
 ---
@@ -53,7 +54,7 @@ class MyOperation < Dex::Operation
 end
 
 # Call with keyword arguments
-MyOperation.new(name: "test", count: 5).call
+MyOperation.call(name: "test", count: 5)
 ```
 
 **Key facts:**
@@ -712,6 +713,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 | Method | Purpose | Example |
 |--------|---------|---------|
+| `.call(**kwargs)` | Create instance and call synchronously (shorthand for `new(**kwargs).call`) | `MyOp.call(name: "Alice")` |
 | `params(delegate: true) { ... }` | Define typed input parameters; delegates attrs as methods by default | `params do attribute :name, Types::String end` |
 | `result { ... }` | Define typed result schema | `result do attribute :id, Types::Integer end` |
 | `before(sym_or_callable = nil, &block)` | Register before callback | `before :validate` / `before { error!(:x) }` |

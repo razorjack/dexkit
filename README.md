@@ -25,7 +25,8 @@ class SendWelcomeEmail < Dex::Operation
   end
 end
 
-SendWelcomeEmail.new(user_id: 123).call
+SendWelcomeEmail.call(user_id: 123)
+# Use `new(...)` form when chaining modifiers (`.safe.call`, `.async.call`).
 ```
 
 ### Parameter Delegation
@@ -98,7 +99,7 @@ class CreateUser < Dex::Operation
   end
 end
 
-result = CreateUser.new(email: "user@example.com", name: "John").call
+result = CreateUser.call(email: "user@example.com", name: "John")
 result.user_id  # => 1
 result.status   # => "created"
 ```

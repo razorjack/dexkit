@@ -570,6 +570,10 @@ module Dex
 
     private :perform
 
+    def self.call(**kwargs)
+      new(**kwargs).call
+    end
+
     def self.inherited(base)
       super
       base.prepend CallbackWrapper
