@@ -21,12 +21,23 @@ module Dex
     end
 
     def perform(*, **)
-      result = super
-      if _record_has_pending_record?
-        _record_update_done!(result)
-      elsif _record_enabled?
-        _record_save!(result)
+      halted = nil
+      result = catch(:_dex_halt) { super }
+
+      if result.is_a?(Operation::Halt)
+        halted = result
+        result = halted.success? ? halted.value : nil
       end
+
+      if halted.nil? || halted.success?
+        if _record_has_pending_record?
+          _record_update_done!(result)
+        elsif _record_enabled?
+          _record_save!(result)
+        end
+      end
+
+      throw(:_dex_halt, halted) if halted
       result
     end
 

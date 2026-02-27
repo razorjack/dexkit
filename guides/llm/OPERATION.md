@@ -183,7 +183,7 @@ end
 - All three halt immediately, stopping execution (non-local exit via `throw`/`catch`)
 - `error!` and `assert!` trigger transaction rollback; `success!` commits
 - `error!` and `assert!` skip `after` callbacks and `around` post-yield; `success!` runs both
-- All skip operation recording
+- `error!` and `assert!` skip operation recording; `success!` records normally
 - All work from `before` callbacks and helper methods
 - When `error :codes` is declared, `error!` and `assert!` validate the code — undeclared code raises `ArgumentError`
 - `assert!` returns the value on success — use the return value to assign in one step
@@ -623,7 +623,7 @@ end
 
 **Key facts:**
 - Recording happens INSIDE transaction (rolled back on error)
-- `error!` prevents recording (error raised before save)
+- `error!` and `assert!` prevent recording (transaction rolled back); `success!` records normally
 - Missing columns silently ignored (minimal table with just `name` works)
 - Recording failures silently swallowed (logged if Rails available)
 - Anonymous operation classes cannot be recorded
@@ -786,7 +786,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 6. **Recording happens inside transaction** — When both are enabled, the operation record is rolled back if `perform` raises.
 
-7. **`error!` and `success!` skip recording** — Both halt before recording save. Use normal `return` if you want recording to happen. However, `success!` still runs `after` callbacks and `around` post-yield code; `error!` skips both.
+7. **`error!` skips recording; `success!` records normally** — `error!` halts before recording save (transaction rolls back). `success!` records the result just like a normal return. `success!` also runs `after` callbacks and `around` post-yield code; `error!` skips both.
 
 8. **Nested operations share transaction** — If outer operation calls inner operation, both share the transaction. Outer rollback rolls back inner changes.
 

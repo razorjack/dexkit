@@ -267,6 +267,23 @@ class TestOperationRecording < Minitest::Test
     end
   end
 
+  def test_success_bang_records
+    with_recording do
+      op = define_operation(:TestSuccessBangRecords) do
+        params { attribute :name, Types::String }
+        def perform
+          success!("early result")
+        end
+      end
+
+      result = op.new(name: "Test").call
+
+      assert_equal "early result", result
+      assert_equal 1, OperationRecord.count
+      assert_equal({ "value" => "early result" }, OperationRecord.last.response)
+    end
+  end
+
   def test_record_response_false_skips_response
     with_recording do
       op = define_operation(:TestRecordResponseFalse) do
