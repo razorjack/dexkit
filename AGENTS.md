@@ -18,7 +18,7 @@ lib/
   dex/
     version.rb           # Version constant
     parameters.rb        # Dex::Parameters (Dry::Struct subclass)
-    types.rb             # Dex::Types::Extension (adds Record() type)
+    types.rb             # Dex::Types::Extension (adds Ref() type)
     operation.rb         # All operation logic and wrapper modules
 
 test/
@@ -170,13 +170,13 @@ bundle exec rubocop -c .rubocop-md.yml
 
 ### Implemented Features
 
-- ✅ Success type declaration via `success Type` — documents return type, drives recording serialization (e.g., `Types::Record(Model)` → stores ID)
+- ✅ Success type declaration via `success Type` — documents return type, drives recording serialization (e.g., `Types::Ref(Model)` → stores ID)
 - ✅ Error code declarations via `error :codes` — documents valid error codes; undeclared codes in `error!` raise `ArgumentError`
 - ✅ Flow control via `error!` and `success!` — both use `throw`/`catch` for immediate halt; `error!` rolls back transaction, `success!` commits
 - ✅ Monad-like result objects (`Ok`/`Err`) via `.safe` modifier
 - ✅ Pattern matching support for errors and outcomes
 - ✅ Operation response recording to database with granular control (`record params: false, response: false`)
-- ✅ `Types::Record(Model)` - parameterized type for model instances with ID coercion and serialization
+- ✅ `Types::Ref(Model)` - parameterized type for model instances with ID coercion and serialization
 - ✅ Lifecycle callbacks (`before`, `after`, `around`) with symbol, lambda, and block support
 - ✅ Exception mapping via `rescue_from` — converts third-party exceptions to `Dex::Error` with inheritance support
 - ✅ `.call` as public entry point, `perform` is private (user-implemented); double-prepend guard for multi-level inheritance

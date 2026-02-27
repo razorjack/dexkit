@@ -197,7 +197,7 @@ class TestOperationAsync < Minitest::Test
     model = TestModel.create!(name: "Alice")
 
     define_operation(:TestRecordOp) do
-      params { attribute :model, Types::Record(TestModel) }
+      params { attribute :model, Types::Ref(TestModel) }
       def perform = model
     end
 
@@ -213,7 +213,7 @@ class TestOperationAsync < Minitest::Test
 
     define_operation(:TestSerializeOp) do
       params do
-        attribute :model, Types::Record(TestModel)
+        attribute :model, Types::Ref(TestModel)
         attribute :due, Types::Nominal::Date
       end
       def perform = nil

@@ -75,7 +75,7 @@ class SendWelcomeEmail < Dex::Operation
 end
 ```
 
-Typed params (`Date`, `Time`, `BigDecimal`, `Symbol`, `Record`) automatically survive the JSON round-trip — no need to switch types. Direct calls remain strict. Non-serializable params raise `ArgumentError` at enqueue time.
+Typed params (`Date`, `Time`, `BigDecimal`, `Symbol`, `Ref`) automatically survive the JSON round-trip — no need to switch types. Direct calls remain strict. Non-serializable params raise `ArgumentError` at enqueue time.
 
 ### Operation Contract
 
@@ -88,7 +88,7 @@ class CreateUser < Dex::Operation
     attribute :name, Types::String
   end
 
-  success Types::Record(User)   # what the operation returns on success
+  success Types::Ref(User)   # what the operation returns on success
   error :email_taken,           # which error codes error!() may raise
         :invalid_email
 
@@ -421,14 +421,14 @@ module Types
 end
 ```
 
-### Record Types
+### Ref Types
 
-`Types::Record(ModelClass)` accepts model instances or IDs, automatically finding records from the database. Perfect for working with ActiveRecord or Mongoid models in operations.
+`Types::Ref(ModelClass)` accepts model instances or IDs, automatically finding records from the database. Perfect for working with ActiveRecord or Mongoid models in operations.
 
 ```ruby
 class SendEmail < Dex::Operation
   params do
-    attribute :user, Types::Record(User)
+    attribute :user, Types::Ref(User)
   end
 
   def perform
@@ -442,11 +442,11 @@ SendEmail.new(user: User.find(123)).call
 SendEmail.new(user: 123).call
 ```
 
-Declare `success Types::Record(Model)` to record just the model ID in the response column (instead of the full serialized object):
+Declare `success Types::Ref(Model)` to record just the model ID in the response column (instead of the full serialized object):
 
 ```ruby
 class FindUser < Dex::Operation
-  success Types::Record(User)
+  success Types::Ref(User)
 
   def perform
     user = User.find_by(id: user_id)
@@ -459,13 +459,13 @@ result = FindUser.new(user_id: 123).call
 result.name  # => "John Doe" (actual User instance)
 ```
 
-Optional records:
+Optional refs:
 
 ```ruby
 class UpdateProfile < Dex::Operation
   params do
-    attribute :user, Types::Record(User)
-    attribute :avatar, Types::Record(Avatar).optional
+    attribute :user, Types::Ref(User)
+    attribute :avatar, Types::Ref(Avatar).optional
   end
 end
 
@@ -477,7 +477,7 @@ Lock records on fetch with `lock: true` (uses `SELECT ... FOR UPDATE`):
 ```ruby
 class TransferFunds < Dex::Operation
   params do
-    attribute :account, Types::Record(Account, lock: true)
+    attribute :account, Types::Ref(Account, lock: true)
   end
 
   def perform
@@ -488,7 +488,7 @@ end
 TransferFunds.new(account: 42).call  # Account.lock.find(42)
 ```
 
-When recording to database, Record types serialize as IDs (not full objects):
+When recording to database, Ref types serialize as IDs (not full objects):
 
 ```ruby
 # params.as_json => {"user" => 123, "avatar" => 456}

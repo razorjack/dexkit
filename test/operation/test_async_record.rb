@@ -147,7 +147,7 @@ class TestOperationAsyncRecord < Minitest::Test
       model = TestModel.create!(name: "Alice")
 
       op_class = define_operation(:TestRecordJobRecordType) do
-        params { attribute :model, Types::Record(TestModel) }
+        params { attribute :model, Types::Ref(TestModel) }
         def perform = model
       end
 

@@ -2,7 +2,7 @@
 
 require "test_helper"
 
-class TestTypesRecord < Minitest::Test
+class TestTypesRef < Minitest::Test
   def setup
     setup_test_database
   end
@@ -11,7 +11,7 @@ class TestTypesRecord < Minitest::Test
 
   def test_accepts_model_instance_directly
     model = TestModel.create!(name: "Test")
-    type = Types::Record(TestModel)
+    type = Types::Ref(TestModel)
     result = type[model]
 
     assert_equal model, result
@@ -20,7 +20,7 @@ class TestTypesRecord < Minitest::Test
 
   def test_coerces_integer_id_to_record
     model = TestModel.create!(name: "Test")
-    type = Types::Record(TestModel)
+    type = Types::Ref(TestModel)
     result = type[model.id]
 
     assert_equal model.id, result.id
@@ -30,7 +30,7 @@ class TestTypesRecord < Minitest::Test
 
   def test_coerces_string_id_to_record
     model = TestModel.create!(name: "Test")
-    type = Types::Record(TestModel)
+    type = Types::Ref(TestModel)
     result = type[model.id.to_s]
 
     assert_equal model.id, result.id
@@ -39,7 +39,7 @@ class TestTypesRecord < Minitest::Test
   end
 
   def test_raises_on_record_not_found
-    type = Types::Record(TestModel)
+    type = Types::Ref(TestModel)
 
     assert_raises(ActiveRecord::RecordNotFound) do
       type[99_999]
@@ -52,7 +52,7 @@ class TestTypesRecord < Minitest::Test
     model = TestModel.create!(name: "Test")
 
     params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Record(TestModel)
+      attribute :model, Types::Ref(TestModel)
     end
 
     params = params_class.new(model: model)
@@ -64,7 +64,7 @@ class TestTypesRecord < Minitest::Test
     model = TestModel.create!(name: "OriginalName")
 
     params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Record(TestModel)
+      attribute :model, Types::Ref(TestModel)
     end
 
     params = params_class.new(model: model)
@@ -81,7 +81,7 @@ class TestTypesRecord < Minitest::Test
     model = TestModel.create!(name: "Test")
 
     params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Record(TestModel)
+      attribute :model, Types::Ref(TestModel)
     end
 
     params = params_class.new(model: model)
@@ -97,7 +97,7 @@ class TestTypesRecord < Minitest::Test
     model = TestModel.create!(name: "Test")
 
     params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Record(TestModel)
+      attribute :model, Types::Ref(TestModel)
     end
 
     params = params_class.new(model: model)
@@ -109,7 +109,7 @@ class TestTypesRecord < Minitest::Test
     model = TestModel.create!(name: "Test")
 
     params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Record(TestModel)
+      attribute :model, Types::Ref(TestModel)
       attribute :name, Types::String
       attribute :count, Types::Integer
     end
@@ -127,9 +127,9 @@ class TestTypesRecord < Minitest::Test
   def test_works_in_params_block
     model = TestModel.create!(name: "Test")
 
-    op = define_operation(:TestRecordInParams) do
+    op = define_operation(:TestRefInParams) do
       params do
-        attribute :model, Types::Record(TestModel)
+        attribute :model, Types::Ref(TestModel)
       end
 
       def perform
@@ -141,11 +141,11 @@ class TestTypesRecord < Minitest::Test
     assert result
   end
 
-  def test_success_type_with_record
+  def test_success_type_with_ref
     model = TestModel.create!(name: "Test")
 
-    op = define_operation(:TestRecordSuccessType) do
-      success Types::Record(TestModel)
+    op = define_operation(:TestRefSuccessType) do
+      success Types::Ref(TestModel)
 
       define_method(:perform) { model }
     end
@@ -159,12 +159,12 @@ class TestTypesRecord < Minitest::Test
     model = TestModel.create!(name: "Test")
 
     with_recording do
-      op = define_operation(:TestRecordRecording) do
+      op = define_operation(:TestRefRecording) do
         params do
-          attribute :model, Types::Record(TestModel)
+          attribute :model, Types::Ref(TestModel)
         end
 
-        success Types::Record(TestModel)
+        success Types::Ref(TestModel)
 
         define_method(:perform) { params.model }
       end
@@ -186,7 +186,7 @@ class TestTypesRecord < Minitest::Test
     locked_scope.expect(:find, model, [model.id])
 
     TestModel.stub(:lock, locked_scope) do
-      type = Types::Record(TestModel, lock: true)
+      type = Types::Ref(TestModel, lock: true)
       result = type[model.id]
 
       assert_equal model, result
@@ -196,14 +196,14 @@ class TestTypesRecord < Minitest::Test
 
   def test_lock_option_skips_lock_for_instance
     model = TestModel.create!(name: "Test")
-    type = Types::Record(TestModel, lock: true)
+    type = Types::Ref(TestModel, lock: true)
     result = type[model]
 
     assert_equal model, result
   end
 
   def test_lock_option_skips_lock_for_nil
-    type = Types::Record(TestModel, lock: true)
+    type = Types::Ref(TestModel, lock: true)
     result = type[nil]
 
     assert_nil result
@@ -211,7 +211,7 @@ class TestTypesRecord < Minitest::Test
 
   def test_lock_false_by_default
     model = TestModel.create!(name: "Test")
-    type = Types::Record(TestModel)
+    type = Types::Ref(TestModel)
 
     # Should use model_class.find directly, not lock
     TestModel.stub(:find, model) do
@@ -224,7 +224,7 @@ class TestTypesRecord < Minitest::Test
 
   def test_optional_works_with_nil
     params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Record(TestModel).optional
+      attribute :model, Types::Ref(TestModel).optional
     end
 
     params = params_class.new(model: nil)
@@ -235,7 +235,7 @@ class TestTypesRecord < Minitest::Test
     model = TestModel.create!(name: "Test")
 
     params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Record(TestModel).optional
+      attribute :model, Types::Ref(TestModel).optional
     end
 
     params = params_class.new(model: model)
@@ -247,7 +247,7 @@ class TestTypesRecord < Minitest::Test
     model = TestModel.create!(name: "Test")
 
     params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Record(TestModel).optional
+      attribute :model, Types::Ref(TestModel).optional
     end
 
     params = params_class.new(model: model.id)
@@ -257,7 +257,7 @@ class TestTypesRecord < Minitest::Test
 
   def test_optional_serializes_nil_correctly
     params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Record(TestModel).optional
+      attribute :model, Types::Ref(TestModel).optional
     end
 
     params = params_class.new(model: nil)

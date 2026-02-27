@@ -11,7 +11,7 @@ class Dex::Parameters < Dry::Struct
     result = {}
     self.class.schema.each do |key|
       value = attributes[key.name]
-      record_class = self.class._dex_extract_record_class_from_type(key.type)
+      record_class = self.class._dex_extract_ref_class_from_type(key.type)
 
       result[key.name.to_s] = if record_class && value
         value.id
@@ -33,15 +33,15 @@ class Dex::Parameters < Dry::Struct
       result
     end
 
-    def _dex_extract_record_class_from_type(type)
-      return type.meta[:dex_record_class] if type.meta[:dex_record_class]
+    def _dex_extract_ref_class_from_type(type)
+      return type.meta[:dex_ref_class] if type.meta[:dex_ref_class]
 
       if type.respond_to?(:right)
-        rc = type.right.meta[:dex_record_class]
+        rc = type.right.meta[:dex_ref_class]
         return rc if rc
       end
       if type.respond_to?(:left)
-        rc = type.left.meta[:dex_record_class]
+        rc = type.left.meta[:dex_ref_class]
         return rc if rc
       end
 
@@ -52,7 +52,7 @@ class Dex::Parameters < Dry::Struct
 
     def _dex_coerce_value(type, value)
       return value unless value # nil/false pass through (VM-level check, no method call)
-      return value if _dex_extract_record_class_from_type(type)
+      return value if _dex_extract_ref_class_from_type(type)
 
       if type.respond_to?(:member)
         return value.map { |v| _dex_coerce_value(type.member, v) } if value.is_a?(Array)
@@ -83,7 +83,7 @@ class Dex::Parameters < Dry::Struct
 
   private
 
-  def _dex_extract_record_class(type)
-    self.class._dex_extract_record_class_from_type(type)
+  def _dex_extract_ref_class(type)
+    self.class._dex_extract_ref_class_from_type(type)
   end
 end

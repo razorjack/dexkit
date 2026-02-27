@@ -118,7 +118,7 @@ module Dex
     def _record_serialize_typed_result(result, type)
       return nil if result.nil?
 
-      record_class = Dex::Parameters._dex_extract_record_class_from_type(type)
+      record_class = Dex::Parameters._dex_extract_ref_class_from_type(type)
       if record_class && result.respond_to?(:id)
         result.id
       else

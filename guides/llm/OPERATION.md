@@ -15,7 +15,7 @@ class CreateUser < Dex::Operation
     attribute :name, Types::String
   end
 
-  success Types::Record(User)  # optional: declare success type
+  success Types::Ref(User)  # optional: declare success type
   error :email_taken           # optional: declare error codes
 
   def perform
@@ -42,7 +42,7 @@ class MyOperation < Dex::Operation
     attribute :name, Types::String
     attribute :count, Types::Integer.default(1)
     attribute :optional_field, Types::String.optional
-    attribute :user, Types::Record(User)  # See Types::Record section
+    attribute :user, Types::Ref(User)  # See Types::Ref section
   end
 
   def perform
@@ -80,11 +80,11 @@ Declare what an operation returns and which errors it can raise. Both are **opti
 
 ### `success(type)`
 
-Declares the Dry::Type of the value returned by `perform` on success. Used for documentation and affects response serialization in recording (e.g., `Types::Record(Model)` → records ID only).
+Declares the Dry::Type of the value returned by `perform` on success. Used for documentation and affects response serialization in recording (e.g., `Types::Ref(Model)` → records ID only).
 
 ```ruby
 class FindUser < Dex::Operation
-  success Types::Record(User)
+  success Types::Ref(User)
 
   def perform
     User.find(user_id)  # Return value passes through as-is
@@ -356,7 +356,7 @@ SendEmailOp.new(...).async(queue: "urgent").call  # Overrides to "urgent"
 | `DateTime` | `"2025-06-15T10:30:00+00:00"` | `DateTime.parse` |
 | `BigDecimal` | `"99.99"` | `BigDecimal()` |
 | `Symbol` | `"active"` | `String#to_sym` |
-| `Record(Model)` | `123` (ID) | `Model.find(id)` |
+| `Ref(Model)` | `123` (ID) | `Model.find(id)` |
 
 Works with `.optional` and `Array.of(...)` types. Direct (non-async) calls remain strict — no implicit coercion.
 
@@ -615,7 +615,7 @@ end
 - `performed_at` — Execution timestamp (if column exists)
 
 **Response serialization:**
-- With `success Types::Record(Model)` declared → stored as the model's integer ID
+- With `success Types::Ref(Model)` declared → stored as the model's integer ID
 - With `success SomeType` declared → calls `.as_json` on result if available
 - Hash without `success` declaration → stored as-is
 - Primitive (Integer, String) without `success` → wrapped as `{ value: result }`
@@ -670,7 +670,7 @@ end
 
 ---
 
-## Types::Record(Model)
+## Types::Ref(Model)
 
 Parameterized type for ActiveRecord/Mongoid model instances. Accepts instances or IDs, automatically coerces IDs to records.
 
@@ -678,7 +678,7 @@ Parameterized type for ActiveRecord/Mongoid model instances. Accepts instances o
 ```ruby
 module Types
   include Dry.Types(default: :nominal)
-  extend Dex::Types::Extension  # Adds Record() constructor
+  extend Dex::Types::Extension  # Adds Ref() constructor
 end
 ```
 
@@ -686,11 +686,11 @@ end
 ```ruby
 class SendEmail < Dex::Operation
   params do
-    attribute :user, Types::Record(User)
-    attribute :avatar, Types::Record(Avatar).optional
+    attribute :user, Types::Ref(User)
+    attribute :avatar, Types::Ref(Avatar).optional
   end
 
-  success Types::Record(User)  # When recording: stores user.id instead of full object
+  success Types::Ref(User)  # When recording: stores user.id instead of full object
 
   def perform
     # user is a User instance (coerced from ID if passed as ID)
@@ -710,7 +710,7 @@ SendEmail.new(user: user_instance, avatar: nil).call  # Optional
 
 ```ruby
 params do
-  attribute :user, Types::Record(User, lock: true)
+  attribute :user, Types::Ref(User, lock: true)
 end
 ```
 
@@ -722,16 +722,16 @@ When an ID is passed, uses `Model.lock.find(id)`. When an instance is passed dir
 - Integer or String → calls `Model.find(id)` (or `Model.lock.find(id)` with `lock: true`)
 - Not found → raises `ActiveRecord::RecordNotFound`
 
-**Serialization:** In `as_json` (used by recording), Record types serialize as the model's ID, not the full object.
+**Serialization:** In `as_json` (used by recording), Ref types serialize as the model's ID, not the full object.
 
 ```ruby
 params.as_json  # => {"user" => 123}  (not full User object)
 ```
 
 **Key facts:**
-- Works in `params` blocks; use `success Types::Record(Model)` for return type
+- Works in `params` blocks; use `success Types::Ref(Model)` for return type
 - Supports `.optional` for nullable fields
-- With `success Types::Record(Model)`, recording stores the model ID (not full object)
+- With `success Types::Ref(Model)`, recording stores the model ID (not full object)
 - All model methods work directly on coerced value
 
 ---
@@ -742,7 +742,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 |--------|---------|---------|
 | `.call(**kwargs)` | Create instance and call synchronously (shorthand for `new(**kwargs).call`) | `MyOp.call(name: "Alice")` |
 | `params(delegate: true) { ... }` | Define typed input parameters; delegates attrs as methods by default | `params do attribute :name, Types::String end` |
-| `success(type)` | Declare success return type (documentation + recording serialization) | `success Types::Record(User)` |
+| `success(type)` | Declare success return type (documentation + recording serialization) | `success Types::Ref(User)` |
 | `error(*codes)` | Declare valid error codes; undeclared codes raise ArgumentError in `error!` | `error :not_found, :invalid` |
 | `before(sym_or_callable = nil, &block)` | Register before callback | `before :validate` / `before { error!(:x) }` |
 | `after(sym_or_callable = nil, &block)` | Register after callback | `after :notify` / `after -> { log }` |
@@ -828,7 +828,7 @@ class CreateOrder < Dex::Operation
   transaction true  # Explicit (default anyway)
 
   params do
-    attribute :user, Types::Record(User)
+    attribute :user, Types::Ref(User)
     attribute :items, Types::Array.of(Types::Hash)
     attribute :total, Types::Coercible::Decimal
   end
