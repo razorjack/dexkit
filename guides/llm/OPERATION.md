@@ -146,6 +146,20 @@ def perform
 end
 ```
 
+### `assert!(code, &block)` / `assert!(value, code)`
+
+Guard against nil/false. Returns the value if truthy; calls `error!(code)` otherwise (rolls back transaction, raises `Dex::Error`).
+
+```ruby
+# Block form: error code first, block produces the value
+user = assert!(:not_found) { User.find_by(id: user_id) }
+
+# Value form: value first, error code second
+assert!(user, :not_found)
+```
+
+Both forms respect declared error codes — undeclared code raises `ArgumentError` (same as `error!`). Works with `.safe` modifier.
+
 **Dex::Error structure:**
 - `code` — Symbol identifying error type
 - `message` — String description (defaults to code.to_s)
@@ -166,12 +180,13 @@ end
 ```
 
 **Key facts:**
-- Both halt immediately, stopping execution (non-local exit via `throw`/`catch`)
-- `error!` triggers transaction rollback; `success!` commits
-- `error!` skips `after` callbacks and `around` post-yield; `success!` runs both
-- Both skip operation recording
-- Both work from `before` callbacks and helper methods
-- When `error :codes` is declared, `error!` validates the code — undeclared code raises `ArgumentError`
+- All three halt immediately, stopping execution (non-local exit via `throw`/`catch`)
+- `error!` and `assert!` trigger transaction rollback; `success!` commits
+- `error!` and `assert!` skip `after` callbacks and `around` post-yield; `success!` runs both
+- All skip operation recording
+- All work from `before` callbacks and helper methods
+- When `error :codes` is declared, `error!` and `assert!` validate the code — undeclared code raises `ArgumentError`
+- `assert!` returns the value on success — use the return value to assign in one step
 
 ---
 
@@ -751,6 +766,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 | `perform` | Result | Implement this — private, called by `call` |
 | `error!(code, msg, details:)` | (halts) | Halt with failure — rolls back transaction, raises Dex::Error to caller |
 | `success!(value, **attrs)` | (halts) | Halt with success — commits transaction, returns value |
+| `assert!(code, &block)` / `assert!(value, code)` | value or (halts) | Guard against nil/false — returns value if truthy, calls `error!(code)` otherwise |
 | `safe` | SafeProxy | Returns proxy for Ok/Err execution via `.safe.call` |
 | `async(**opts)` | AsyncProxy | Returns proxy for background execution via `.async.call` |
 

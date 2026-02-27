@@ -140,6 +140,16 @@ success!(name: "John", age: 30)      # keyword args (becomes Hash)
 success!                              # returns nil
 ```
 
+**`assert!(code, &block)` / `assert!(value, code)`** — Guard against nil/false. Returns value if truthy, otherwise calls `error!(code)`. Rolls back transaction on failure.
+
+```ruby
+# Block form: evaluate + guard in one statement
+user = assert!(:not_found) { User.find_by(id: user_id) }
+
+# Value form: guard an already-evaluated value
+assert!(user, :not_found)
+```
+
 ### Rescue Mapping
 
 Map third-party exceptions to structured `Dex::Error` codes declaratively, eliminating boilerplate `begin/rescue/error!` blocks.

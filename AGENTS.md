@@ -183,6 +183,7 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ Parameter delegation — params accessible directly in `perform` (e.g., `name` instead of `params.name`), configurable via `delegate:` option
 - ✅ Record-based async strategy — when recording is enabled, async jobs store only a record ID in Redis instead of the full params payload; status tracking (`pending` → `running` → `done`/`failed`) with error field
 - ✅ Advisory locking via `advisory_lock` DSL — wraps operation in database advisory lock (outside transaction boundary); supports static keys, dynamic blocks, symbol methods, timeout; uses `with_advisory_lock` gem as optional runtime dependency
+- ✅ `assert!` guard — inline nil/false guard: block form `assert!(:code) { expr }` returns value or errors; value form `assert!(value, :code)`; respects declared error codes; rolls back transaction on failure
 
 ### Future plans
 
