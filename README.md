@@ -102,7 +102,7 @@ user = CreateUser.call(email: "user@example.com", name: "John")
 user.name  # => "John" (actual User instance)
 ```
 
-When `error :codes` is declared, calling `error!` with an undeclared code raises `ArgumentError` immediately — a programming mistake, caught at runtime.
+When `success Type` is declared, the return value of `perform` is validated at runtime — returning a mismatched type raises `ArgumentError` immediately (nil is always allowed). When `error :codes` is declared, calling `error!` with an undeclared code raises `ArgumentError` immediately — a programming mistake, caught at runtime.
 
 Use `.contract` to introspect an operation's declared interface:
 

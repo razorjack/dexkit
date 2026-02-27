@@ -80,17 +80,24 @@ Declare what an operation returns and which errors it can raise. Both are **opti
 
 ### `success(type)`
 
-Declares the Dry::Type of the value returned by `perform` on success. Used for documentation and affects response serialization in recording (e.g., `Types::Ref(Model)` → records ID only).
+Declares the Dry::Type of the value returned by `perform` on success. **Validates the actual return value at runtime** — raises `ArgumentError` if `perform` returns a mismatched type. Also affects response serialization in recording (e.g., `Types::Ref(Model)` → records ID only).
 
 ```ruby
 class FindUser < Dex::Operation
   success Types::Ref(User)
 
   def perform
-    User.find(user_id)  # Return value passes through as-is
+    User.find(user_id)  # Must return a User instance or nil
   end
 end
 ```
+
+**Validation behavior:**
+- `nil` return is always allowed (many operations return nil implicitly)
+- `Types::Ref(Model)` — checks `value.is_a?(ModelClass)`
+- Primitive types (String, Integer, Array, Hash, etc.) — checks `value.is_a?(primitive)`
+- Sum/optional types and `Object` primitive — skipped (too broad to validate)
+- Raises `ArgumentError` — same severity as undeclared `error!` codes
 
 Accessible as `MyOp._success_type`. Inherits from parent class.
 
@@ -811,7 +818,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 2. **Safe only catches `Dex::Error`** — Other exceptions (RuntimeError, ActiveRecord errors) propagate through `.safe.call` without wrapping.
 
-3. **`success` and `error` are declarative only** — `success(type)` documents the return type and affects recording serialization. `error(*codes)` documents valid error codes and guards against typos in `error!` calls. Neither affects the actual return value of `perform`.
+3. **`success` validates at runtime; `error` guards typos** — `success(type)` documents the return type, validates the actual return value (raises `ArgumentError` on mismatch, nil is allowed), and affects recording serialization. `error(*codes)` documents valid error codes and guards against typos in `error!` calls.
 
 4. **Ok delegates to value** — `ok.user_id` works if `ok.value` responds to `user_id`. No need to unwrap explicitly.
 

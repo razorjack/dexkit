@@ -130,4 +130,44 @@ class TestOperationResult < Minitest::Test
     result = op.new.call
     assert_equal({ id: 1, name: "Test" }, result)
   end
+
+  # success type runtime validation
+
+  def test_success_type_validates_correct_type
+    op = operation(success: Types::String) { "hello" }
+    assert_equal "hello", op.new.call
+  end
+
+  def test_success_type_rejects_wrong_type
+    op = operation(success: Types::String) { 123 }
+    assert_raises(ArgumentError) { op.new.call }
+  end
+
+  def test_success_type_skips_nil_return
+    op = operation(success: Types::String) { nil }
+    assert_nil op.new.call
+  end
+
+  def test_success_type_validates_ref_type
+    model = TestModel.create!(name: "test")
+    op = operation(success: Types::Ref(TestModel)) { model }
+    assert_equal model, op.new.call
+  end
+
+  def test_success_type_rejects_wrong_ref_type
+    op = operation(success: Types::Ref(TestModel)) { { id: 1 } }
+    assert_raises(ArgumentError) { op.new.call }
+  end
+
+  def test_success_type_no_declaration_skips_validation
+    op = operation { 42 }
+    assert_equal 42, op.new.call
+  end
+
+  def test_success_type_validates_success_bang
+    op = operation(success: Types::String) do
+      success!(123)
+    end
+    assert_raises(ArgumentError) { op.new.call }
+  end
 end

@@ -334,11 +334,13 @@ module Dex
       halted = catch(:_dex_halt) { super }
       if halted.is_a?(Operation::Halt)
         if halted.success?
+          _result_validate_success_type!(halted.value)
           halted.value
         else
           raise Dex::Error.new(halted.error_code, halted.error_message, details: halted.error_details)
         end
       else
+        _result_validate_success_type!(halted)
         halted
       end
     end
@@ -366,6 +368,30 @@ module Dex
 
       error!(code) unless value
       value
+    end
+
+    private
+
+    def _result_validate_success_type!(value)
+      return if value.nil?
+
+      success_type = self.class._success_type
+      return unless success_type
+
+      ref_class = Dex::Parameters._dex_extract_ref_class_from_type(success_type)
+      if ref_class
+        return if value.is_a?(ref_class)
+
+        raise ArgumentError,
+          "#{self.class.name || "Operation"} declared `success Types::Ref(#{ref_class})` but returned #{value.class}"
+      end
+
+      prim = success_type.primitive
+      return if prim == Object
+      return if value.is_a?(prim)
+
+      raise ArgumentError,
+        "#{self.class.name || "Operation"} declared `success #{success_type}` but returned #{value.class}"
     end
   end
 
