@@ -103,15 +103,31 @@ result.class    # => MyOperation::Result (Dry::Struct)
 
 ---
 
-## Error Handling
+## Flow Control (`error!` / `success!`)
 
-Signal failures with `error!(code, message = nil, details: nil)`. Raises a `Dex::Error` with structured error data.
+Both methods halt execution immediately — code after them is never reached. They work from `perform` and any methods called from it (non-local exit).
+
+### `error!(code, message = nil, details: nil)`
+
+Halt with failure. Rolls back the transaction. Raises `Dex::Error` to the caller.
 
 ```ruby
 def perform
   error!(:not_found, "User not found")
   error!(:validation_failed, "Invalid input", details: { field: "email" })
   error!(:unauthorized)  # message defaults to "unauthorized"
+end
+```
+
+### `success!(value = nil, **attrs)`
+
+Halt with success. Commits the transaction. Returns the value (wrapped by result schema if defined).
+
+```ruby
+def perform
+  success!(42)                        # positional value
+  success!(name: "John", age: 30)    # keyword args → Hash, wrapped by result schema if present
+  success!                            # returns nil
 end
 ```
 
@@ -135,9 +151,12 @@ end
 ```
 
 **Key facts:**
-- `error!` raises immediately, stopping execution
-- Triggers transaction rollback (transactions enabled by default)
-- Prevents operation recording (see Recording section)
+- Both halt immediately, stopping execution (non-local exit via `throw`/`catch`)
+- `error!` triggers transaction rollback; `success!` commits
+- `error!` skips `after` callbacks and `around` post-yield; `success!` runs both
+- Both skip operation recording
+- Both work from `before` callbacks and helper methods
+- `success!` with kwargs and a result schema wraps the value into the typed Result struct
 
 ---
 
@@ -404,7 +423,7 @@ end
 
 **Key behaviors:**
 - `before` calling `error!` stops execution — `perform` and `after` never run
-- `after` is skipped if `perform` raises any exception
+- `after` is skipped if `perform` raises or calls `error!`; runs on normal return and `success!`
 - `around` with a symbol: the method receives a block, call `yield` to proceed
 - `around` with a proc/lambda: receives continuation as first argument, call `cont.call` to proceed
 - If `around` callback doesn't yield/call continuation, `perform` never runs (circuit breaker pattern)
@@ -715,7 +734,8 @@ params.as_json  # => {"user" => 123}  (not full User object)
 | `params` | Typed params object | Access input parameters (also available as direct methods by default) |
 | `call` | Result | Public entry point — invokes `perform` through the wrapper chain |
 | `perform` | Result | Implement this — private, called by `call` |
-| `error!(code, msg, details:)` | (raises) | Signal failure, raise Dex::Error |
+| `error!(code, msg, details:)` | (halts) | Halt with failure — rolls back transaction, raises Dex::Error to caller |
+| `success!(value, **attrs)` | (halts) | Halt with success — commits transaction, returns value |
 | `safe` | SafeProxy | Returns proxy for Ok/Err execution via `.safe.call` |
 | `async(**opts)` | AsyncProxy | Returns proxy for background execution via `.async.call` |
 
@@ -735,7 +755,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 6. **Recording happens inside transaction** — When both are enabled, the operation record is rolled back if `perform` raises.
 
-7. **`error!` prevents recording** — Since `error!` raises before recording save, failed operations are never recorded.
+7. **`error!` and `success!` skip recording** — Both halt before recording save. Use normal `return` if you want recording to happen. However, `success!` still runs `after` callbacks and `around` post-yield code; `error!` skips both.
 
 8. **Nested operations share transaction** — If outer operation calls inner operation, both share the transaction. Outer rollback rolls back inner changes.
 

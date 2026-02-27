@@ -103,9 +103,9 @@ result.user_id  # => 1
 result.status   # => "created"
 ```
 
-### Error Handling
+### Flow Control
 
-Signal failures explicitly with `error!`. Automatically triggers transaction rollback.
+`error!` and `success!` provide early return from `perform` (and any methods it calls). Both halt execution immediately — code after them is never reached.
 
 ```ruby
 class ProcessPayment < Dex::Operation
@@ -114,22 +114,29 @@ class ProcessPayment < Dex::Operation
   end
 
   def perform
-    if amount < 0
-      error!(:invalid_amount, "Amount must be positive")
-    end
+    error!(:invalid_amount, "Amount must be positive") if amount < 0
 
-    # Process payment...
+    charge = Gateway.charge(amount)
+    success!(charge_id: charge.id)
+
+    # Never reached
   end
 end
-
-ProcessPayment.new(amount: -100).call
-# raises Dex::Error with code: :invalid_amount
 ```
 
-Add details to errors:
+**`error!(code, message = nil, details: nil)`** — Halt with failure. Rolls back the transaction. Raises `Dex::Error` to the caller.
 
 ```ruby
+error!(:not_found, "User not found")
 error!(:validation_failed, "Invalid data", details: {field: "email", issue: "format"})
+```
+
+**`success!(value = nil, **attrs)`** — Halt with success. Commits the transaction. Returns the value (wrapped by result schema if defined).
+
+```ruby
+success!(42)                          # positional value
+success!(name: "John", age: 30)      # keyword args (becomes Hash)
+success!                              # returns nil
 ```
 
 ### Rescue Mapping
@@ -291,7 +298,7 @@ end
 
 **Behavior:**
 - `before` callbacks run in order before `perform`. Calling `error!` stops execution.
-- `after` callbacks run in order after `perform` succeeds. Skipped if `perform` raises.
+- `after` callbacks run in order after `perform` succeeds or calls `success!`. Skipped if `perform` raises or calls `error!`.
 - `around` wraps the entire before/perform/after sequence. If the callback doesn't yield/call the continuation, `perform` is never invoked.
 - Callbacks inherit from parent classes (parent runs first).
 - Blocks and lambdas execute via `instance_exec`, giving access to `params`, `error!`, etc.

@@ -120,11 +120,22 @@ module Dex
     end
 
     def perform(*, **)
-      if _transaction_enabled?
-        _transaction_execute { super }
-      else
-        super
+      return super unless _transaction_enabled?
+
+      halted = nil
+      result = _transaction_execute do
+        halted_value = catch(:_dex_halt) { super }
+        if halted_value.is_a?(Operation::Halt)
+          halted = halted_value
+          raise ActiveRecord::Rollback if halted.error?
+          halted.value
+        else
+          halted_value
+        end
       end
+
+      throw(:_dex_halt, halted) if halted
+      result
     end
 
     module ClassMethods
@@ -290,12 +301,25 @@ module Dex
     end
 
     def perform(*, **)
-      raw_result = super
-      _result_wrap(raw_result)
+      halted = catch(:_dex_halt) { super }
+      if halted.is_a?(Operation::Halt)
+        if halted.success?
+          _result_wrap(halted.value)
+        else
+          raise Dex::Error.new(halted.error_code, halted.error_message, details: halted.error_details)
+        end
+      else
+        _result_wrap(halted)
+      end
     end
 
     def error!(code, message = nil, details: nil)
-      raise Dex::Error.new(code, message, details: details)
+      throw(:_dex_halt, Operation::Halt.new(type: :error, error_code: code, error_message: message,
+        error_details: details))
+    end
+
+    def success!(value = nil, **attrs)
+      throw(:_dex_halt, Operation::Halt.new(type: :success, value: attrs.empty? ? value : attrs))
     end
 
     private
@@ -465,12 +489,25 @@ module Dex
       return super if @_callback_active
 
       @_callback_active = true
-      _callback_run_around(self.class._callback_list(:around)) do
+      halted = nil
+      result = _callback_run_around(self.class._callback_list(:around)) do
         _callback_run_before
-        result = super
-        _callback_run_after
-        result
+        caught = catch(:_dex_halt) { super }
+        if caught.is_a?(Operation::Halt)
+          if caught.success?
+            halted = caught
+            _callback_run_after
+            caught.value
+          else
+            throw(:_dex_halt, caught)
+          end
+        else
+          _callback_run_after
+          caught
+        end
       end
+      throw(:_dex_halt, halted) if halted
+      result
     ensure
       @_callback_active = false
     end
@@ -509,6 +546,11 @@ module Dex
   end
 
   class Operation
+    Halt = Struct.new(:type, :value, :error_code, :error_message, :error_details, keyword_init: true) do
+      def success? = type == :success
+      def error? = type == :error
+    end
+
     def initialize(*, **)
     end
 

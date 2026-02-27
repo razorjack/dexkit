@@ -171,7 +171,7 @@ bundle exec rubocop -c .rubocop-md.yml
 ### Implemented Features
 
 - ✅ Typed result objects via `result do` block (dry-struct based)
-- ✅ Explicit failure signaling via `error!` method
+- ✅ Flow control via `error!` and `success!` — both use `throw`/`catch` for immediate halt; `error!` rolls back transaction, `success!` commits
 - ✅ Monad-like result objects (`Ok`/`Err`) via `.safe` modifier
 - ✅ Pattern matching support for errors and outcomes
 - ✅ Operation response recording to database with granular control (`record params: false, response: false`)
