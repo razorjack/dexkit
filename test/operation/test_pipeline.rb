@@ -202,6 +202,34 @@ class TestOperationPipeline < Minitest::Test
     assert_equal [:extra], log
   end
 
+  def test_use_with_bad_before_does_not_include_module
+    wrapper = Module.new do
+      def _leaked_wrap(&block) = block.call
+    end
+
+    op = build_operation
+    assert_raises(ArgumentError) do
+      op.use wrapper, as: :leaked, before: :nonexistent
+    end
+
+    refute op.ancestors.include?(wrapper)
+  end
+
+  def test_parent_use_after_child_creation_does_not_affect_child
+    parent = build_operation
+    child = build_operation(parent: parent)
+
+    child_steps_before = child.pipeline.steps.map(&:name)
+
+    wrapper = Module.new do
+      def _late_wrap(&block) = block.call
+    end
+    parent.use wrapper, as: :late
+
+    assert_includes parent.pipeline.steps.map(&:name), :late
+    assert_equal child_steps_before, child.pipeline.steps.map(&:name)
+  end
+
   # --- Pipeline execute ---
 
   def test_pipeline_executes_in_correct_order

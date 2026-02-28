@@ -696,20 +696,20 @@ module Dex
 
     private_class_method :_contract_params
 
+    def self.inherited(subclass)
+      subclass.instance_variable_set(:@_pipeline, pipeline.dup)
+      super
+    end
+
     def self.pipeline
-      @_pipeline ||= if superclass.respond_to?(:pipeline)
-        superclass.pipeline.dup
-      else
-        Pipeline.new
-      end
+      @_pipeline ||= Pipeline.new
     end
 
     def self.use(mod, as: nil, wrap: nil, before: nil, after: nil, at: nil)
-      include mod
-
       step_name = as || _derive_step_name(mod)
       wrap_method = wrap || :"_#{step_name}_wrap"
       pipeline.add(step_name, method: wrap_method, before: before, after: after, at: at)
+      include mod
     end
 
     def self._derive_step_name(mod)
