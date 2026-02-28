@@ -270,10 +270,23 @@ module Dex
 
       private
 
+      RESERVED_PARAM_NAMES = %i[call perform params async safe initialize].to_set.freeze
+
       def _params_define_delegates(schema_class, delegate_option)
-        _params_delegated_names(schema_class, delegate_option).each do |name|
+        names = _params_delegated_names(schema_class, delegate_option)
+        _params_validate_delegate_names!(names)
+        names.each do |name|
           define_method(name) { params.public_send(name) }
         end
+      end
+
+      def _params_validate_delegate_names!(names)
+        conflicts = names.select { |n| RESERVED_PARAM_NAMES.include?(n) }
+        return if conflicts.empty?
+
+        raise ArgumentError,
+          "Parameter(s) #{conflicts.map(&:inspect).join(", ")} conflict with core Operation methods " \
+          "and cannot be delegated. Use `delegate: false` or selectively delegate other params."
       end
 
       def _params_delegated_names(schema_class, delegate_option)

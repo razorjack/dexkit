@@ -72,6 +72,8 @@ params(delegate: :email) { ... }           # delegate only :email
 params(delegate: [:email, :name]) { ... }  # delegate specific list
 ```
 
+**Reserved param names:** `call`, `perform`, `params`, `async`, `safe`, `initialize` cannot be delegated — they conflict with core Operation methods. Declaring a delegated param with a reserved name raises `ArgumentError` at class definition time. Workaround: use `delegate: false` or selectively delegate only non-conflicting params.
+
 ---
 
 ## Operation Contract (`success` / `error`)

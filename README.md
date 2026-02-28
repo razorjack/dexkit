@@ -55,6 +55,8 @@ params(delegate: :email) { ... }             # delegate only :email
 params(delegate: [:email, :name]) { ... }    # delegate specific list
 ```
 
+Names `call`, `perform`, `params`, `async`, `safe`, and `initialize` are reserved and cannot be delegated (raises `ArgumentError`).
+
 ### Async Execution
 
 Requires ActiveJob. Enqueue operations as background jobs.

@@ -87,4 +87,51 @@ class TestOperationDelegate < Minitest::Test
 
     assert_equal "inherited", child.new(name: "inherited").call
   end
+
+  def test_reserved_param_name_raises_on_default_delegation
+    error = assert_raises(ArgumentError) do
+      build_operation do
+        params { attribute :call, Types::String }
+      end
+    end
+
+    assert_includes error.message, ":call"
+    assert_includes error.message, "conflict with core Operation methods"
+    assert_includes error.message, "delegate: false"
+  end
+
+  def test_reserved_param_name_allowed_with_delegate_false
+    op = build_operation do
+      params(delegate: false) { attribute :call, Types::String }
+      def perform = params.call
+    end
+
+    assert_equal "hello", op.new(call: "hello").call
+  end
+
+  def test_reserved_param_name_allowed_with_selective_delegation
+    op = build_operation do
+      params(delegate: [:name]) do
+        attribute :name, Types::String
+        attribute :call, Types::String
+      end
+      def perform = "#{name}-#{params.call}"
+    end
+
+    assert_equal "hi-world", op.new(name: "hi", call: "world").call
+  end
+
+  def test_multiple_reserved_names_listed_in_error
+    error = assert_raises(ArgumentError) do
+      build_operation do
+        params do
+          attribute :call, Types::String
+          attribute :perform, Types::String
+        end
+      end
+    end
+
+    assert_includes error.message, ":call"
+    assert_includes error.message, ":perform"
+  end
 end
