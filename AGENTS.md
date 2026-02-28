@@ -89,24 +89,33 @@ end
 
 ### Wrapper Modules
 
+Modules are registered as named pipeline steps via `use`. `Operation#call` invokes the pipeline, which executes steps in declared order (outermost first). Each step's `_xxx_wrap` method receives a block (continuation) and calls `yield` to proceed.
+
+**Pipeline steps (execution order):**
+
+| Step | Module | Purpose | Default |
+|------|--------|---------|---------|
+| `:result` | ResultWrapper | Contract declarations via `success`/`error`, flow control via `error!`/`success!` | Active |
+| `:lock` | LockWrapper | Advisory locking via `advisory_lock` | Opt-in |
+| `:transaction` | TransactionWrapper | Wraps `perform` in DB transaction | Enabled |
+| `:record` | RecordWrapper | Logs operation calls to database | Requires config |
+| `:rescue` | RescueWrapper | Maps exceptions to `Dex::Error` via `rescue_from` | Active |
+| `:callback` | CallbackWrapper | Lifecycle hooks via `before`, `after`, `around` | Active |
+
+**Non-pipeline modules (included directly):**
+
 | Module | Purpose | Default |
 |--------|---------|---------|
 | Settings | Class-level configuration via `set`/`settings_for` | Active |
-| ParamsWrapper | Typed parameters via `params` block | Active |
-| ResultWrapper | Contract declarations via `success`/`error`, flow control via `error!`/`success!` | Active |
+| ParamsWrapper | Typed parameters via `params` block (prepended) | Active |
 | AsyncWrapper | Background execution via `.async.call` | Opt-in |
 | SafeWrapper | Safe execution via `.safe` returning `Ok`/`Err` | Active |
-| TransactionWrapper | Wraps `perform` in DB transaction | Enabled |
-| LockWrapper | Advisory locking via `advisory_lock` | Opt-in |
-| RecordWrapper | Logs operation calls to database | Requires config |
-| RescueWrapper | Maps exceptions to `Dex::Error` via `rescue_from` | Active |
-| CallbackWrapper | Lifecycle hooks via `before`, `after`, `around` | Active |
 
 ### Development
 
-All operation logic is in `lib/dex/operation.rb`. Keep it this way until the API matures. Each behavior is modularized via prepended modules.
+All operation logic is in `lib/dex/operation.rb`. Keep it this way until the API matures. Each behavior is modularized via included modules with pipeline steps.
 
-Modularity: when it makes sense, keep existing pattern of modularizing each type of behavior and prepending the module on the base class.
+Modularity: when it makes sense, keep existing pattern of modularizing each type of behavior as a separate module registered via `use` on the pipeline.
 
 #### Module Pattern
 
@@ -114,10 +123,8 @@ The standard pattern for adding new wrapper functionality:
 
 ```ruby
 module SomeWrapper
-  def self.prepended(base)
-    class << base
-      prepend ClassMethods
-    end
+  def self.included(base)
+    base.extend(ClassMethods)
   end
 
   module ClassMethods
@@ -125,8 +132,16 @@ module SomeWrapper
       set(:key, **opts)
     end
   end
+
+  def _some_wrap
+    # before logic
+    yield  # calls next step in pipeline
+    # after logic
+  end
 end
 ```
+
+Then register in Operation: `use SomeWrapper` (step name derived as `:some`)
 
 #### Adapter Pattern
 
@@ -190,7 +205,8 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ `Types::Ref(Model)` - parameterized type for model instances with ID coercion and serialization
 - ✅ Lifecycle callbacks (`before`, `after`, `around`) with symbol, lambda, and block support
 - ✅ Exception mapping via `rescue_from` — converts third-party exceptions to `Dex::Error` with inheritance support
-- ✅ `.call` as public entry point, `perform` is private (user-implemented); wrappers hook into `call` and are prepended once on Operation — safe at any inheritance depth
+- ✅ `.call` as public entry point, `perform` is private (user-implemented); `call` invokes an explicit `Pipeline` of named steps; each step wraps via `yield` — safe at any inheritance depth
+- ✅ Pipeline architecture with `use` DSL — modules register named steps; users can add custom steps with positioning (`before:`, `after:`, `at: :outer/:inner`); `pipeline.remove` to drop steps; child classes get independent pipeline copies
 - ✅ Parameter delegation — params accessible directly in `perform` (e.g., `name` instead of `params.name`), configurable via `delegate:` option
 - ✅ Record-based async strategy — when recording is enabled, async jobs store only a record ID in Redis instead of the full params payload; status tracking (`pending` → `running` → `done`/`failed`) with error field
 - ✅ Advisory locking via `advisory_lock` DSL — wraps operation in database advisory lock (outside transaction boundary); supports static keys, dynamic blocks, symbol methods, timeout; uses `with_advisory_lock` gem as optional runtime dependency

@@ -804,7 +804,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `params` | Typed params object | Access input parameters (also available as direct methods by default) |
-| `call` | Result | Public entry point — invokes `perform` through the wrapper chain |
+| `call` | Result | Public entry point — invokes `perform` through the pipeline |
 | `perform` | Result | Implement this — private, called by `call` |
 | `error!(code, msg, details:)` | (halts) | Halt with failure — rolls back transaction, raises Dex::Error to caller |
 | `success!(value, **attrs)` | (halts) | Halt with success — commits transaction, returns value |
@@ -848,9 +848,79 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 16. **Async + recording auto-optimizes** — When recording is enabled with params, `.async.call` stores only the record ID in Redis (via `RecordJob`) instead of the full params hash. This is automatic — no DSL changes needed. The record tracks `status` (`pending` → `running` → `done`/`failed`) and `error` (code or exception class name).
 
-17. **Multi-level inheritance is safe** — Wrapper modules (transactions, recording, callbacks, rescue, etc.) are prepended once on `Dex::Operation` and hook into `call`. Subclasses at any depth inherit them through normal Ruby MRO without duplication. Side effects (recording, transaction wrapping, callbacks) execute exactly once regardless of inheritance depth.
+17. **Multi-level inheritance is safe** — Wrapper modules are registered as named pipeline steps via `use` on `Dex::Operation`. `Operation#call` invokes the pipeline, which executes steps in declared order. Child classes get independent pipeline copies. Side effects (recording, transaction wrapping, callbacks) execute exactly once regardless of inheritance depth.
 
 18. **DSL arguments validated at declaration time** — All DSL methods (`error`, `rescue_from`, `async`, `record`, `advisory_lock`, `before`/`after`/`around`, `transaction`) validate their arguments when the class body is evaluated. Typos and wrong types raise `ArgumentError` immediately — your Ruby file won't finish loading with bad arguments. The low-level `set` method stays unvalidated (extensible foundation). Examples: `error "string"` raises (must be Symbol), `async priority: 5` raises (unknown option), `transaction :redis` raises (unknown adapter), `before 123` raises (must be Symbol or callable).
+
+---
+
+## Pipeline Architecture
+
+`Operation#call` invokes an explicit pipeline of named steps. Each step's `_xxx_wrap` method receives a block (continuation) and calls `yield` to proceed to the next step, ending at `perform`.
+
+**Default pipeline (execution order):**
+
+| Step | Module | Wrap Method |
+|------|--------|------------|
+| `:result` | ResultWrapper | `_result_wrap` |
+| `:lock` | LockWrapper | `_lock_wrap` |
+| `:transaction` | TransactionWrapper | `_transaction_wrap` |
+| `:record` | RecordWrapper | `_record_wrap` |
+| `:rescue` | RescueWrapper | `_rescue_wrap` |
+| `:callback` | CallbackWrapper | `_callback_wrap` |
+
+### `use` DSL — Adding Custom Steps
+
+Add custom wrapper modules to the pipeline in subclasses:
+
+```ruby
+module AuthorizationWrapper
+  def self.included(base)
+    base.extend(ClassMethods)
+  end
+
+  module ClassMethods
+    def authorize(policy)
+      set(:authorize, policy: policy)
+    end
+  end
+
+  def _authorization_wrap
+    policy = self.class.settings_for(:authorize)[:policy]
+    raise Dex::Error.new(:unauthorized) if policy && !policy.call(self)
+    yield
+  end
+end
+
+class SecureOp < Dex::Operation
+  use AuthorizationWrapper, before: :callback
+  authorize -> (op) { op.current_user.admin? }
+
+  def perform
+    # runs only if authorized
+  end
+end
+```
+
+**Positioning options:**
+```ruby
+use MyWrapper, as: :custom                  # append (innermost), step name :custom
+use MyWrapper, as: :custom, before: :callback  # insert before :callback step
+use MyWrapper, as: :custom, after: :rescue     # insert after :rescue step
+use MyWrapper, as: :custom, at: :outer         # outermost position
+use MyWrapper, as: :custom, at: :inner         # innermost position
+use MyWrapper, as: :custom, wrap: :_my_method  # custom wrap method name
+```
+
+**Step name derivation:** For named modules, the step name is derived automatically by stripping `Wrapper` suffix and converting to snake_case (e.g., `AuthorizationWrapper` → `:authorization`). Anonymous modules require explicit `as:`.
+
+**Pipeline inspection:**
+```ruby
+MyOp.pipeline.steps       # => [Step(:result, ...), Step(:lock, ...), ...]
+MyOp.pipeline.steps.map(&:name)  # => [:result, :lock, :transaction, :record, :rescue, :callback]
+```
+
+**Inheritance:** Child classes get independent pipeline copies. Adding steps to a child does not affect the parent.
 
 ---
 

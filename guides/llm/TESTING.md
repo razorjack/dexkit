@@ -32,7 +32,7 @@ Dex::TestHelpers (include in test classes)
          Dex::TestWrapper (prepended on Dex::Operation once)
 ```
 
-**TestWrapper** prepends `call` on `Dex::Operation` base class. Since all wrapper modules wrap `perform`, this intercepts at the outermost layer. Stubs bypass the entire wrapper chain; real calls are recorded to TestLog.
+**TestWrapper** prepends `call` on `Dex::Operation` base class. Since pipeline steps wrap `perform` via `call`, this intercepts at the outermost layer. Stubs bypass the entire pipeline; real calls are recorded to TestLog.
 
 **TestLog** is automatically cleared in `setup`. Stubs are also cleared.
 

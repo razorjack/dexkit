@@ -14,15 +14,13 @@ module Dex
   end
 
   module RecordWrapper
-    def self.prepended(base)
-      class << base
-        prepend ClassMethods
-      end
+    def self.included(base)
+      base.extend(ClassMethods)
     end
 
-    def call
+    def _record_wrap
       halted = nil
-      result = catch(:_dex_halt) { super }
+      result = catch(:_dex_halt) { yield }
 
       if result.is_a?(Operation::Halt)
         halted = result
@@ -142,18 +140,16 @@ module Dex
   end
 
   module TransactionWrapper
-    def self.prepended(base)
-      class << base
-        prepend ClassMethods
-      end
+    def self.included(base)
+      base.extend(ClassMethods)
     end
 
-    def call
-      return super unless _transaction_enabled?
+    def _transaction_wrap
+      return yield unless _transaction_enabled?
 
       halted = nil
       result = _transaction_execute do
-        halted_value = catch(:_dex_halt) { super }
+        halted_value = catch(:_dex_halt) { yield }
         if halted_value.is_a?(Operation::Halt)
           halted = halted_value
           raise ActiveRecord::Rollback if halted.error?
@@ -218,10 +214,8 @@ module Dex
   end
 
   module LockWrapper
-    def self.prepended(base)
-      class << base
-        prepend ClassMethods
-      end
+    def self.included(base)
+      base.extend(ClassMethods)
     end
 
     module ClassMethods
@@ -240,8 +234,8 @@ module Dex
       end
     end
 
-    def call
-      _lock_enabled? ? _lock_execute { super } : super
+    def _lock_wrap
+      _lock_enabled? ? _lock_execute { yield } : yield
     end
 
     private
@@ -337,10 +331,7 @@ module Dex
 
     def self.prepended(base)
       base.attr_reader :params
-
-      class << base
-        prepend ClassMethods
-      end
+      base.extend(ClassMethods)
     end
   end
 
@@ -375,14 +366,12 @@ module Dex
       end
     end
 
-    def self.prepended(base)
-      class << base
-        prepend ClassMethods
-      end
+    def self.included(base)
+      base.extend(ClassMethods)
     end
 
-    def call
-      halted = catch(:_dex_halt) { super }
+    def _result_wrap
+      halted = catch(:_dex_halt) { yield }
       if halted.is_a?(Operation::Halt)
         if halted.success?
           _result_validate_success_type!(halted.value)
@@ -465,10 +454,8 @@ module Dex
       end
     end
 
-    def self.prepended(base)
-      class << base
-        prepend ClassMethods
-      end
+    def self.included(base)
+      base.extend(ClassMethods)
     end
   end
 
@@ -488,10 +475,8 @@ module Dex
       end
     end
 
-    def self.prepended(base)
-      class << base
-        prepend ClassMethods
-      end
+    def self.included(base)
+      base.extend(ClassMethods)
     end
 
     def async(**options)
@@ -506,10 +491,8 @@ module Dex
   end
 
   module RescueWrapper
-    def self.prepended(base)
-      class << base
-        prepend ClassMethods
-      end
+    def self.included(base)
+      base.extend(ClassMethods)
     end
 
     module ClassMethods
@@ -541,8 +524,8 @@ module Dex
       end
     end
 
-    def call
-      super
+    def _rescue_wrap
+      yield
     rescue Dex::Error
       raise
     rescue => e
@@ -568,10 +551,8 @@ module Dex
   end
 
   module CallbackWrapper
-    def self.prepended(base)
-      class << base
-        prepend ClassMethods
-      end
+    def self.included(base)
+      base.extend(ClassMethods)
     end
 
     module ClassMethods
@@ -631,13 +612,13 @@ module Dex
       end
     end
 
-    def call
-      return super unless self.class._callback_any?
+    def _callback_wrap
+      return yield unless self.class._callback_any?
 
       halted = nil
       result = _callback_run_around(self.class._callback_list(:around)) do
         _callback_run_before
-        caught = catch(:_dex_halt) { super }
+        caught = catch(:_dex_halt) { yield }
         if caught.is_a?(Operation::Halt)
           if caught.success?
             halted = caught
@@ -715,6 +696,88 @@ module Dex
 
     private_class_method :_contract_params
 
+    def self.pipeline
+      @_pipeline ||= if superclass.respond_to?(:pipeline)
+        superclass.pipeline.dup
+      else
+        Pipeline.new
+      end
+    end
+
+    def self.use(mod, as: nil, wrap: nil, before: nil, after: nil, at: nil)
+      include mod
+
+      step_name = as || _derive_step_name(mod)
+      wrap_method = wrap || :"_#{step_name}_wrap"
+      pipeline.add(step_name, method: wrap_method, before: before, after: after, at: at)
+    end
+
+    def self._derive_step_name(mod)
+      base = mod.name&.split("::")&.last
+      raise ArgumentError, "anonymous modules require explicit as: parameter" unless base
+
+      base.sub(/Wrapper\z/, "")
+        .gsub(/([a-z])([A-Z])/, '\1_\2')
+        .downcase
+        .to_sym
+    end
+    private_class_method :_derive_step_name
+
+    class Pipeline
+      Step = Data.define(:name, :method)
+
+      def initialize(steps = [])
+        @steps = steps.dup
+      end
+
+      def dup
+        self.class.new(@steps)
+      end
+
+      def steps
+        @steps.dup.freeze
+      end
+
+      def add(name, method: :"_#{name}_wrap", before: nil, after: nil, at: nil)
+        _validate_positioning!(before, after, at)
+        step = Step.new(name: name, method: method)
+
+        if at == :outer then @steps.unshift(step)
+        elsif at == :inner then @steps.push(step)
+        elsif before then @steps.insert(_find_index!(before), step)
+        elsif after then @steps.insert(_find_index!(after) + 1, step)
+        else @steps.push(step)
+        end
+        self
+      end
+
+      def remove(name)
+        @steps.reject! { |s| s.name == name }
+        self
+      end
+
+      def execute(operation)
+        chain = @steps.reverse_each.reduce(-> { yield }) do |next_step, step|
+          -> { operation.send(step.method, &next_step) }
+        end
+        chain.call
+      end
+
+      private
+
+      def _validate_positioning!(before, after, at)
+        count = [before, after, at].count { |v| !v.nil? }
+        raise ArgumentError, "specify only one of before:, after:, at:" if count > 1
+        raise ArgumentError, "at: must be :outer or :inner" if at && !%i[outer inner].include?(at)
+      end
+
+      def _find_index!(name)
+        idx = @steps.index { |s| s.name == name }
+        raise ArgumentError, "pipeline step :#{name} not found" unless idx
+        idx
+      end
+    end
+
     def initialize(*, **)
     end
 
@@ -722,7 +785,7 @@ module Dex
     end
 
     def call
-      perform
+      self.class.pipeline.execute(self) { perform }
     end
 
     def self.method_added(method_name)
@@ -738,16 +801,17 @@ module Dex
       new(**kwargs).call
     end
 
-    prepend CallbackWrapper
-    prepend RescueWrapper
-    prepend RecordWrapper
-    prepend TransactionWrapper
-    prepend LockWrapper
-    prepend ResultWrapper
+    include Settings
+    include AsyncWrapper
+    include SafeWrapper
     prepend ParamsWrapper
-    prepend Settings
-    prepend AsyncWrapper
-    prepend SafeWrapper
+
+    use ResultWrapper
+    use LockWrapper
+    use TransactionWrapper
+    use RecordWrapper
+    use RescueWrapper
+    use CallbackWrapper
 
     class AsyncProxy
       def initialize(operation, **runtime_options)
