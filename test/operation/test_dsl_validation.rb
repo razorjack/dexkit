@@ -174,6 +174,12 @@ class TestDSLValidation < Minitest::Test
     assert_equal false, op.settings_for(:transaction)[:enabled]
   end
 
+  def test_transaction_rejects_unknown_options
+    assert_raises(ArgumentError, /unknown transaction option/) do
+      build_operation { transaction true, retries: 2 }
+    end
+  end
+
   def test_transaction_accepts_valid_adapter
     op = build_operation { transaction :mongoid }
     assert_equal :mongoid, op.settings_for(:transaction)[:adapter]

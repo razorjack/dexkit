@@ -169,9 +169,17 @@ module Dex
     end
 
     TRANSACTION_KNOWN_ADAPTERS = %i[active_record mongoid].freeze
+    TRANSACTION_KNOWN_OPTIONS = %i[adapter].freeze
 
     module ClassMethods
       def transaction(enabled_or_options = nil, **options)
+        unknown = options.keys - TransactionWrapper::TRANSACTION_KNOWN_OPTIONS
+        if unknown.any?
+          raise ArgumentError,
+            "unknown transaction option(s): #{unknown.map(&:inspect).join(", ")}. " \
+            "Known: #{TransactionWrapper::TRANSACTION_KNOWN_OPTIONS.map(&:inspect).join(", ")}"
+        end
+
         case enabled_or_options
         when false
           set :transaction, enabled: false
