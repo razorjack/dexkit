@@ -1,3 +1,5 @@
+require "set"
+
 module Dex
   class Error < StandardError
     attr_reader :code, :details
@@ -1100,8 +1102,13 @@ module Dex
       end
 
       class ActiveRecordAdapter < Base
+        def initialize(record_class)
+          super
+          @column_set = record_class.column_names.to_set
+        end
+
         def has_field?(field_name)
-          record_class.column_names.include?(field_name.to_s)
+          @column_set.include?(field_name.to_s)
         end
       end
 
