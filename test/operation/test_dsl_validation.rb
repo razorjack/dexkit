@@ -68,6 +68,12 @@ class TestDSLValidation < Minitest::Test
     end
   end
 
+  def test_record_rejects_invalid_first_arg
+    assert_raises(ArgumentError, /record expects true, false, or nil/) do
+      build_operation { record :foo }
+    end
+  end
+
   def test_record_accepts_known_options
     op = build_operation { record params: false }
     assert_equal false, op.settings_for(:record)[:params]

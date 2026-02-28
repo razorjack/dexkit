@@ -57,6 +57,9 @@ module Dex
         elsif enabled == true || enabled.nil?
           merged = { enabled: true, params: true, response: true }.merge(options)
           set :record, **merged
+        else
+          raise ArgumentError,
+            "record expects true, false, or nil, got: #{enabled.inspect}"
         end
       end
     end
