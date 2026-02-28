@@ -502,6 +502,13 @@ module Dex
     end
 
     def async(**options)
+      unknown = options.keys - AsyncWrapper::ASYNC_KNOWN_OPTIONS
+      if unknown.any?
+        raise ArgumentError,
+          "unknown async option(s): #{unknown.map(&:inspect).join(", ")}. " \
+          "Known: #{AsyncWrapper::ASYNC_KNOWN_OPTIONS.map(&:inspect).join(", ")}"
+      end
+
       Operation::AsyncProxy.new(self, **options)
     end
   end

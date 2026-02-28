@@ -190,4 +190,19 @@ class TestDSLValidation < Minitest::Test
     op = build_operation { transaction :mongoid }
     assert_equal :mongoid, op.settings_for(:transaction)[:adapter]
   end
+
+  # --- async (runtime) ---
+
+  def test_runtime_async_rejects_unknown_options
+    op = build_operation { def perform = "ok" }
+    assert_raises(ArgumentError, /unknown async option/) do
+      op.new.async(priority: 5)
+    end
+  end
+
+  def test_runtime_async_accepts_known_options
+    op = build_operation { def perform = "ok" }
+    proxy = op.new.async(queue: "low")
+    assert_instance_of Dex::Operation::AsyncProxy, proxy
+  end
 end
