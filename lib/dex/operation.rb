@@ -384,7 +384,8 @@ module Dex
           "#{self.class.name || "Operation"} declared `success Types::Ref(#{ref_class})` but returned #{value.class}"
       end
 
-      prim = success_type.primitive
+      prim = Dex::Parameters._dex_resolve_primitive(success_type)
+      return unless prim
       return if prim == Object
       return if value.is_a?(prim)
 

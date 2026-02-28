@@ -48,22 +48,6 @@ class Dex::Parameters < Dry::Struct
       nil
     end
 
-    private
-
-    def _dex_coerce_value(type, value)
-      return value unless value # nil/false pass through (VM-level check, no method call)
-      return value if _dex_extract_ref_class_from_type(type)
-
-      if type.respond_to?(:member)
-        return value.map { |v| _dex_coerce_value(type.member, v) } if value.is_a?(Array)
-        return value
-      end
-
-      primitive = _dex_resolve_primitive(type)
-      coercion = SERIALIZED_COERCIONS[primitive]
-      coercion ? coercion.call(value) : value
-    end
-
     def _dex_resolve_primitive(type)
       # Sum type (.optional) — recurse on right (non-nil) side
       if type.respond_to?(:right) && type.respond_to?(:left)
@@ -78,6 +62,22 @@ class Dex::Parameters < Dry::Struct
       nil
     rescue NoMethodError
       nil
+    end
+
+    private
+
+    def _dex_coerce_value(type, value)
+      return value unless value # nil/false pass through (VM-level check, no method call)
+      return value if _dex_extract_ref_class_from_type(type)
+
+      if type.respond_to?(:member)
+        return value.map { |v| _dex_coerce_value(type.member, v) } if value.is_a?(Array)
+        return value
+      end
+
+      primitive = _dex_resolve_primitive(type)
+      coercion = SERIALIZED_COERCIONS[primitive]
+      coercion ? coercion.call(value) : value
     end
   end
 

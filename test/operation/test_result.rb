@@ -164,6 +164,21 @@ class TestOperationResult < Minitest::Test
     assert_equal 42, op.new.call
   end
 
+  def test_success_optional_type_accepts_correct_type
+    op = operation(success: Types::String.optional) { "hello" }
+    assert_equal "hello", op.new.call
+  end
+
+  def test_success_optional_type_rejects_wrong_type
+    op = operation(success: Types::String.optional) { 123 }
+    assert_raises(ArgumentError) { op.new.call }
+  end
+
+  def test_success_optional_type_accepts_nil
+    op = operation(success: Types::String.optional) { nil }
+    assert_nil op.new.call
+  end
+
   def test_success_type_validates_success_bang
     op = operation(success: Types::String) do
       success!(123)
