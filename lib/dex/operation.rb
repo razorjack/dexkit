@@ -881,8 +881,8 @@ module Dex
         rescue => e
           begin
             record.destroy
-          rescue # best-effort cleanup
-            nil
+          rescue => destroy_error
+            _async_log_warning("Failed to clean up pending record #{record.id}: #{destroy_error.message}")
           end
           raise e
         end
@@ -927,6 +927,12 @@ module Dex
           hash = @operation.params&.as_json || {}
           _async_validate_serializable!(hash)
           hash
+        end
+      end
+
+      def _async_log_warning(message)
+        if defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
+          Rails.logger.warn "[Dex] #{message}"
         end
       end
 
