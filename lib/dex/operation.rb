@@ -252,9 +252,7 @@ module Dex
     @_params_schema = Dex::Parameters
 
     def initialize(*args, **kwargs)
-      if !kwargs.empty?
-        @params = self.class._params_schema.new(kwargs)
-      end
+      @params = self.class._params_schema.new(kwargs)
       super
     end
 
@@ -267,7 +265,7 @@ module Dex
       end
 
       def _params_schema
-        @_params_schema || (superclass.respond_to?(:_params_schema) ? superclass._params_schema : nil)
+        @_params_schema || (superclass.respond_to?(:_params_schema) ? superclass._params_schema : nil) || Dex::Parameters
       end
 
       private

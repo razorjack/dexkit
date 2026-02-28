@@ -28,4 +28,12 @@ class TestOperationParams < Minitest::Test
     op.new(name: "Test test", spy: logger).call
     assert_mock logger
   end
+
+  def test_required_params_raise_when_missing
+    op = operation(params: { name: Types::String }) do
+      name
+    end
+
+    assert_raises(Dry::Struct::Error) { op.new }
+  end
 end
