@@ -85,7 +85,7 @@ module Dex
     end
 
     def _record_update_done!(result)
-      attrs = { status: "done", performed_at: Time.now }
+      attrs = { status: "done", performed_at: _record_current_time }
       attrs[:response] = _record_response(result) if _record_response?
       Dex.record_backend.update_record(@_dex_record_id, attrs)
     rescue => e
@@ -93,7 +93,7 @@ module Dex
     end
 
     def _record_attributes(result)
-      attrs = { name: self.class.name, performed_at: Time.now, status: "done" }
+      attrs = { name: self.class.name, performed_at: _record_current_time, status: "done" }
       attrs[:params] = _record_params? ? _record_params : nil
       attrs[:response] = _record_response? ? _record_response(result) : nil
       attrs
@@ -135,6 +135,10 @@ module Dex
       else
         result.respond_to?(:as_json) ? result.as_json : result
       end
+    end
+
+    def _record_current_time
+      Time.respond_to?(:current) ? Time.current : Time.now
     end
 
     def _record_handle_error(error)
