@@ -113,6 +113,12 @@ class TestDSLValidation < Minitest::Test
     assert_equal 5, op.settings_for(:advisory_lock)[:timeout]
   end
 
+  def test_advisory_lock_rejects_unknown_options
+    assert_raises(ArgumentError, /unknown advisory_lock option/) do
+      build_operation { advisory_lock "key", retries: 3 }
+    end
+  end
+
   # --- before / after / around ---
 
   def test_before_rejects_string
