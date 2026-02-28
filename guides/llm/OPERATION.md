@@ -850,6 +850,8 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 17. **Multi-level inheritance is safe** — Wrapper modules (transactions, recording, callbacks, rescue, etc.) are prepended once on `Dex::Operation` and hook into `call`. Subclasses at any depth inherit them through normal Ruby MRO without duplication. Side effects (recording, transaction wrapping, callbacks) execute exactly once regardless of inheritance depth.
 
+18. **DSL arguments validated at declaration time** — All DSL methods (`error`, `rescue_from`, `async`, `record`, `advisory_lock`, `before`/`after`/`around`, `transaction`) validate their arguments when the class body is evaluated. Typos and wrong types raise `ArgumentError` immediately — your Ruby file won't finish loading with bad arguments. The low-level `set` method stays unvalidated (extensible foundation). Examples: `error "string"` raises (must be Symbol), `async priority: 5` raises (unknown option), `transaction :redis` raises (unknown adapter), `before 123` raises (must be Symbol or callable).
+
 ---
 
 ## Global Configuration

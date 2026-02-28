@@ -210,9 +210,9 @@ class TestOperationTransaction < Minitest::Test
     error = assert_raises(ArgumentError) do
       build_operation do
         transaction :unknown_adapter
-      end.new.call
+      end
     end
 
-    assert_match(/Unknown transaction adapter/, error.message)
+    assert_match(/unknown transaction adapter/, error.message)
   end
 end

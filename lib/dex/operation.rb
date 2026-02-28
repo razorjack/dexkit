@@ -41,12 +41,20 @@ module Dex
       result
     end
 
+    RECORD_KNOWN_OPTIONS = %i[params response].freeze
+
     module ClassMethods
       def record(enabled = nil, **options)
+        unknown = options.keys - RecordWrapper::RECORD_KNOWN_OPTIONS
+        if unknown.any?
+          raise ArgumentError,
+            "unknown record option(s): #{unknown.map(&:inspect).join(", ")}. " \
+            "Known: #{RecordWrapper::RECORD_KNOWN_OPTIONS.map(&:inspect).join(", ")}"
+        end
+
         if enabled == false
           set :record, enabled: false
         elsif enabled == true || enabled.nil?
-          # Default: record both params and response
           merged = { enabled: true, params: true, response: true }.merge(options)
           set :record, **merged
         end
@@ -159,16 +167,34 @@ module Dex
       result
     end
 
+    TRANSACTION_KNOWN_ADAPTERS = %i[active_record mongoid].freeze
+
     module ClassMethods
       def transaction(enabled_or_options = nil, **options)
         case enabled_or_options
         when false
           set :transaction, enabled: false
         when true, nil
+          _transaction_validate_adapter!(options[:adapter]) if options.key?(:adapter)
           set :transaction, enabled: true, **options
         when Symbol
-          # Shorthand: `transaction :mongoid`
+          _transaction_validate_adapter!(enabled_or_options)
           set :transaction, enabled: true, adapter: enabled_or_options, **options
+        else
+          raise ArgumentError,
+            "transaction expects true, false, nil, or a Symbol adapter, got: #{enabled_or_options.inspect}"
+        end
+      end
+
+      private
+
+      def _transaction_validate_adapter!(adapter)
+        return if adapter.nil?
+
+        unless TransactionWrapper::TRANSACTION_KNOWN_ADAPTERS.include?(adapter.to_sym)
+          raise ArgumentError,
+            "unknown transaction adapter: #{adapter.inspect}. " \
+            "Known: #{TransactionWrapper::TRANSACTION_KNOWN_ADAPTERS.map(&:inspect).join(", ")}"
         end
       end
     end
@@ -201,6 +227,15 @@ module Dex
     module ClassMethods
       def advisory_lock(key = nil, **options, &block)
         lock_key = block || key
+
+        unless lock_key.nil? || lock_key.is_a?(String) || lock_key.is_a?(Symbol) || lock_key.is_a?(Proc)
+          raise ArgumentError, "advisory_lock key must be a String, Symbol, or Proc, got: #{lock_key.class}"
+        end
+
+        if options.key?(:timeout) && !options[:timeout].is_a?(Numeric)
+          raise ArgumentError, "advisory_lock :timeout must be Numeric, got: #{options[:timeout].inspect}"
+        end
+
         set(:advisory_lock, enabled: true, key: lock_key, **options)
       end
     end
@@ -316,6 +351,11 @@ module Dex
       end
 
       def error(*codes)
+        invalid = codes.reject { |c| c.is_a?(Symbol) }
+        if invalid.any?
+          raise ArgumentError, "error codes must be Symbols, got: #{invalid.map(&:inspect).join(", ")}"
+        end
+
         @_declared_errors ||= []
         @_declared_errors.concat(codes)
       end
@@ -433,8 +473,17 @@ module Dex
   end
 
   module AsyncWrapper
+    ASYNC_KNOWN_OPTIONS = %i[queue in at].freeze
+
     module ClassMethods
       def async(**options)
+        unknown = options.keys - AsyncWrapper::ASYNC_KNOWN_OPTIONS
+        if unknown.any?
+          raise ArgumentError,
+            "unknown async option(s): #{unknown.map(&:inspect).join(", ")}. " \
+            "Known: #{AsyncWrapper::ASYNC_KNOWN_OPTIONS.map(&:inspect).join(", ")}"
+        end
+
         set(:async, **options)
       end
     end
@@ -466,6 +515,14 @@ module Dex
     module ClassMethods
       def rescue_from(*exception_classes, as:, message: nil)
         raise ArgumentError, "rescue_from requires at least one exception class" if exception_classes.empty?
+
+        invalid = exception_classes.reject { |k| k.is_a?(Module) && k <= Exception }
+        if invalid.any?
+          raise ArgumentError,
+            "rescue_from expects Exception subclasses, got: #{invalid.map(&:inspect).join(", ")}"
+        end
+
+        raise ArgumentError, "rescue_from :as must be a Symbol, got: #{as.inspect}" unless as.is_a?(Symbol)
 
         exception_classes.each do |klass|
           _rescue_own << { exception_class: klass, code: as, message: message }
@@ -519,18 +576,21 @@ module Dex
 
     module ClassMethods
       def before(callable = nil, &block)
+        _callback_validate!(callable, block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:before) << entry
         _callback_invalidate_cache!
       end
 
       def after(callable = nil, &block)
+        _callback_validate!(callable, block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:after) << entry
         _callback_invalidate_cache!
       end
 
       def around(callable = nil, &block)
+        _callback_validate!(callable, block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:around) << entry
         _callback_invalidate_cache!
@@ -548,6 +608,18 @@ module Dex
       end
 
       private
+
+      def _callback_validate!(callable, block)
+        return if callable.is_a?(Symbol)
+        return if callable.nil? && block
+        return if callable.respond_to?(:call)
+
+        if callable.nil?
+          raise ArgumentError, "callback requires a Symbol, callable, or block"
+        else
+          raise ArgumentError, "callback must be a Symbol or callable, got: #{callable.class}"
+        end
+      end
 
       def _callback_invalidate_cache!
         remove_instance_variable(:@_callback_any) if defined?(@_callback_any)

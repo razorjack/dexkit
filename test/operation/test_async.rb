@@ -129,11 +129,11 @@ class TestOperationAsync < Minitest::Test
 
   def test_settings_inheritance_for_async
     parent = build_operation do
-      async queue: "default", priority: 5
+      set :async, queue: "default", priority: 5
     end
 
     child = build_operation(parent: parent) do
-      async priority: 10
+      set :async, priority: 10
     end
 
     assert_equal({ queue: "default", priority: 10 }, child.settings_for(:async))

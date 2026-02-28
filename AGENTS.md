@@ -177,6 +177,8 @@ For markdown files with Ruby code snippets:
 bundle exec rubocop -c .rubocop-md.yml
 ```
 
+**DSL validation:** All DSL methods (`error`, `rescue_from`, `async`, `record`, `advisory_lock`, `before`/`after`/`around`, `transaction`, etc.) validate their arguments at declaration time, raising `ArgumentError` for invalid inputs. This gives users immediate feedback when they make a mistake in their class definitions. The low-level `set` method stays unvalidated — it's the extensible foundation. When adding new DSL methods, always validate arguments early.
+
 ### Implemented Features
 
 - ✅ Success type declaration via `success Type` — documents return type, drives recording serialization (e.g., `Types::Ref(Model)` → stores ID)
