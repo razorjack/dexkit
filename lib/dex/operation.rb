@@ -70,7 +70,7 @@ module Dex
 
     def _record_enabled?
       return false unless Dex.record_backend
-      return false unless self.class.name # Anonymous classes can't be recorded
+      return false unless self.class.name
 
       record_settings = self.class.settings_for(:record)
       record_settings.fetch(:enabled, true)
@@ -102,8 +102,7 @@ module Dex
     end
 
     def _record_params
-      return {} unless respond_to?(:params) && params
-      params.as_json
+      _props_as_json
     end
 
     def _record_params?
@@ -131,8 +130,8 @@ module Dex
     def _record_serialize_typed_result(result, type)
       return nil if result.nil?
 
-      record_class = Dex::Parameters._dex_extract_ref_class_from_type(type)
-      if record_class && result.respond_to?(:id)
+      ref_type = self.class._dex_find_ref_type(type)
+      if ref_type && result.respond_to?(:id)
         result.id
       else
         result.respond_to?(:as_json) ? result.as_json : result
@@ -218,7 +217,7 @@ module Dex
 
     def _transaction_enabled?
       settings = self.class.settings_for(:transaction)
-      settings.fetch(:enabled, true)  # Default: enabled
+      settings.fetch(:enabled, true)
     end
 
     def _transaction_adapter
@@ -306,61 +305,48 @@ module Dex
     end
   end
 
-  module ParamsWrapper
-    @_params_schema = Dex::Parameters
-
-    def initialize(*args, **kwargs)
-      @params = self.class._params_schema.new(kwargs)
-      super
+  module PropsSetup
+    def self.included(base)
+      base.extend(Literal::Properties)
+      base.extend(Literal::Types)
+      base.extend(ClassMethods)
     end
 
     module ClassMethods
-      def params(delegate: true, &block)
-        klass = Class.new(Dex::Parameters, &block)
-        const_set(:Params, klass)
-        @_params_schema = klass
-        _params_define_delegates(klass, delegate)
+      RESERVED_PROP_NAMES = %i[call perform async safe initialize].to_set.freeze
+
+      def prop(name, type, kind = :keyword, **options, &block)
+        _props_validate_name!(name)
+        options[:reader] = :public unless options.key?(:reader)
+        if type.is_a?(Dex::RefType) && !block
+          ref = type
+          block = ->(v) { ref.coerce(v) }
+        end
+        super(name, type, kind, **options, &block)
       end
 
-      def _params_schema
-        @_params_schema || (superclass.respond_to?(:_params_schema) ? superclass._params_schema : nil) || Dex::Parameters
+      def prop?(name, type, kind = :keyword, **options, &block)
+        options[:reader] = :public unless options.key?(:reader)
+        options[:default] = nil unless options.key?(:default)
+        if type.is_a?(Dex::RefType) && !block
+          ref = type
+          block = ->(v) { v.nil? ? v : ref.coerce(v) }
+        end
+        prop(name, _Nilable(type), kind, **options, &block)
+      end
+
+      def _Ref(model_class, lock: false) # rubocop:disable Naming/MethodName
+        Dex::RefType.new(model_class, lock: lock)
       end
 
       private
 
-      RESERVED_PARAM_NAMES = %i[call perform params async safe initialize].to_set.freeze
-
-      def _params_define_delegates(schema_class, delegate_option)
-        names = _params_delegated_names(schema_class, delegate_option)
-        _params_validate_delegate_names!(names)
-        names.each do |name|
-          define_method(name) { params.public_send(name) }
-        end
-      end
-
-      def _params_validate_delegate_names!(names)
-        conflicts = names.select { |n| RESERVED_PARAM_NAMES.include?(n) }
-        return if conflicts.empty?
+      def _props_validate_name!(name)
+        return unless RESERVED_PROP_NAMES.include?(name)
 
         raise ArgumentError,
-          "Parameter(s) #{conflicts.map(&:inspect).join(", ")} conflict with core Operation methods " \
-          "and cannot be delegated. Use `delegate: false` or selectively delegate other params."
+          "Property :#{name} conflicts with core Operation methods."
       end
-
-      def _params_delegated_names(schema_class, delegate_option)
-        case delegate_option
-        when true then schema_class.attribute_names
-        when false, nil then []
-        when Symbol then [delegate_option]
-        when Array then delegate_option
-        else []
-        end
-      end
-    end
-
-    def self.prepended(base)
-      base.attr_reader :params
-      base.extend(ClassMethods)
     end
   end
 
@@ -446,22 +432,10 @@ module Dex
 
       success_type = self.class._success_type
       return unless success_type
-
-      ref_class = Dex::Parameters._dex_extract_ref_class_from_type(success_type)
-      if ref_class
-        return if value.is_a?(ref_class)
-
-        raise ArgumentError,
-          "#{self.class.name || "Operation"} declared `success Types::Ref(#{ref_class})` but returned #{value.class}"
-      end
-
-      prim = Dex::Parameters._dex_resolve_primitive(success_type)
-      return unless prim
-      return if prim == Object
-      return if value.is_a?(prim)
+      return if success_type === value
 
       raise ArgumentError,
-        "#{self.class.name || "Operation"} declared `success #{success_type}` but returned #{value.class}"
+        "#{self.class.name || "Operation"} declared `success #{success_type.inspect}` but returned #{value.class}"
     end
   end
 
@@ -702,6 +676,17 @@ module Dex
       def error? = type == :error
     end
 
+    def self._serialized_coercions
+      @_serialized_coercions ||= {
+        Time => ->(v) { v.is_a?(String) ? Time.parse(v) : v },
+        Symbol => ->(v) { v.is_a?(String) ? v.to_sym : v }
+      }.tap do |h|
+        h[Date] = ->(v) { v.is_a?(String) ? Date.parse(v) : v } if defined?(Date)
+        h[DateTime] = ->(v) { v.is_a?(String) ? DateTime.parse(v) : v } if defined?(DateTime)
+        h[BigDecimal] = ->(v) { v.is_a?(String) ? BigDecimal(v) : v } if defined?(BigDecimal)
+      end.freeze
+    end
+
     Contract = Data.define(:params, :success, :errors)
 
     def self.contract
@@ -713,15 +698,63 @@ module Dex
     end
 
     def self._contract_params
-      schema = _params_schema
-      return {} unless schema
+      return {} unless respond_to?(:literal_properties)
 
-      schema.schema.each_with_object({}) do |key, hash|
-        hash[key.name] = key.type
+      literal_properties.each_with_object({}) do |prop, hash|
+        hash[prop.name] = prop.type
       end
     end
 
     private_class_method :_contract_params
+
+    def self._dex_find_ref_type(type)
+      return type if type.is_a?(Dex::RefType)
+
+      if type.respond_to?(:type)
+        inner = type.type
+        return inner if inner.is_a?(Dex::RefType)
+      end
+      nil
+    end
+
+    def self._dex_coerce_serialized_hash(hash)
+      return hash.transform_keys(&:to_sym) unless respond_to?(:literal_properties)
+
+      result = {}
+      literal_properties.each do |prop|
+        name = prop.name
+        raw = hash.key?(name) ? hash[name] : hash[name.to_s]
+        result[name] = _dex_coerce_value(prop.type, raw)
+      end
+      result
+    end
+
+    def self._dex_resolve_base_class(type)
+      return type.model_class if type.is_a?(Dex::RefType)
+      return _dex_resolve_base_class(type.type) if type.respond_to?(:type)
+
+      type if type.is_a?(Class)
+    end
+
+    def self._dex_coerce_value(type, value)
+      return value unless value
+      return value if _dex_find_ref_type(type)
+
+      if type.respond_to?(:type) && type.is_a?(Literal::Types::ArrayType)
+        return value.map { |v| _dex_coerce_value(type.type, v) } if value.is_a?(Array)
+        return value
+      end
+
+      if type.respond_to?(:type) && type.is_a?(Literal::Types::NilableType)
+        return _dex_coerce_value(type.type, value)
+      end
+
+      base = _dex_resolve_base_class(type)
+      coercion = _serialized_coercions[base]
+      coercion ? coercion.call(value) : value
+    end
+
+    private_class_method :_dex_resolve_base_class, :_dex_coerce_value
 
     def self.inherited(subclass)
       subclass.instance_variable_set(:@_pipeline, pipeline.dup)
@@ -805,9 +838,6 @@ module Dex
       end
     end
 
-    def initialize(*, **)
-    end
-
     def perform(*, **)
     end
 
@@ -828,10 +858,28 @@ module Dex
       new(**kwargs).call
     end
 
+    # Serialization helpers
+
+    def _props_as_json
+      return {} unless self.class.respond_to?(:literal_properties)
+
+      result = {}
+      self.class.literal_properties.each do |prop|
+        value = public_send(prop.name)
+        ref = self.class._dex_find_ref_type(prop.type)
+        result[prop.name.to_s] = if ref && value
+          value.id
+        else
+          value.respond_to?(:as_json) ? value.as_json : value
+        end
+      end
+      result
+    end
+
     include Settings
     include AsyncWrapper
     include SafeWrapper
-    prepend ParamsWrapper
+    include PropsSetup
 
     use ResultWrapper
     use LockWrapper
@@ -917,7 +965,7 @@ module Dex
 
       def _async_serialized_params
         @_async_serialized_params ||= begin
-          hash = @operation.params&.as_json || {}
+          hash = @operation._props_as_json
           _async_validate_serializable!(hash)
           hash
         end
@@ -1024,16 +1072,7 @@ module Dex
         const_set(:DirectJob, Class.new(ActiveJob::Base) do
           def perform(class_name:, params:)
             klass = class_name.constantize
-            klass.new(**_dex_coerce_params(klass, params)).call
-          end
-
-          private
-
-          def _dex_coerce_params(klass, params)
-            schema = klass._params_schema
-            return params.deep_symbolize_keys unless schema && schema < Dex::Parameters
-
-            schema._dex_coerce_serialized_hash(params)
+            klass.new(**klass._dex_coerce_serialized_hash(params)).call
           end
         end)
       when :RecordJob
@@ -1041,7 +1080,7 @@ module Dex
           def perform(class_name:, record_id:)
             klass = class_name.constantize
             record = Dex.record_backend.find_record(record_id)
-            params = _dex_coerce_params(klass, record.params || {})
+            params = klass._dex_coerce_serialized_hash(record.params || {})
 
             op = klass.new(**params)
             op.instance_variable_set(:@_dex_record_id, record_id)
@@ -1054,13 +1093,6 @@ module Dex
           end
 
           private
-
-          def _dex_coerce_params(klass, params)
-            schema = klass._params_schema
-            return params.deep_symbolize_keys unless schema && schema < Dex::Parameters
-
-            schema._dex_coerce_serialized_hash(params)
-          end
 
           def _dex_update_status(record_id, **attributes)
             Dex.record_backend.update_record(record_id, attributes)
@@ -1084,7 +1116,6 @@ module Dex
           end
         end)
       when :Job
-        # Backward compatibility alias
         const_set(:Job, const_get(:DirectJob))
       else
         super
@@ -1097,7 +1128,7 @@ module Dex
 
         if defined?(ActiveRecord::Base) && record_class < ActiveRecord::Base
           ActiveRecordAdapter.new(record_class)
-        elsif defined?(Mongoid::Document) && record_class.included_modules.include?(Mongoid::Document)
+        elsif defined?(Mongoid::Document) && record_class.include?(Mongoid::Document)
           MongoidAdapter.new(record_class)
         else
           raise ArgumentError, "record_class must inherit from ActiveRecord::Base or include Mongoid::Document"

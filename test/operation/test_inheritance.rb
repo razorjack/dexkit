@@ -86,7 +86,7 @@ class TestOperationInheritance < Minitest::Test
   def test_recording_creates_one_record_for_child
     with_recording do
       parent = define_operation(:InheritRecordParent) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = name
       end
       child = define_operation(:InheritRecordChild, parent: parent) do
@@ -102,7 +102,7 @@ class TestOperationInheritance < Minitest::Test
   def test_recording_creates_one_record_for_grandchild
     with_recording do
       grandparent = define_operation(:InheritRecordGrandparent) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = name
       end
       parent = define_operation(:InheritRecordParent2, parent: grandparent)
@@ -172,7 +172,7 @@ class TestOperationInheritance < Minitest::Test
     log = []
     with_recording do
       grandparent = define_operation(:IntegrationGrandparent) do
-        params { attribute :name, Types::String }
+        prop :name, String
         rescue_from ArgumentError, as: :bad_arg
         before { log << :before }
         after { log << :after }
@@ -202,7 +202,7 @@ class TestOperationInheritance < Minitest::Test
   def test_grandchild_integration_error_flow
     with_recording do
       grandparent = define_operation(:ErrorFlowGrandparent) do
-        params { attribute :name, Types::String }
+        prop :name, String
         error :not_found
 
         def perform

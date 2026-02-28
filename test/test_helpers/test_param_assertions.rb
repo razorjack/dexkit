@@ -14,7 +14,7 @@ class TestParamAssertions < Minitest::Test
 
   def test_assert_invalid_params_passes
     op = build_operation do
-      params { attribute :name, Types::Strict::String }
+      prop :name, String
       def perform = nil
     end
     assert_invalid_params(op, name: 123)
@@ -22,7 +22,7 @@ class TestParamAssertions < Minitest::Test
 
   def test_assert_invalid_params_fails_for_valid
     op = build_operation do
-      params { attribute :name, Types::Strict::String }
+      prop :name, String
       def perform = nil
     end
     assert_raises(Minitest::Assertion) { assert_invalid_params(op, name: "Alice") }
@@ -30,7 +30,7 @@ class TestParamAssertions < Minitest::Test
 
   def test_assert_valid_params_passes
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = nil
     end
     assert_valid_params(op, name: "Alice")
@@ -38,10 +38,10 @@ class TestParamAssertions < Minitest::Test
 
   def test_assert_valid_params_fails_for_invalid
     op = build_operation do
-      params { attribute :name, Types::Strict::String }
+      prop :name, String
       def perform = nil
     end
-    assert_raises(Dry::Struct::Error) { assert_valid_params(op, name: 123) }
+    assert_raises(Literal::TypeError) { assert_valid_params(op, name: 123) }
   end
 end
 
@@ -50,7 +50,7 @@ class TestParamAssertionsWithSubject < Minitest::Test
   include OperationHelpers
 
   ParamOp = Class.new(Dex::Operation) do
-    params { attribute :count, Types::Strict::Integer }
+    prop :count, Integer
     def perform = count
   end
 

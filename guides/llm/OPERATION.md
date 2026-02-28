@@ -2,7 +2,7 @@
 
 **Purpose:** This file documents all features of `Dex::Operation` for AI coding agents. Copy this to your app's operations directory (e.g., `app/operations/CLAUDE.md` or `app/operations/AGENTS.md`) so agents know the full API when implementing operations.
 
-**What it is:** A base class for service objects/operations in Ruby/Rails applications. Provides typed parameters, success/error contract declarations, error handling, transactions, background jobs, and execution recording.
+**What it is:** A base class for service objects/operations in Ruby/Rails applications. Provides typed properties, success/error contract declarations, error handling, transactions, background jobs, and execution recording.
 
 ---
 
@@ -10,13 +10,11 @@
 
 ```ruby
 class CreateUser < Dex::Operation
-  params do
-    attribute :email, Types::String
-    attribute :name, Types::String
-  end
+  prop :email, String
+  prop :name,  String
 
-  success Types::Ref(User)  # optional: declare success type
-  error :email_taken           # optional: declare error codes
+  success _Ref(User)  # optional: declare success type
+  error :email_taken      # optional: declare error codes
 
   def perform
     error!(:email_taken) if User.exists?(email: email)
@@ -32,47 +30,82 @@ user = CreateUser.call(email: "test@example.com", name: "Test")
 
 ---
 
-## Typed Parameters
+## Properties (Props)
 
-Define input parameters with types via `params do ... end`. Uses Dry::Struct under the hood.
+Define input properties directly on the operation class using `prop` and `prop?`.
 
 ```ruby
 class MyOperation < Dex::Operation
-  params do
-    attribute :name, Types::String
-    attribute :count, Types::Integer.default(1)
-    attribute :optional_field, Types::String.optional
-    attribute :user, Types::Ref(User)  # See Types::Ref section
-  end
+  prop  :name,           String
+  prop  :count,          Integer, default: 1
+  prop  :user,           _Ref(User)              # See _Ref(Model) section
+  prop  :currency,       _Union("USD", "EUR"),   default: "USD"
+  prop? :optional_field, String                   # nilable, defaults to nil
 
   def perform
-    name    # Direct access (delegated by default)
+    name    # Direct reader method
     count
-    params.name  # params accessor also available
+    user    # Coerced User instance
   end
 end
 
 # Call with keyword arguments
-MyOperation.call(name: "test", count: 5)
+MyOperation.call(name: "test", count: 5, user: 123)
+```
+
+**`prop :name, Type`** — Required property. Raises `Literal::TypeError` if value doesn't match type.
+
+**`prop? :name, Type`** — Optional property. Nilable (accepts nil), defaults to nil. Equivalent to `prop :name, _Nilable(Type), default: nil`.
+
+**Built-in types from Literal::Types** (available as class methods in operation body):
+
+| Constructor | Description | Example |
+|-------------|-------------|---------|
+| Plain class | Matches with `===` | `String`, `Integer`, `Float`, `Hash`, `Array` |
+| `_Integer(range)` | Constrained integer | `_Integer(1..)`, `_Integer(0..100)` |
+| `_String(constraints)` | Constrained string | `_String(length: 1..500)` |
+| `_Array(type)` | Typed array | `_Array(Integer)`, `_Array(String)` |
+| `_Union(*values)` | Enum of values | `_Union("USD", "EUR", "GBP")` |
+| `_Nilable(type)` | Nilable wrapper | `_Nilable(String)` |
+| `_Ref(Model)` | Model reference (see below) | `_Ref(User)`, `_Ref(Account, lock: true)` |
+
+**Literal types cheat sheet** (types use `===` for validation; all constructors available in operation class body):
+
+```ruby
+prop :name,     String                       # any String
+prop :count,    Integer                      # any Integer
+prop :amount,   Float                        # any Float
+prop :amount,   BigDecimal                   # any BigDecimal
+prop :data,     Hash                         # any Hash
+prop :items,    Array                        # any Array
+prop :active,   _Boolean                     # true or false
+prop :role,     Symbol                       # any Symbol
+prop :count,    _Integer(1..)                # Integer >= 1
+prop :count,    _Integer(0..100)             # Integer 0–100
+prop :name,     _String(length: 1..255)      # String with length constraint
+prop :score,    _Float(0.0..1.0)             # Float in range
+prop :tags,     _Array(String)               # Array of Strings
+prop :ids,      _Array(Integer)              # Array of Integers
+prop :matrix,   _Array(_Array(Integer))      # nested typed arrays
+prop :currency, _Union("USD", "EUR", "GBP")  # enum of values
+prop :id,       _Union(String, Integer)      # union of types
+prop :label,    _Nilable(String)             # String or nil
+prop :meta,     _Hash(Symbol, String)        # Hash with typed keys+values
+prop :pair,     _Tuple(String, Integer)      # fixed-size typed array
+prop :name,     _Frozen(String)              # must be frozen
+prop :handler,  _Callable                    # anything responding to .call
+prop :handler,  _Interface(:call, :arity)    # responds to listed methods
+prop :user,     _Ref(User)                   # Dex-specific: model by instance or ID
+prop :account,  _Ref(Account, lock: true)    # Dex-specific: with row lock
+prop :title,    String, default: "Untitled"  # default value
+prop? :note,    String                       # optional (nilable, default: nil)
 ```
 
 **Key facts:**
-- Parameters are validated and coerced on initialization
-- Access directly via attribute name (e.g., `name`) — delegated by default
-- `params` accessor also available for explicit access or struct methods (`.as_json`, `.to_h`)
-- Supports all Dry::Types features (defaults, optional, constraints)
-- Invalid params raise `Dry::Struct::Error` on initialization
-
-**Delegation options:**
-```ruby
-params { ... }                              # delegates all (default)
-params(delegate: true) { ... }             # delegates all (explicit)
-params(delegate: false) { ... }            # no delegation
-params(delegate: :email) { ... }           # delegate only :email
-params(delegate: [:email, :name]) { ... }  # delegate specific list
-```
-
-**Reserved param names:** `call`, `perform`, `params`, `async`, `safe`, `initialize` cannot be delegated — they conflict with core Operation methods. Declaring a delegated param with a reserved name raises `ArgumentError` at class definition time. Workaround: use `delegate: false` or selectively delegate only non-conflicting params.
+- Properties are validated on initialization via `Literal::TypeError`
+- Access directly via property name (e.g., `name`, `user`) — public reader methods
+- No `params` accessor or delegation — props ARE reader methods
+- Reserved names that cannot be used: `call`, `perform`, `async`, `safe`, `initialize`
 
 ---
 
@@ -82,11 +115,11 @@ Declare what an operation returns and which errors it can raise. Both are **opti
 
 ### `success(type)`
 
-Declares the Dry::Type of the value returned by `perform` on success. **Validates the actual return value at runtime** — raises `ArgumentError` if `perform` returns a mismatched type. Also affects response serialization in recording (e.g., `Types::Ref(Model)` → records ID only).
+Declares the type of the value returned by `perform` on success. **Validates the actual return value at runtime** using `===` — raises `ArgumentError` if `perform` returns a mismatched type. Also affects response serialization in recording (e.g., `_Ref(Model)` → records ID only).
 
 ```ruby
 class FindUser < Dex::Operation
-  success Types::Ref(User)
+  success _Ref(User)
 
   def perform
     User.find(user_id)  # Must return a User instance or nil
@@ -96,9 +129,8 @@ end
 
 **Validation behavior:**
 - `nil` return is always allowed (many operations return nil implicitly)
-- `Types::Ref(Model)` — checks `value.is_a?(ModelClass)`
-- Primitive types (String, Integer, Array, Hash, etc.) — checks `value.is_a?(primitive)`
-- Sum/optional types and `Object` primitive — skipped (too broad to validate)
+- `_Ref(Model)` — checks `value.is_a?(ModelClass)`
+- Plain classes (`String`, `Integer`, etc.) — checks `value.is_a?(class)`
 - Raises `ArgumentError` — same severity as undeclared `error!` codes
 
 Accessible as `MyOp._success_type`. Inherits from parent class.
@@ -132,14 +164,14 @@ Returns a frozen `Dex::Operation::Contract` value object (`Data.define`) aggrega
 ```ruby
 CreateUser.contract
 # => #<data Dex::Operation::Contract
-#      params={email: #<Dry::Types::...>, name: #<Dry::Types::...>},
-#      success=Types::Ref(User),
+#      params={email: String, name: String},
+#      success=_Ref(User),
 #      errors=[:email_taken, :invalid_email]>
 ```
 
 **Fields:**
-- `params` → `Hash{Symbol => Dry::Types::Type}` — declared attribute names and their types; `{}` if none
-- `success` → Dry::Types type or `nil`
+- `params` → `Hash{Symbol => type}` — declared property names and their types; `{}` if none
+- `success` → type or `nil`
 - `errors` → `Array<Symbol>`, merged with parent, deduped; `[]` if none
 
 **Behaviour:**
@@ -389,7 +421,7 @@ SendEmailOp.new(...).async(queue: "urgent").call  # Overrides to "urgent"
 - `in:` — Delay in seconds
 - `at:` — Schedule at specific Time
 
-**Type-safe serialization:** Params are serialized via `as_json` and automatically coerced back to typed equivalents on deserialization. No need to change types when adding `.async`.
+**Type-safe serialization:** Props are serialized via `as_json` and automatically coerced back to typed equivalents on deserialization. No need to change types when adding `.async`.
 
 | Type | Serialized as | Deserialized via |
 |------|--------------|-----------------|
@@ -398,13 +430,13 @@ SendEmailOp.new(...).async(queue: "urgent").call  # Overrides to "urgent"
 | `DateTime` | `"2025-06-15T10:30:00+00:00"` | `DateTime.parse` |
 | `BigDecimal` | `"99.99"` | `BigDecimal()` |
 | `Symbol` | `"active"` | `String#to_sym` |
-| `Ref(Model)` | `123` (ID) | `Model.find(id)` |
+| `_Ref(Model)` | `123` (ID) | `Model.find(id)` |
 
-Works with `.optional` and `Array.of(...)` types. Direct (non-async) calls remain strict — no implicit coercion.
+Works with `_Nilable(T)` and `_Array(T)` types. Direct (non-async) calls remain strict — no implicit coercion.
 
 **Key facts:**
-- Params serialized via `as_json` (Record → ID, Date → string, etc.)
-- Non-serializable params raise `ArgumentError` at enqueue time
+- Props serialized via `as_json` (Ref → ID, Date → string, etc.)
+- Non-serializable props raise `ArgumentError` at enqueue time
 - Job instantiates operation class and calls `call` synchronously in worker
 - Runtime options merge with and override class-level defaults
 - Raises `LoadError` if ActiveJob is not available
@@ -472,7 +504,7 @@ class ProcessOrder < Dex::Operation
   around ->(cont) { cont.call }    # proc — receives continuation callable
 
   def validate_stock
-    error!(:out_of_stock) unless in_stock?  # has access to params, delegated attrs, error!, etc.
+    error!(:out_of_stock) unless in_stock?  # has access to props, error!, etc.
   end
 
   def with_timing
@@ -572,9 +604,7 @@ Wrap operations in database advisory locks for mutual exclusion. Uses the [`with
 
 ```ruby
 class ProcessPayment < Dex::Operation
-  params do
-    attribute :charge_id, Types::String
-  end
+  prop :charge_id, String
 
   advisory_lock { "pay:#{charge_id}" }  # dynamic key
 
@@ -626,7 +656,7 @@ end
 # Migration for OperationRecord
 create_table :operation_records do |t|
   t.string :name            # Required: operation class name
-  t.jsonb :params           # Optional: serialized params
+  t.jsonb :params           # Optional: serialized props
   t.jsonb :response         # Optional: serialized result
   t.string :status          # Optional: pending/running/done/failed (for async+recording)
   t.string :error           # Optional: error code on failure (for async+recording)
@@ -652,12 +682,12 @@ end
 
 **What gets recorded:**
 - `name` — Operation class name (always)
-- `params` — Serialized via `params.as_json` (if `params: true`, default)
+- `params` — Serialized via `_props_as_json` (if `params: true`, default)
 - `response` — Serialized result (if `response: true`, default)
 - `performed_at` — Execution timestamp (if column exists)
 
 **Response serialization:**
-- With `success Types::Ref(Model)` declared → stored as the model's integer ID
+- With `success _Ref(Model)` declared → stored as the model's integer ID
 - With `success SomeType` declared → calls `.as_json` on result if available
 - Hash without `success` declaration → stored as-is
 - Primitive (Integer, String) without `success` → wrapped as `{ value: result }`
@@ -712,27 +742,18 @@ end
 
 ---
 
-## Types::Ref(Model)
+## _Ref(Model)
 
-Parameterized type for ActiveRecord/Mongoid model instances. Accepts instances or IDs, automatically coerces IDs to records.
+Type constructor for ActiveRecord/Mongoid model instances. Accepts instances or IDs, automatically coerces IDs to records.
 
-**Setup (required):**
-```ruby
-module Types
-  include Dry.Types(default: :nominal)
-  extend Dex::Types::Extension  # Adds Ref() constructor
-end
-```
-
-**Usage:**
+**Usage (inside operation class body):**
 ```ruby
 class SendEmail < Dex::Operation
-  params do
-    attribute :user, Types::Ref(User)
-    attribute :avatar, Types::Ref(Avatar).optional
-  end
+  prop  :user,   _Ref(User)
+  prop? :avatar, _Ref(Avatar)                    # optional (nilable)
+  prop  :account, _Ref(Account, lock: true)       # row lock on fetch
 
-  success Types::Ref(User)  # When recording: stores user.id instead of full object
+  success _Ref(User)  # When recording: stores user.id instead of full object
 
   def perform
     # user is a User instance (coerced from ID if passed as ID)
@@ -748,32 +769,36 @@ SendEmail.new(user: "1").call            # String ID
 SendEmail.new(user: user_instance, avatar: nil).call  # Optional
 ```
 
+**Outside the class body** (e.g., in tests), use `Dex::RefType.new(Model)` directly:
+```ruby
+assert_success_type(Dex::RefType.new(User))
+```
+
 **Lock option:** Use `lock: true` to acquire a row lock (`SELECT ... FOR UPDATE`) when coercing from ID. Useful inside transactions to prevent concurrent modifications.
 
 ```ruby
-params do
-  attribute :user, Types::Ref(User, lock: true)
-end
+prop :user, _Ref(User, lock: true)
 ```
 
 When an ID is passed, uses `Model.lock.find(id)`. When an instance is passed directly, no re-locking occurs.
 
 **Coercion behavior:**
 - Instance of model class → passes through (no lock, even with `lock: true`)
-- `nil` → passes through (use `.optional` to allow nil)
+- `nil` → passes through (use `prop?` to allow nil)
 - Integer or String → calls `Model.find(id)` (or `Model.lock.find(id)` with `lock: true`)
 - Not found → raises `ActiveRecord::RecordNotFound`
 
-**Serialization:** In `as_json` (used by recording), Ref types serialize as the model's ID, not the full object.
+**Serialization:** In `_props_as_json` (used by recording), Ref types serialize as the model's ID, not the full object.
 
 ```ruby
-params.as_json  # => {"user" => 123}  (not full User object)
+# _props_as_json => {"user" => 123}  (not full User object)
 ```
 
 **Key facts:**
-- Works in `params` blocks; use `success Types::Ref(Model)` for return type
-- Supports `.optional` for nullable fields
-- With `success Types::Ref(Model)`, recording stores the model ID (not full object)
+- `_Ref(Model)` is a class method available inside operation class body
+- Outside class body, use `Dex::RefType.new(Model)` or `Dex::RefType.new(Model, lock: true)`
+- Use `prop?` for optional refs (nilable with nil default)
+- With `success _Ref(Model)`, recording stores the model ID (not full object)
 - All model methods work directly on coerced value
 
 ---
@@ -783,8 +808,9 @@ params.as_json  # => {"user" => 123}  (not full User object)
 | Method | Purpose | Example |
 |--------|---------|---------|
 | `.call(**kwargs)` | Create instance and call synchronously (shorthand for `new(**kwargs).call`) | `MyOp.call(name: "Alice")` |
-| `params(delegate: true) { ... }` | Define typed input parameters; delegates attrs as methods by default | `params do attribute :name, Types::String end` |
-| `success(type)` | Declare success return type (documentation + recording serialization) | `success Types::Ref(User)` |
+| `prop(name, type, **opts)` | Define required typed property | `prop :name, String` |
+| `prop?(name, type, **opts)` | Define optional typed property (nilable, defaults to nil) | `prop? :note, String` |
+| `success(type)` | Declare success return type (documentation + recording serialization) | `success _Ref(User)` |
 | `error(*codes)` | Declare valid error codes; undeclared codes raise ArgumentError in `error!` | `error :not_found, :invalid` |
 | `before(sym_or_callable = nil, &block)` | Register before callback | `before :validate` / `before { error!(:x) }` |
 | `after(sym_or_callable = nil, &block)` | Register after callback | `after :notify` / `after -> { log }` |
@@ -803,7 +829,6 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `params` | Typed params object | Access input parameters (also available as direct methods by default) |
 | `call` | Result | Public entry point — invokes `perform` through the pipeline |
 | `perform` | Result | Implement this — private, called by `call` |
 | `error!(code, msg, details:)` | (halts) | Halt with failure — rolls back transaction, raises Dex::Error to caller |
@@ -816,7 +841,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 ## Key Behaviors (Non-Obvious)
 
-1. **Params delegated by default** — All param attributes are accessible directly (e.g., `name` instead of `params.name`). The `params` accessor is still available. Disable with `params(delegate: false)` or delegate selectively with `params(delegate: :field)` or `params(delegate: [:a, :b])`.
+1. **Props are reader methods** — All properties are accessible directly (e.g., `name` instead of needing a `params` accessor). No delegation layer; the property IS the method.
 
 2. **Safe only catches `Dex::Error`** — Other exceptions (RuntimeError, ActiveRecord errors) propagate through `.safe.call` without wrapping.
 
@@ -834,7 +859,7 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 9. **Missing record columns OK** — Recording filters to only existing columns. A minimal table with just `name` and timestamps works.
 
-10. **Async serializes and coerces params** — Params are serialized via `as_json` and transparently coerced back (Date, Time, BigDecimal, Symbol, Record). Non-serializable params raise `ArgumentError` at enqueue time.
+10. **Async serializes and coerces props** — Props are serialized via `as_json` and transparently coerced back (Date, Time, BigDecimal, Symbol, Ref). Non-serializable props raise `ArgumentError` at enqueue time.
 
 11. **Anonymous classes cannot record** — Operation class must have a name for recording to work.
 
@@ -943,11 +968,9 @@ class CreateOrder < Dex::Operation
   async queue: "orders"
   transaction true  # Explicit (default anyway)
 
-  params do
-    attribute :user, Types::Ref(User)
-    attribute :items, Types::Array.of(Types::Hash)
-    attribute :total, Types::Coercible::Decimal
-  end
+  prop :user,  _Ref(User)
+  prop :items, _Array(Hash)
+  prop :total, BigDecimal
 
   error :insufficient_stock
 

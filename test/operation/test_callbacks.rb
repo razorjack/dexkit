@@ -54,7 +54,7 @@ class TestOperationCallbacks < Minitest::Test
 
   def test_before_accesses_params
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       before { error!(:invalid) if name == "bad" }
       def perform = "ok"
     end

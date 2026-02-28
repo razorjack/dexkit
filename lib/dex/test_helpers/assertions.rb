@@ -87,7 +87,7 @@ module Dex
     # --- Contract assertions ---
 
     def assert_params(*args)
-      if args.last.is_a?(Hash) && !args.last.empty? && args.last.values.first.is_a?(Dry::Types::Type)
+      if args.last.is_a?(Hash)
         klass_args, type_hash = _dex_split_class_and_hash(args)
         klass = _dex_resolve_subject(klass_args)
         contract = klass.contract
@@ -165,7 +165,7 @@ module Dex
 
     def assert_invalid_params(*args, **params)
       klass = _dex_resolve_subject(args)
-      assert_raises(Dry::Struct::Error) { klass.new(**params) }
+      assert_raises(Literal::TypeError) { klass.new(**params) }
     end
 
     def assert_valid_params(*args, **params)

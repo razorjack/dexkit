@@ -31,7 +31,7 @@ class TestTestExecution < Minitest::Test
 
   def test_call_operation_with_params
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = "Hi #{name}"
     end
     result = call_operation(op, name: "Alice")
@@ -55,7 +55,7 @@ class TestTestExecution < Minitest::Test
 
   def test_call_operation_bang_with_params
     op = build_operation do
-      params { attribute :x, Types::Integer }
+      prop :x, Integer
       def perform = x * 2
     end
     assert_equal 10, call_operation!(op, x: 5)
@@ -71,7 +71,7 @@ class TestTestExecutionWithSubject < Minitest::Test
   include OperationHelpers
 
   GreetOp = Class.new(Dex::Operation) do
-    params { attribute :name, Types::String }
+    prop :name, String
     def perform = "Hello #{name}"
   end
 

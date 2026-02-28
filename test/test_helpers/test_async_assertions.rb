@@ -15,7 +15,7 @@ class TestAsyncAssertions < Minitest::Test
 
   def test_assert_enqueues_operation
     op = define_operation(:AsyncTestOp) do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = name
     end
 
@@ -28,7 +28,7 @@ class TestAsyncAssertions < Minitest::Test
 
   def test_refute_enqueues_operation_fails_when_enqueued
     op = define_operation(:AsyncTestOp2) do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = name
     end
 
@@ -41,7 +41,7 @@ class TestAsyncAssertions < Minitest::Test
 
   def test_assert_enqueues_operation_with_record_strategy
     op = define_operation(:AsyncRecordOp) do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = name
     end
 

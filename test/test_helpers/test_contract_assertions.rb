@@ -16,10 +16,8 @@ class TestContractAssertions < Minitest::Test
 
   def test_assert_params_passes_with_correct_names
     op = build_operation do
-      params do
-        attribute :name, Types::String
-        attribute :email, Types::String
-      end
+      prop :name, String
+      prop :email, String
       def perform = nil
     end
     assert_params(op, :name, :email)
@@ -27,10 +25,8 @@ class TestContractAssertions < Minitest::Test
 
   def test_assert_params_fails_with_missing_name
     op = build_operation do
-      params do
-        attribute :name, Types::String
-        attribute :email, Types::String
-      end
+      prop :name, String
+      prop :email, String
       def perform = nil
     end
     assert_raises(Minitest::Assertion) { assert_params(op, :name) }
@@ -38,7 +34,7 @@ class TestContractAssertions < Minitest::Test
 
   def test_assert_params_fails_with_extra_name
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = nil
     end
     assert_raises(Minitest::Assertion) { assert_params(op, :name, :email) }
@@ -48,31 +44,27 @@ class TestContractAssertions < Minitest::Test
 
   def test_assert_params_with_types
     op = build_operation do
-      params do
-        attribute :name, Types::String
-        attribute :count, Types::Integer
-      end
+      prop :name, String
+      prop :count, Integer
       def perform = nil
     end
-    assert_params(op, name: Types::String, count: Types::Integer)
+    assert_params(op, name: String, count: Integer)
   end
 
   def test_assert_params_with_wrong_type
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = nil
     end
-    assert_raises(Minitest::Assertion) { assert_params(op, name: Types::Integer) }
+    assert_raises(Minitest::Assertion) { assert_params(op, name: Integer) }
   end
 
   # assert_accepts_param
 
   def test_assert_accepts_param_passes
     op = build_operation do
-      params do
-        attribute :name, Types::String
-        attribute :email, Types::String
-      end
+      prop :name, String
+      prop :email, String
       def perform = nil
     end
     assert_accepts_param(op, :name)
@@ -80,7 +72,7 @@ class TestContractAssertions < Minitest::Test
 
   def test_assert_accepts_param_fails_for_missing
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = nil
     end
     assert_raises(Minitest::Assertion) { assert_accepts_param(op, :email) }
@@ -90,18 +82,18 @@ class TestContractAssertions < Minitest::Test
 
   def test_assert_success_type_passes
     op = build_operation do
-      success Types::String
+      success String
       def perform = "hello"
     end
-    assert_success_type(op, Types::String)
+    assert_success_type(op, String)
   end
 
   def test_assert_success_type_fails_on_mismatch
     op = build_operation do
-      success Types::String
+      success String
       def perform = "hello"
     end
-    assert_raises(Minitest::Assertion) { assert_success_type(op, Types::Integer) }
+    assert_raises(Minitest::Assertion) { assert_success_type(op, Integer) }
   end
 
   # assert_error_codes
@@ -134,19 +126,17 @@ class TestContractAssertions < Minitest::Test
 
   def test_assert_contract_full
     op = build_operation do
-      params do
-        attribute :name, Types::String
-      end
-      success Types::String
+      prop :name, String
+      success String
       error :invalid
       def perform = name
     end
-    assert_contract(op, params: [:name], success: Types::String, errors: [:invalid])
+    assert_contract(op, params: [:name], success: String, errors: [:invalid])
   end
 
   def test_assert_contract_partial_params_only
     op = build_operation do
-      params { attribute :x, Types::Integer }
+      prop :x, Integer
       def perform = x
     end
     assert_contract(op, params: [:x])
@@ -166,11 +156,9 @@ class TestContractWithSubject < Minitest::Test
   include OperationHelpers
 
   ContractOp = Class.new(Dex::Operation) do
-    params do
-      attribute :name, Types::String
-      attribute :age, Types::Integer
-    end
-    success Types::String
+    prop :name, String
+    prop :age, Integer
+    success String
     error :too_young
 
     def perform
@@ -195,7 +183,7 @@ class TestContractWithSubject < Minitest::Test
   end
 
   def test_assert_success_type_uses_subject
-    assert_success_type(Types::String)
+    assert_success_type(String)
   end
 
   def test_assert_error_codes_uses_subject
@@ -203,6 +191,6 @@ class TestContractWithSubject < Minitest::Test
   end
 
   def test_assert_contract_uses_subject
-    assert_contract(params: [:name, :age], success: Types::String, errors: [:too_young])
+    assert_contract(params: [:name, :age], success: String, errors: [:too_young])
   end
 end

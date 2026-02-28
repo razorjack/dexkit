@@ -35,7 +35,7 @@ class TestOperationAdvisoryLock < Minitest::Test
   def test_dynamic_block_key_with_param_access
     key = nil
     op = build_operation do
-      params { attribute :charge_id, Types::String }
+      prop :charge_id, String
       advisory_lock { "pay:#{charge_id}" }
       def perform = "charged"
     end
@@ -48,7 +48,7 @@ class TestOperationAdvisoryLock < Minitest::Test
   def test_symbol_key_calls_instance_method
     key = nil
     op = build_operation do
-      params { attribute :id, Types::Integer }
+      prop :id, Integer
       advisory_lock :compute_lock_key
       define_method(:compute_lock_key) { "item:#{id}" }
       def perform = "done"

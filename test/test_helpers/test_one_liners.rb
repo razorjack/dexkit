@@ -22,7 +22,7 @@ class TestOneLinerAssertions < Minitest::Test
 
   def test_assert_operation_with_params
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = "Hi #{name}"
     end
     result = assert_operation(op, name: "Alice")
@@ -60,7 +60,7 @@ class TestOneLinerAssertions < Minitest::Test
 
   def test_assert_operation_error_with_params
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       error :invalid
       define_method(:perform) do
         error!(:invalid, "bad name") if name == "bad"
@@ -105,7 +105,7 @@ class TestOneLinerWithSubject < Minitest::Test
   include OperationHelpers
 
   SimpleOp = Class.new(Dex::Operation) do
-    params { attribute :value, Types::Integer }
+    prop :value, Integer
     error :negative
     def perform
       error!(:negative) if value < 0

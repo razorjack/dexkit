@@ -14,7 +14,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_uses_record_job_when_recording_enabled
     with_recording do
       op_class = define_operation(:TestRecordJobStrategy) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = nil
       end
 
@@ -26,7 +26,7 @@ class TestOperationAsyncRecord < Minitest::Test
 
   def test_falls_back_to_direct_job_when_no_recording
     op_class = define_operation(:TestDirectJobFallback) do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = nil
     end
 
@@ -39,7 +39,7 @@ class TestOperationAsyncRecord < Minitest::Test
     with_recording do
       op_class = define_operation(:TestRecordFalseDirectJob) do
         record false
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = nil
       end
 
@@ -53,7 +53,7 @@ class TestOperationAsyncRecord < Minitest::Test
     with_recording do
       op_class = define_operation(:TestParamsFalseDirectJob) do
         record params: false
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = nil
       end
 
@@ -66,7 +66,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_falls_back_to_direct_job_for_anonymous_class
     with_recording do
       op_class = build_operation do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = nil
       end
 
@@ -81,7 +81,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_creates_pending_record_at_enqueue
     with_recording do
       op_class = define_operation(:TestPendingRecord) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = nil
       end
 
@@ -99,7 +99,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_record_job_basic_round_trip
     with_recording do
       op_class = define_operation(:TestRecordRoundTrip) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = { greeting: "Hello #{name}" }
       end
 
@@ -122,10 +122,8 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_record_job_typed_params_round_trip
     with_recording do
       op_class = define_operation(:TestRecordTypedParams) do
-        params do
-          attribute :due, Types::Strict::Date
-          attribute :status, Types::Strict::Symbol
-        end
+        prop :due, Date
+        prop :status, Symbol
         def perform = { due: due, status: status }
       end
 
@@ -147,7 +145,7 @@ class TestOperationAsyncRecord < Minitest::Test
       model = TestModel.create!(name: "Alice")
 
       op_class = define_operation(:TestRecordJobRecordType) do
-        params { attribute :model, Types::Ref(TestModel) }
+        prop :model, _Ref(TestModel)
         def perform = model
       end
 
@@ -166,7 +164,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_record_job_full_active_job_round_trip
     with_recording do
       op_class = define_operation(:TestRecordFullRoundTrip) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = { name: name }
       end
 
@@ -185,7 +183,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_status_transitions_success
     with_recording do
       define_operation(:TestStatusSuccess) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = nil
       end
 
@@ -207,7 +205,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_status_transitions_dex_error
     with_recording do
       define_operation(:TestStatusDexError) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = error!(:bad_input, "Invalid")
       end
 
@@ -230,7 +228,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_status_transitions_unhandled_exception
     with_recording do
       define_operation(:TestStatusException) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = raise "boom"
       end
 
@@ -255,7 +253,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_record_deleted_before_job_runs
     with_recording do
       define_operation(:TestRecordDeleted) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = nil
       end
 
@@ -277,7 +275,7 @@ class TestOperationAsyncRecord < Minitest::Test
     with_recording do
       define_operation(:TestRecordResponseFalseAsync) do
         record response: false
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = { greeting: "Hello" }
       end
 
@@ -298,7 +296,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_minimal_table_without_status_column
     with_recording(record_class: MinimalOperationRecord) do
       define_operation(:TestMinimalTableAsync) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = nil
       end
 
@@ -313,7 +311,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_sync_call_sets_done_status
     with_recording do
       define_operation(:TestSyncDoneStatus) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = nil
       end
 
@@ -333,7 +331,7 @@ class TestOperationAsyncRecord < Minitest::Test
   def test_async_options_work_with_record_job
     with_recording do
       op_class = define_operation(:TestRecordJobOptions) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform = nil
       end
 

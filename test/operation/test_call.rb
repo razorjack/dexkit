@@ -10,7 +10,7 @@ class TestOperationClassCall < Minitest::Test
   end
 
   def test_class_call_with_params
-    op = operation(params: { name: Types::String }) { name }
+    op = operation(params: { name: String }) { name }
     assert_equal "Alice", op.call(name: "Alice")
   end
 
@@ -25,13 +25,13 @@ class TestOperationClassCall < Minitest::Test
   end
 
   def test_class_call_is_inherited
-    parent = operation(params: { x: Types::Integer }) { x + 1 }
+    parent = operation(params: { x: Integer }) { x + 1 }
     child = Class.new(parent)
     assert_equal 6, child.call(x: 5)
   end
 
   def test_class_call_equivalent_to_new_call
-    op = operation(params: { n: Types::Integer }) { n * n }
+    op = operation(params: { n: Integer }) { n * n }
     assert_equal op.new(n: 7).call, op.call(n: 7)
   end
 end

@@ -11,8 +11,8 @@ class TestTypesRef < Minitest::Test
 
   def test_accepts_model_instance_directly
     model = TestModel.create!(name: "Test")
-    type = Types::Ref(TestModel)
-    result = type[model]
+    ref = Dex::RefType.new(TestModel)
+    result = ref.coerce(model)
 
     assert_equal model, result
     assert_instance_of TestModel, result
@@ -20,8 +20,8 @@ class TestTypesRef < Minitest::Test
 
   def test_coerces_integer_id_to_record
     model = TestModel.create!(name: "Test")
-    type = Types::Ref(TestModel)
-    result = type[model.id]
+    ref = Dex::RefType.new(TestModel)
+    result = ref.coerce(model.id)
 
     assert_equal model.id, result.id
     assert_equal model.name, result.name
@@ -30,8 +30,8 @@ class TestTypesRef < Minitest::Test
 
   def test_coerces_string_id_to_record
     model = TestModel.create!(name: "Test")
-    type = Types::Ref(TestModel)
-    result = type[model.id.to_s]
+    ref = Dex::RefType.new(TestModel)
+    result = ref.coerce(model.id.to_s)
 
     assert_equal model.id, result.id
     assert_equal model.name, result.name
@@ -39,101 +39,95 @@ class TestTypesRef < Minitest::Test
   end
 
   def test_raises_on_record_not_found
-    type = Types::Ref(TestModel)
+    ref = Dex::RefType.new(TestModel)
 
     assert_raises(ActiveRecord::RecordNotFound) do
-      type[99_999]
+      ref.coerce(99_999)
     end
   end
 
-  # === Type behavior tests ===
+  # === Type behavior in operations ===
 
-  def test_is_a_check_returns_true
+  def test_ref_prop_accepts_model_instance
     model = TestModel.create!(name: "Test")
 
-    params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Ref(TestModel)
+    op = build_operation do
+      prop :model, _Ref(TestModel)
+      def perform = model.is_a?(TestModel)
     end
 
-    params = params_class.new(model: model)
+    assert op.new(model: model).call
+  end
 
-    assert params.model.is_a?(TestModel)
+  def test_ref_prop_coerces_id_to_model
+    model = TestModel.create!(name: "Test")
+
+    op = build_operation do
+      prop :model, _Ref(TestModel)
+      def perform = model
+    end
+
+    result = op.new(model: model.id).call
+    assert_instance_of TestModel, result
+    assert_equal model.id, result.id
   end
 
   def test_model_methods_work_directly
     model = TestModel.create!(name: "OriginalName")
 
-    params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Ref(TestModel)
+    op = build_operation do
+      prop :model, _Ref(TestModel)
+      def perform = model.name
     end
 
-    params = params_class.new(model: model)
-
-    # Can call model methods
-    assert_equal "OriginalName", params.model.name
-
-    # Can update the model
-    params.model.update!(name: "UpdatedName")
-    assert_equal "UpdatedName", params.model.reload.name
-  end
-
-  def test_respond_to_works_correctly
-    model = TestModel.create!(name: "Test")
-
-    params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Ref(TestModel)
-    end
-
-    params = params_class.new(model: model)
-
-    assert params.model.respond_to?(:name)
-    assert params.model.respond_to?(:update!)
-    refute params.model.respond_to?(:nonexistent_method)
+    assert_equal "OriginalName", op.new(model: model).call
   end
 
   # === Serialization tests ===
 
-  def test_as_json_returns_id_for_record_attributes
+  def test_as_json_returns_id_for_ref_props
     model = TestModel.create!(name: "Test")
 
-    params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Ref(TestModel)
+    op = build_operation do
+      prop :model, _Ref(TestModel)
+      def perform = nil
     end
 
-    params = params_class.new(model: model)
+    instance = op.new(model: model)
+    json = instance.send(:_props_as_json)
 
-    assert_equal({ "model" => model.id }, params.as_json)
+    assert_equal({ "model" => model.id }, json)
   end
 
-  def test_non_record_attributes_serialize_normally
+  def test_non_ref_props_serialize_normally
     model = TestModel.create!(name: "Test")
 
-    params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Ref(TestModel)
-      attribute :name, Types::String
-      attribute :count, Types::Integer
+    op = build_operation do
+      prop :model, _Ref(TestModel)
+      prop :name, String
+      prop :count, Integer
+      def perform = nil
     end
 
-    params = params_class.new(model: model, name: "TestName", count: 42)
+    instance = op.new(model: model, name: "TestName", count: 42)
+    json = instance.send(:_props_as_json)
 
     expected = {
       "model" => model.id,
       "name" => "TestName",
       "count" => 42
     }
-    assert_equal expected, params.as_json
+    assert_equal expected, json
   end
 
-  def test_works_in_params_block
+  def test_works_with_prop_and_coercion
     model = TestModel.create!(name: "Test")
 
     op = define_operation(:TestRefInParams) do
-      params do
-        attribute :model, Types::Ref(TestModel)
-      end
+      prop :model, _Ref(TestModel)
 
       def perform
-        params.model.is_a?(TestModel)
+        model.is_a?(TestModel)
       end
     end
 
@@ -145,7 +139,7 @@ class TestTypesRef < Minitest::Test
     model = TestModel.create!(name: "Test")
 
     op = define_operation(:TestRefSuccessType) do
-      success Types::Ref(TestModel)
+      success _Ref(TestModel)
 
       define_method(:perform) { model }
     end
@@ -160,13 +154,10 @@ class TestTypesRef < Minitest::Test
 
     with_recording do
       op = define_operation(:TestRefRecording) do
-        params do
-          attribute :model, Types::Ref(TestModel)
-        end
+        prop :model, _Ref(TestModel)
+        success _Ref(TestModel)
 
-        success Types::Ref(TestModel)
-
-        define_method(:perform) { params.model }
+        define_method(:perform) { model }
       end
 
       op.new(model: model.id).call
@@ -186,8 +177,8 @@ class TestTypesRef < Minitest::Test
     locked_scope.expect(:find, model, [model.id])
 
     TestModel.stub(:lock, locked_scope) do
-      type = Types::Ref(TestModel, lock: true)
-      result = type[model.id]
+      ref = Dex::RefType.new(TestModel, lock: true)
+      result = ref.coerce(model.id)
 
       assert_equal model, result
     end
@@ -196,71 +187,91 @@ class TestTypesRef < Minitest::Test
 
   def test_lock_option_skips_lock_for_instance
     model = TestModel.create!(name: "Test")
-    type = Types::Ref(TestModel, lock: true)
-    result = type[model]
+    ref = Dex::RefType.new(TestModel, lock: true)
+    result = ref.coerce(model)
 
     assert_equal model, result
   end
 
   def test_lock_option_skips_lock_for_nil
-    type = Types::Ref(TestModel, lock: true)
-    result = type[nil]
+    ref = Dex::RefType.new(TestModel, lock: true)
+    result = ref.coerce(nil)
 
     assert_nil result
   end
 
   def test_lock_false_by_default
     model = TestModel.create!(name: "Test")
-    type = Types::Ref(TestModel)
+    ref = Dex::RefType.new(TestModel)
 
     # Should use model_class.find directly, not lock
     TestModel.stub(:find, model) do
-      result = type[model.id]
+      result = ref.coerce(model.id)
       assert_equal model, result
     end
   end
 
-  # === Optional type tests ===
+  # === Optional ref tests ===
 
-  def test_optional_works_with_nil
-    params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Ref(TestModel).optional
+  def test_optional_ref_works_with_nil
+    op = build_operation do
+      prop? :model, _Ref(TestModel)
+      def perform = model
     end
 
-    params = params_class.new(model: nil)
-    assert_nil params.model
+    result = op.new(model: nil).call
+    assert_nil result
   end
 
-  def test_optional_works_with_instance
+  def test_optional_ref_works_with_instance
     model = TestModel.create!(name: "Test")
 
-    params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Ref(TestModel).optional
+    op = build_operation do
+      prop? :model, _Ref(TestModel)
+      def perform = model
     end
 
-    params = params_class.new(model: model)
-    assert_equal model, params.model
-    assert_instance_of TestModel, params.model
+    result = op.new(model: model).call
+    assert_equal model, result
+    assert_instance_of TestModel, result
   end
 
-  def test_optional_works_with_id
+  def test_optional_ref_works_with_id
     model = TestModel.create!(name: "Test")
 
-    params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Ref(TestModel).optional
+    op = build_operation do
+      prop? :model, _Ref(TestModel)
+      def perform = model
     end
 
-    params = params_class.new(model: model.id)
-    assert_equal model.id, params.model.id
-    assert_instance_of TestModel, params.model
+    result = op.new(model: model.id).call
+    assert_equal model.id, result.id
+    assert_instance_of TestModel, result
   end
 
-  def test_optional_serializes_nil_correctly
-    params_class = Class.new(Dex::Parameters) do
-      attribute :model, Types::Ref(TestModel).optional
+  def test_optional_ref_serializes_nil_correctly
+    op = build_operation do
+      prop? :model, _Ref(TestModel)
+      def perform = nil
     end
 
-    params = params_class.new(model: nil)
-    assert_equal({ "model" => nil }, params.as_json)
+    instance = op.new(model: nil)
+    json = instance.send(:_props_as_json)
+    assert_equal({ "model" => nil }, json)
+  end
+
+  # === Case equality (===) ===
+
+  def test_ref_type_matches_model_instance
+    model = TestModel.create!(name: "Test")
+    ref = Dex::RefType.new(TestModel)
+
+    assert ref === model # rubocop:disable Style/CaseEquality
+  end
+
+  def test_ref_type_does_not_match_non_model
+    ref = Dex::RefType.new(TestModel)
+
+    refute ref === "not a model" # rubocop:disable Style/CaseEquality
   end
 end

@@ -2,23 +2,13 @@
 
 require "test_helper"
 
-class TestMyOperation < Dex::Operation
-  params do
-    attribute :name, Types::String
-  end
-
-  def perform
-    puts "Welome #{name}"
-  end
-end
-
 class TestOperationParams < Minitest::Test
   def setup
     setup_test_database
   end
 
   def test_parameters_and_perform
-    op = operation(params: { name: Types::String, spy: Types::Any }) do
+    op = operation(params: { name: String, spy: Object }) do
       spy.puts name
     end
 
@@ -30,10 +20,10 @@ class TestOperationParams < Minitest::Test
   end
 
   def test_required_params_raise_when_missing
-    op = operation(params: { name: Types::String }) do
+    op = operation(params: { name: String }) do
       name
     end
 
-    assert_raises(Dry::Struct::Error) { op.new }
+    assert_raises(ArgumentError) { op.new }
   end
 end

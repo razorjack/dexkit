@@ -16,7 +16,7 @@ class TestBatchAssertions < Minitest::Test
 
   def test_assert_all_succeed_passes
     op = build_operation do
-      params { attribute :x, Types::Integer }
+      prop :x, Integer
       def perform = x * 2
     end
 
@@ -27,7 +27,7 @@ class TestBatchAssertions < Minitest::Test
 
   def test_assert_all_succeed_fails_on_any_error
     op = build_operation do
-      params { attribute :x, Types::Integer }
+      prop :x, Integer
       error :negative
       def perform
         error!(:negative) if x < 0
@@ -44,7 +44,7 @@ class TestBatchAssertions < Minitest::Test
 
   def test_assert_all_fail_passes
     op = build_operation do
-      params { attribute :x, Types::Integer }
+      prop :x, Integer
       error :negative
       def perform
         error!(:negative) if x < 0
@@ -59,7 +59,7 @@ class TestBatchAssertions < Minitest::Test
 
   def test_assert_all_fail_fails_on_success
     op = build_operation do
-      params { attribute :x, Types::Integer }
+      prop :x, Integer
       error :negative
       def perform
         error!(:negative) if x < 0
@@ -74,7 +74,7 @@ class TestBatchAssertions < Minitest::Test
 
   def test_assert_all_fail_fails_on_wrong_code
     op = build_operation do
-      params { attribute :x, Types::Integer }
+      prop :x, Integer
       error :negative, :zero
       def perform
         error!(:zero) if x == 0
@@ -94,7 +94,7 @@ class TestBatchWithSubject < Minitest::Test
   include OperationHelpers
 
   BatchOp = Class.new(Dex::Operation) do
-    params { attribute :n, Types::Integer }
+    prop :n, Integer
     error :too_big
     def perform
       error!(:too_big) if n > 100

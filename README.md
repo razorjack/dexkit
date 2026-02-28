@@ -10,14 +10,12 @@ gem 'dexkit'
 
 ## Operations
 
-Service objects with typed parameters.
+Service objects with typed properties.
 
 ```ruby
 class SendWelcomeEmail < Dex::Operation
-  params do
-    attribute :user_id, Types::Integer
-    attribute :template, Types::String.default("default")
-  end
+  prop :user_id,  Integer
+  prop :template, String, default: "default"
 
   def perform
     user = User.find(user_id)
@@ -29,33 +27,7 @@ SendWelcomeEmail.call(user_id: 123)
 # Use `new(...)` form when chaining modifiers (`.safe.call`, `.async.call`).
 ```
 
-### Parameter Delegation
-
-By default, all params are accessible directly in `perform` without the `params.` prefix:
-
-```ruby
-class CreateUser < Dex::Operation
-  params do
-    attribute :email, Types::String
-    attribute :name, Types::String
-  end
-
-  def perform
-    User.create!(email: email, name: name)  # direct access
-    params.email  # params accessor still available too
-  end
-end
-```
-
-Control delegation with the `delegate:` option:
-
-```ruby
-params(delegate: false) { ... }              # no delegation
-params(delegate: :email) { ... }             # delegate only :email
-params(delegate: [:email, :name]) { ... }    # delegate specific list
-```
-
-Names `call`, `perform`, `params`, `async`, `safe`, and `initialize` are reserved and cannot be delegated (raises `ArgumentError`).
+Types are powered by the [literal](https://github.com/joeldrapper/literal) gem. Plain Ruby classes (`String`, `Integer`) work as types, plus constructors like `_Integer(1..)`, `_Array(String)`, `_Union("USD", "EUR")`, and `_Nilable(String)` are available inside operation class bodies.
 
 ### Async Execution
 
@@ -77,7 +49,7 @@ class SendWelcomeEmail < Dex::Operation
 end
 ```
 
-Typed params (`Date`, `Time`, `BigDecimal`, `Symbol`, `Ref`) automatically survive the JSON round-trip — no need to switch types. Direct calls remain strict. Non-serializable params raise `ArgumentError` at enqueue time.
+Typed props (`Date`, `Time`, `BigDecimal`, `Symbol`, `Ref`) automatically survive the JSON round-trip — no need to switch types. Direct calls remain strict. Non-serializable props raise `ArgumentError` at enqueue time.
 
 ### Operation Contract
 
@@ -85,13 +57,11 @@ Declare what an operation returns and which errors it can raise. Both are option
 
 ```ruby
 class CreateUser < Dex::Operation
-  params do
-    attribute :email, Types::String
-    attribute :name, Types::String
-  end
+  prop :email, String
+  prop :name,  String
 
-  success Types::Ref(User)   # what the operation returns on success
-  error :email_taken,           # which error codes error!() may raise
+  success _Ref(User)
+  error :email_taken,
         :invalid_email
 
   def perform
@@ -111,8 +81,8 @@ Use `.contract` to introspect an operation's declared interface:
 ```ruby
 CreateUser.contract
 # => #<data Dex::Operation::Contract
-#      params={email: #<Dry::Types...>, name: #<Dry::Types...>},
-#      success=Types::Ref(User),
+#      params={email: String, name: String},
+#      success=_Ref(User),
 #      errors=[:email_taken, :invalid_email]>
 
 # Pattern matching
@@ -130,9 +100,7 @@ The returned object is frozen and inherits from parent classes automatically.
 
 ```ruby
 class ProcessPayment < Dex::Operation
-  params do
-    attribute :amount, Types::Integer
-  end
+  prop :amount, Integer
 
   def perform
     error!(:invalid_amount, "Amount must be positive") if amount < 0
@@ -199,9 +167,7 @@ Use `.safe` to return `Ok`/`Err` instead of raising exceptions. Perfect for patt
 
 ```ruby
 class FindUser < Dex::Operation
-  params do
-    attribute :user_id, Types::Integer
-  end
+  prop :user_id, Integer
 
   error :not_found
 
@@ -330,7 +296,7 @@ end
 - `after` callbacks run in order after `perform` succeeds or calls `success!`. Skipped if `perform` raises or calls `error!`.
 - `around` wraps the entire before/perform/after sequence. If the callback doesn't yield/call the continuation, `perform` is never invoked.
 - Callbacks inherit from parent classes (parent runs first).
-- Blocks and lambdas execute via `instance_exec`, giving access to `params`, `error!`, etc.
+- Blocks and lambdas execute via `instance_exec`, giving access to props, `error!`, etc.
 
 ### Transactions
 
@@ -381,9 +347,7 @@ Wrap operations in database advisory locks for mutual exclusion. Requires the [`
 
 ```ruby
 class ProcessPayment < Dex::Operation
-  params do
-    attribute :charge_id, Types::String
-  end
+  prop :charge_id, String
 
   advisory_lock { "pay:#{charge_id}" }
 
@@ -430,26 +394,13 @@ ChildOperation.settings_for(:retry)
 # => { attempts: 3, delay: 10 }
 ```
 
-## Types
+## Ref Types
 
-Uses [dry-types](https://dry-rb.org/gems/dry-types). Define in your app:
-
-```ruby
-module Types
-  include Dry.Types(default: :nominal)
-  extend Dex::Types::Extension
-end
-```
-
-### Ref Types
-
-`Types::Ref(ModelClass)` accepts model instances or IDs, automatically finding records from the database. Perfect for working with ActiveRecord or Mongoid models in operations.
+`_Ref(ModelClass)` is a type constructor available inside operation class bodies. It accepts model instances or IDs, automatically finding records from the database. Works with ActiveRecord and Mongoid models.
 
 ```ruby
 class SendEmail < Dex::Operation
-  params do
-    attribute :user, Types::Ref(User)
-  end
+  prop :user, _Ref(User)
 
   def perform
     # user is an actual User instance
@@ -462,11 +413,11 @@ SendEmail.new(user: User.find(123)).call
 SendEmail.new(user: 123).call
 ```
 
-Declare `success Types::Ref(Model)` to record just the model ID in the response column (instead of the full serialized object):
+Declare `success _Ref(Model)` to record just the model ID in the response column (instead of the full serialized object):
 
 ```ruby
 class FindUser < Dex::Operation
-  success Types::Ref(User)
+  success _Ref(User)
 
   def perform
     user = User.find_by(id: user_id)
@@ -483,10 +434,8 @@ Optional refs:
 
 ```ruby
 class UpdateProfile < Dex::Operation
-  params do
-    attribute :user, Types::Ref(User)
-    attribute :avatar, Types::Ref(Avatar).optional
-  end
+  prop  :user,   _Ref(User)
+  prop? :avatar, _Ref(Avatar)
 end
 
 UpdateProfile.new(user: 1, avatar: nil).call  # avatar can be nil
@@ -496,9 +445,7 @@ Lock records on fetch with `lock: true` (uses `SELECT ... FOR UPDATE`):
 
 ```ruby
 class TransferFunds < Dex::Operation
-  params do
-    attribute :account, Types::Ref(Account, lock: true)
-  end
+  prop :account, _Ref(Account, lock: true)
 
   def perform
     account.update!(balance: account.balance - 100)
@@ -511,7 +458,7 @@ TransferFunds.new(account: 42).call  # Account.lock.find(42)
 When recording to database, Ref types serialize as IDs (not full objects):
 
 ```ruby
-# params.as_json => {"user" => 123, "avatar" => 456}
+# props as_json => {"user" => 123, "avatar" => 456}
 # Keeps your operation_records table clean and efficient
 ```
 
@@ -579,7 +526,7 @@ Inspect declarations without calling:
 ```ruby
 assert_params(:name, :email)                       # exhaustive param names
 assert_accepts_param(:name)                        # subset check
-assert_success_type(Types::Ref(User))              # success type
+assert_success_type(_Ref(User))                    # success type
 assert_error_codes(:not_found, :invalid)           # exhaustive error codes
 assert_contract(params: [:name], errors: [:invalid]) # full contract
 ```
@@ -615,7 +562,7 @@ end
 
 ```ruby
 # Param validation
-assert_invalid_params(name: 123)                   # expects Dry::Struct::Error
+assert_invalid_params(name: 123)                   # expects Literal::TypeError
 assert_valid_params(name: "Alice")                  # no error on construction
 
 # Transaction

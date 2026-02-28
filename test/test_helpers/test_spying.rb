@@ -72,7 +72,7 @@ class TestSpying < Minitest::Test
 
   def test_spy_called_with
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = name
     end
 

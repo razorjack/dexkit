@@ -178,7 +178,7 @@ class TestOperationOutcome < Minitest::Test
 
   # Integration test
   def test_safe_with_params
-    op = operation(params: { value: Types::Integer }) do
+    op = operation(params: { value: Integer }) do
       if value < 0
         error!(:invalid_value, "Value must be positive")
       else

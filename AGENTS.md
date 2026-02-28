@@ -16,8 +16,7 @@ lib/
   dexkit.rb              # Entry point, configuration, Zeitwerk loader
   dex/
     version.rb           # Version constant
-    parameters.rb        # Dex::Parameters (Dry::Struct subclass)
-    types.rb             # Dex::Types::Extension (adds Ref() type)
+    ref_type.rb          # Dex::RefType (Literal::Type for model references)
     operation.rb         # All operation logic and wrapper modules
     test_log.rb          # Dex::TestLog (global activity log for tests)
     test_helpers.rb      # Dex::TestHelpers + Dex::TestWrapper
@@ -27,7 +26,7 @@ lib/
       stubbing.rb        # stub_operation, spy_on_operation, Spy class
 
 test/
-  test_helper.rb         # Minitest setup, Types module
+  test_helper.rb         # Minitest setup
   support/
     operation_helpers.rb # define_operation(), with_recording()
     database_helpers.rb  # setup_test_database()
@@ -41,7 +40,7 @@ test/
 
 ## Core Dependencies
 
-**Runtime:** `dry-struct`, `zeitwerk`
+**Runtime:** `literal`, `zeitwerk`
 
 **Development:** `activejob`, `activerecord` (for testing Rails integration)
 
@@ -79,7 +78,6 @@ bundle exec rubocop -c .rubocop-md.yml
 
 ## Future Plans
 
-- Ability to define params contract (using dry-validation)
 - Performing an operation with nonce token (as used nonce tokens need to be saved somewhere)
 
 ## Finishing Up

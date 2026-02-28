@@ -9,7 +9,7 @@ class TestOperationRecording < Minitest::Test
 
   def test_recording_disabled_when_not_configured
     op = define_operation(:TestRecordingDisabled) do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform
       end
     end
@@ -22,7 +22,7 @@ class TestOperationRecording < Minitest::Test
   def test_recording_enabled_when_configured
     with_recording do
       op = define_operation(:TestRecordingEnabled) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
         end
       end
@@ -36,7 +36,7 @@ class TestOperationRecording < Minitest::Test
   def test_records_operation_name
     with_recording do
       op = define_operation(:NamedOperation) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
         end
       end
@@ -50,7 +50,7 @@ class TestOperationRecording < Minitest::Test
   def test_records_params_as_json
     with_recording do
       op = define_operation(:TestRecordsParams) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
         end
       end
@@ -65,7 +65,7 @@ class TestOperationRecording < Minitest::Test
     with_recording do
       op = define_operation(:TestRecordFalseOp) do
         record false
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
         end
       end
@@ -80,7 +80,7 @@ class TestOperationRecording < Minitest::Test
     with_recording do
       op = define_operation(:TestSetRecordFalseOp) do
         set :record, enabled: false
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
         end
       end
@@ -94,7 +94,7 @@ class TestOperationRecording < Minitest::Test
   def test_missing_params_field_still_works
     with_recording(record_class: MinimalOperationRecord) do
       op = define_operation(:TestMinimalFieldsOp) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
         end
       end
@@ -110,7 +110,7 @@ class TestOperationRecording < Minitest::Test
     with_recording do
       result = []
       op = define_operation(:TestDbErrorOp) do
-        params { attribute :name, Types::String }
+        prop :name, String
         define_method(:perform) { result << :executed }
       end
 
@@ -130,7 +130,7 @@ class TestOperationRecording < Minitest::Test
       end
 
       child = define_operation(:TestChildInheritsNoRecord, parent: parent) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
         end
       end
@@ -149,7 +149,7 @@ class TestOperationRecording < Minitest::Test
 
       child = define_operation(:TestChildReenabled, parent: parent) do
         record true
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
         end
       end
@@ -177,7 +177,7 @@ class TestOperationRecording < Minitest::Test
   def test_records_response_hash
     with_recording do
       op = define_operation(:TestRecordsResponseHash) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
           { greeting: "Hello #{name}" }
         end
@@ -192,8 +192,8 @@ class TestOperationRecording < Minitest::Test
   def test_records_response_with_success_type
     with_recording do
       op = define_operation(:TestRecordsResponseWithSuccessType) do
-        params { attribute :name, Types::String }
-        success Types::String
+        prop :name, String
+        success String
 
         define_method(:perform) { "Hello #{name}" }
       end
@@ -207,7 +207,7 @@ class TestOperationRecording < Minitest::Test
   def test_records_nil_response
     with_recording do
       op = define_operation(:TestRecordsNilResponse) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
           nil
         end
@@ -222,7 +222,7 @@ class TestOperationRecording < Minitest::Test
   def test_records_primitive_response_wrapped
     with_recording do
       op = define_operation(:TestRecordsPrimitiveResponse) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
           42
         end
@@ -237,7 +237,7 @@ class TestOperationRecording < Minitest::Test
   def test_missing_response_column_still_works
     with_recording(record_class: MinimalOperationRecord) do
       op = define_operation(:TestMissingResponseColumn) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
           { result: "success" }
         end
@@ -253,7 +253,7 @@ class TestOperationRecording < Minitest::Test
   def test_error_does_not_record
     with_recording do
       op = define_operation(:TestErrorDoesNotRecord) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
           error!(:test_error, "Test error message")
         end
@@ -270,7 +270,7 @@ class TestOperationRecording < Minitest::Test
   def test_success_bang_records
     with_recording do
       op = define_operation(:TestSuccessBangRecords) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
           success!("early result")
         end
@@ -288,7 +288,7 @@ class TestOperationRecording < Minitest::Test
     with_recording do
       op = define_operation(:TestRecordResponseFalse) do
         record response: false
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
           { greeting: "Hello" }
         end
@@ -306,7 +306,7 @@ class TestOperationRecording < Minitest::Test
     with_recording do
       op = define_operation(:TestRecordParamsFalse) do
         record params: false
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
           { greeting: "Hello" }
         end
@@ -324,7 +324,7 @@ class TestOperationRecording < Minitest::Test
     with_recording do
       op = define_operation(:TestRecordDefaults) do
         record true
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
           { greeting: "Hello" }
         end

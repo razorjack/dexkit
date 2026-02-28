@@ -144,7 +144,7 @@ class TestOperationTransaction < Minitest::Test
   def test_record_save_inside_transaction
     with_recording do
       op = define_operation(:TestRecordInTransaction) do
-        params { attribute :name, Types::String }
+        prop :name, String
         def perform
           TestModel.create!(name: "TestModel")
           raise "Error"

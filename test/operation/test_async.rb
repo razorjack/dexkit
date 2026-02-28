@@ -28,7 +28,7 @@ class TestOperationAsync < Minitest::Test
     spy = Minitest::Mock.new
     spy.expect :call, nil, ["Test"]
 
-    operation(name: :TestSpyOperation, params: { name: Types::String, spy: Types::Any }) do
+    operation(name: :TestSpyOperation, params: { name: String, spy: Object }) do
       spy.call(name)
     end
 
@@ -143,7 +143,7 @@ class TestOperationAsync < Minitest::Test
 
   def test_async_round_trip_date
     define_operation(:TestDateOp) do
-      params { attribute :due, Types::Strict::Date }
+      prop :due, Date
       def perform = due
     end
 
@@ -156,7 +156,7 @@ class TestOperationAsync < Minitest::Test
 
   def test_async_round_trip_time
     define_operation(:TestTimeOp) do
-      params { attribute :at, Types::Strict::Time }
+      prop :at, Time
       def perform = at
     end
 
@@ -172,7 +172,7 @@ class TestOperationAsync < Minitest::Test
 
   def test_async_round_trip_symbol
     define_operation(:TestSymbolOp) do
-      params { attribute :status, Types::Strict::Symbol }
+      prop :status, Symbol
       def perform = status
     end
 
@@ -185,7 +185,7 @@ class TestOperationAsync < Minitest::Test
 
   def test_async_round_trip_optional_date_nil
     define_operation(:TestOptDateNilOp) do
-      params { attribute :due, Types::Strict::Date.optional }
+      prop? :due, Date
       def perform = due
     end
 
@@ -198,7 +198,7 @@ class TestOperationAsync < Minitest::Test
 
   def test_async_round_trip_optional_date_present
     define_operation(:TestOptDateOp) do
-      params { attribute :due, Types::Strict::Date.optional }
+      prop? :due, Date
       def perform = due
     end
 
@@ -211,7 +211,7 @@ class TestOperationAsync < Minitest::Test
 
   def test_async_round_trip_array_of_dates
     define_operation(:TestArrayDatesOp) do
-      params { attribute :dates, Types::Array.of(Types::Strict::Date) }
+      prop :dates, _Array(Date)
       def perform = dates
     end
 
@@ -226,7 +226,7 @@ class TestOperationAsync < Minitest::Test
     model = TestModel.create!(name: "Alice")
 
     define_operation(:TestRecordOp) do
-      params { attribute :model, Types::Ref(TestModel) }
+      prop :model, _Ref(TestModel)
       def perform = model
     end
 
@@ -241,10 +241,8 @@ class TestOperationAsync < Minitest::Test
     model = TestModel.create!(name: "Bob")
 
     define_operation(:TestSerializeOp) do
-      params do
-        attribute :model, Types::Ref(TestModel)
-        attribute :due, Types::Nominal::Date
-      end
+      prop :model, _Ref(TestModel)
+      prop :due, Date
       def perform = nil
     end
 
@@ -263,7 +261,7 @@ class TestOperationAsync < Minitest::Test
     end
 
     define_operation(:TestNonSerOp) do
-      params { attribute :data, Types::Any }
+      prop :data, Object
       def perform = nil
     end
 
@@ -274,10 +272,8 @@ class TestOperationAsync < Minitest::Test
 
   def test_async_full_round_trip
     op_class = define_operation(:TestFullRoundTripOp) do
-      params do
-        attribute :due, Types::Nominal::Date
-        attribute :label, Types::String
-      end
+      prop :due, Date
+      prop :label, String
 
       def perform
         { due: due, label: label }
@@ -291,13 +287,13 @@ class TestOperationAsync < Minitest::Test
     end
   end
 
-  def test_direct_call_still_strict
+  def test_direct_call_validates_types
     define_operation(:TestStrictOp) do
-      params { attribute :due, Types::Strict::Date }
+      prop :due, Date
       def perform = due
     end
 
-    assert_raises(Dry::Struct::Error) do
+    assert_raises(Literal::TypeError) do
       TestStrictOp.new(due: "2025-06-15").call
     end
   end
@@ -307,9 +303,7 @@ class TestOperationAsync < Minitest::Test
   # Override the global helper with test-specific defaults
   def build_operation(parent: Dex::Operation, &block)
     super do
-      params do
-        attribute :name, Types::String
-      end
+      prop :name, String
 
       class_eval(&block) if block
 

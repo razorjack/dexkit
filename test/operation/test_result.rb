@@ -11,28 +11,28 @@ class TestOperationResult < Minitest::Test
 
   def test_success_type_is_stored
     op = build_operation {}
-    op.success(Types::String)
+    op.success(String)
 
-    assert_equal Types::String, op._success_type
+    assert_equal String, op._success_type
   end
 
   def test_success_type_inherits_from_parent
     parent = build_operation {}
-    parent.success(Types::Integer)
+    parent.success(Integer)
 
     child = Class.new(parent)
-    assert_equal Types::Integer, child._success_type
+    assert_equal Integer, child._success_type
   end
 
   def test_success_type_child_overrides_parent
     parent = build_operation {}
-    parent.success(Types::Integer)
+    parent.success(Integer)
 
     child = Class.new(parent)
-    child.success(Types::String)
+    child.success(String)
 
-    assert_equal Types::String, child._success_type
-    assert_equal Types::Integer, parent._success_type
+    assert_equal String, child._success_type
+    assert_equal Integer, parent._success_type
   end
 
   def test_success_type_nil_when_not_declared
@@ -134,28 +134,28 @@ class TestOperationResult < Minitest::Test
   # success type runtime validation
 
   def test_success_type_validates_correct_type
-    op = operation(success: Types::String) { "hello" }
+    op = operation(success: String) { "hello" }
     assert_equal "hello", op.new.call
   end
 
   def test_success_type_rejects_wrong_type
-    op = operation(success: Types::String) { 123 }
+    op = operation(success: String) { 123 }
     assert_raises(ArgumentError) { op.new.call }
   end
 
   def test_success_type_skips_nil_return
-    op = operation(success: Types::String) { nil }
+    op = operation(success: String) { nil }
     assert_nil op.new.call
   end
 
   def test_success_type_validates_ref_type
     model = TestModel.create!(name: "test")
-    op = operation(success: Types::Ref(TestModel)) { model }
+    op = operation(success: Dex::RefType.new(TestModel)) { model }
     assert_equal model, op.new.call
   end
 
   def test_success_type_rejects_wrong_ref_type
-    op = operation(success: Types::Ref(TestModel)) { { id: 1 } }
+    op = operation(success: Dex::RefType.new(TestModel)) { { id: 1 } }
     assert_raises(ArgumentError) { op.new.call }
   end
 
@@ -165,22 +165,31 @@ class TestOperationResult < Minitest::Test
   end
 
   def test_success_optional_type_accepts_correct_type
-    op = operation(success: Types::String.optional) { "hello" }
+    op = build_operation do
+      success _Nilable(String)
+      def perform = "hello"
+    end
     assert_equal "hello", op.new.call
   end
 
   def test_success_optional_type_rejects_wrong_type
-    op = operation(success: Types::String.optional) { 123 }
+    op = build_operation do
+      success _Nilable(String)
+      def perform = 123
+    end
     assert_raises(ArgumentError) { op.new.call }
   end
 
   def test_success_optional_type_accepts_nil
-    op = operation(success: Types::String.optional) { nil }
+    op = build_operation do
+      success _Nilable(String)
+      def perform = nil
+    end
     assert_nil op.new.call
   end
 
   def test_success_type_validates_success_bang
-    op = operation(success: Types::String) do
+    op = operation(success: String) do
       success!(123)
     end
     assert_raises(ArgumentError) { op.new.call }

@@ -39,7 +39,7 @@ class TestTestLog < Minitest::Test
 
   def test_entry_contains_params
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = name
     end
     op.new(name: "Alice").call
@@ -98,7 +98,7 @@ class TestTestLog < Minitest::Test
 
   def test_find_by_class_and_params
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = name
     end
 

@@ -2,74 +2,23 @@
 
 require "test_helper"
 
-class TestOperationDelegate < Minitest::Test
+class TestOperationProps < Minitest::Test
   def setup
     setup_test_database
   end
 
-  def test_default_delegates_all_attributes
-    op = operation(params: { name: Types::String, count: Types::Integer }) do
+  def test_props_are_accessible_as_reader_methods
+    op = operation(params: { name: String, count: Integer }) do
       "#{name}-#{count}"
     end
 
     assert_equal "test-3", op.new(name: "test", count: 3).call
   end
 
-  def test_params_accessor_still_works_alongside_delegation
-    op = operation(params: { name: Types::String }) do
-      [name, params.name]
-    end
-
-    assert_equal ["hello", "hello"], op.new(name: "hello").call
-  end
-
-  def test_delegate_false_disables_delegation
-    op = build_operation do
-      params(delegate: false) { attribute :name, Types::String }
-      def perform = respond_to?(:name)
-    end
-
-    refute op.new(name: "test").call
-  end
-
-  def test_delegate_true_explicit
-    op = build_operation do
-      params(delegate: true) { attribute :name, Types::String }
-      def perform = name
-    end
-
-    assert_equal "explicit", op.new(name: "explicit").call
-  end
-
-  def test_delegate_symbol_delegates_only_that_attribute
-    op = build_operation do
-      params(delegate: :name) do
-        attribute :name, Types::String
-        attribute :email, Types::String
-      end
-      def perform = [name, respond_to?(:email)]
-    end
-
-    assert_equal ["Alice", false], op.new(name: "Alice", email: "a@x.com").call
-  end
-
-  def test_delegate_array_delegates_listed_attributes
-    op = build_operation do
-      params(delegate: [:name, :email]) do
-        attribute :name, Types::String
-        attribute :email, Types::String
-        attribute :age, Types::Integer
-      end
-      def perform = [name, email, respond_to?(:age)]
-    end
-
-    assert_equal ["Bob", "b@x.com", false], op.new(name: "Bob", email: "b@x.com", age: 30).call
-  end
-
-  def test_delegated_methods_available_in_callbacks
+  def test_props_available_in_callbacks
     log = []
     op = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       before { log << name }
       def perform = "done"
     end
@@ -78,9 +27,9 @@ class TestOperationDelegate < Minitest::Test
     assert_equal ["Alice"], log
   end
 
-  def test_child_inherits_delegated_methods
+  def test_child_inherits_props
     parent = build_operation do
-      params { attribute :name, Types::String }
+      prop :name, String
       def perform = name
     end
     child = build_operation(parent: parent)
@@ -88,50 +37,24 @@ class TestOperationDelegate < Minitest::Test
     assert_equal "inherited", child.new(name: "inherited").call
   end
 
-  def test_reserved_param_name_raises_on_default_delegation
+  def test_reserved_prop_name_raises
     error = assert_raises(ArgumentError) do
       build_operation do
-        params { attribute :call, Types::String }
+        prop :call, String
       end
     end
 
     assert_includes error.message, ":call"
-    assert_includes error.message, "conflict with core Operation methods"
-    assert_includes error.message, "delegate: false"
+    assert_includes error.message, "conflicts with core Operation methods"
   end
 
-  def test_reserved_param_name_allowed_with_delegate_false
-    op = build_operation do
-      params(delegate: false) { attribute :call, Types::String }
-      def perform = params.call
-    end
-
-    assert_equal "hello", op.new(call: "hello").call
-  end
-
-  def test_reserved_param_name_allowed_with_selective_delegation
-    op = build_operation do
-      params(delegate: [:name]) do
-        attribute :name, Types::String
-        attribute :call, Types::String
-      end
-      def perform = "#{name}-#{params.call}"
-    end
-
-    assert_equal "hi-world", op.new(name: "hi", call: "world").call
-  end
-
-  def test_multiple_reserved_names_listed_in_error
+  def test_reserved_perform_name_raises
     error = assert_raises(ArgumentError) do
       build_operation do
-        params do
-          attribute :call, Types::String
-          attribute :perform, Types::String
-        end
+        prop :perform, String
       end
     end
 
-    assert_includes error.message, ":call"
     assert_includes error.message, ":perform"
   end
 end

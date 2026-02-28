@@ -79,9 +79,7 @@ module Dex
     end
 
     def _test_safe_params
-      return {} unless respond_to?(:params) && params
-
-      params.to_h
+      respond_to?(:to_h) ? to_h : {}
     rescue
       {}
     end

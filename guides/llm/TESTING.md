@@ -145,9 +145,9 @@ Inspect class declarations without calling the operation.
 assert_params(:name, :email)
 assert_params(MyOp, :name, :email)
 
-# With types
-assert_params(name: Types::String, email: Types::String)
-assert_params(MyOp, name: Types::String)
+# With types (plain Ruby classes or Literal types)
+assert_params(name: String, email: String)
+assert_params(MyOp, name: String)
 ```
 
 ### assert_accepts_param
@@ -160,9 +160,11 @@ assert_accepts_param(MyOp, :name)
 ### assert_success_type
 
 ```ruby
-assert_success_type(Types::String)
-assert_success_type(MyOp, Types::Ref(User))
+assert_success_type(String)
+assert_success_type(MyOp, Dex::RefType.new(User))
 ```
+
+Note: Outside the operation class body, use `Dex::RefType.new(Model)` instead of `_Ref(Model)`.
 
 ### assert_error_codes
 
@@ -174,8 +176,8 @@ assert_error_codes(MyOp, :not_found, :invalid)
 ### assert_contract
 
 ```ruby
-assert_contract(params: [:name, :email], success: Types::String, errors: [:invalid])
-assert_contract(MyOp, params: { name: Types::String }, errors: [:invalid])
+assert_contract(params: [:name, :email], success: String, errors: [:invalid])
+assert_contract(MyOp, params: { name: String }, errors: [:invalid])
 ```
 
 ---
@@ -185,7 +187,7 @@ assert_contract(MyOp, params: { name: Types::String }, errors: [:invalid])
 ### assert_invalid_params
 
 ```ruby
-assert_invalid_params(name: 123)          # asserts Dry::Struct::Error on construction
+assert_invalid_params(name: 123)          # asserts Literal::TypeError on construction
 assert_invalid_params(MyOp, name: 123)
 ```
 
@@ -311,7 +313,7 @@ Dex::TestLog.summary     # => "Operations called (2):\n  1. MyOp [OK] 1.2ms\n...
 | `type` | `String` | Always `"Operation"` |
 | `name` | `String` | Class name |
 | `operation_class` | `Class` | The operation class |
-| `params` | `Hash` | Param values |
+| `params` | `Hash` | Prop values |
 | `result` | `Ok` or `Err` | Wrapped result |
 | `duration` | `Float` | Seconds |
 | `caller_location` | `Thread::Backtrace::Location` | Call site |
@@ -334,7 +336,7 @@ class CreateUserTest < Minitest::Test
   # Contract
   def test_contract
     assert_params(:name, :email)
-    assert_success_type(Types::Ref(User))
+    assert_success_type(Dex::RefType.new(User))
     assert_error_codes(:invalid_email, :duplicate)
   end
 
