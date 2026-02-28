@@ -154,7 +154,7 @@ module Dex
         halted_value = catch(:_dex_halt) { yield }
         if halted_value.is_a?(Operation::Halt)
           halted = halted_value
-          raise ActiveRecord::Rollback if halted.error?
+          raise _transaction_adapter.rollback_exception_class if halted.error?
           halted.value
         else
           halted_value
@@ -1138,6 +1138,10 @@ module Dex
           end
           ActiveRecord::Base.transaction(&block)
         end
+
+        def self.rollback_exception_class
+          ActiveRecord::Rollback
+        end
       end
 
       module MongoidAdapter
@@ -1146,6 +1150,10 @@ module Dex
             raise LoadError, "Mongoid is required for transactions"
           end
           Mongoid.transaction(&block)
+        end
+
+        def self.rollback_exception_class
+          Mongoid::Errors::Rollback
         end
       end
     end
