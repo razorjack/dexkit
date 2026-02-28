@@ -718,11 +718,11 @@ module Dex
       end
 
       def _async_apply_options(job_class)
-        job = job_class
-        job = job.set(queue: _async_queue) if _async_queue
-        job = job.set(wait_until: _async_scheduled_at) if _async_scheduled_at
-        job = job.set(wait: _async_scheduled_in) if _async_scheduled_in
-        job
+        options = {}
+        options[:queue] = _async_queue if _async_queue
+        options[:wait_until] = _async_scheduled_at if _async_scheduled_at
+        options[:wait] = _async_scheduled_in if _async_scheduled_in
+        options.empty? ? job_class : job_class.set(**options)
       end
 
       def _async_ensure_active_job_loaded!

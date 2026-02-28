@@ -98,6 +98,35 @@ class TestOperationAsync < Minitest::Test
     assert_equal op1.settings_for(:async), op2.settings_for(:async)
   end
 
+  def test_async_with_queue_and_scheduled_time
+    scheduled_time = Time.now + 3600
+    op = build_operation.new(name: "Test")
+
+    assert_enqueued_with(job: Dex::Operation::Job, queue: "low", at: scheduled_time) do
+      op.async(queue: "low", at: scheduled_time).call
+    end
+  end
+
+  def test_async_with_queue_and_delay
+    op = build_operation.new(name: "Test")
+
+    assert_enqueued_with(job: Dex::Operation::Job, queue: "low") do
+      op.async(queue: "low", in: 300).call
+    end
+  end
+
+  def test_class_defaults_compose_with_runtime_options
+    scheduled_time = Time.now + 3600
+
+    op_class = build_operation do
+      async queue: "low"
+    end
+
+    assert_enqueued_with(job: Dex::Operation::Job, queue: "low", at: scheduled_time) do
+      op_class.new(name: "Test").async(at: scheduled_time).call
+    end
+  end
+
   def test_settings_inheritance_for_async
     parent = build_operation do
       async queue: "default", priority: 5
