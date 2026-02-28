@@ -513,6 +513,129 @@ When recording to database, Ref types serialize as IDs (not full objects):
 # Keeps your operation_records table clean and efficient
 ```
 
+## Testing
+
+Dexkit ships test helpers for Minitest with assertions, stubbing, spying, and a global activity log.
+
+### Setup
+
+```ruby
+# test/test_helper.rb
+require "dex/test_helpers"
+
+class Minitest::Test
+  include Dex::TestHelpers
+end
+```
+
+### Subject Declaration
+
+Set a default operation for all helpers in a test class:
+
+```ruby
+class CreateUserTest < Minitest::Test
+  testing CreateUser
+
+  def test_creates_user
+    result = call_operation(name: "Alice", email: "a@b.com")
+    assert_ok result
+  end
+end
+```
+
+### Execution Helpers
+
+```ruby
+result = call_operation(name: "Alice")          # => Ok or Err (safe)
+value  = call_operation!(name: "Alice")         # => value or raises Dex::Error
+
+result = call_operation(MyOp, name: "Alice")    # explicit class form
+```
+
+### Result Assertions
+
+```ruby
+assert_ok result                                # passes if Ok
+assert_ok result, 42                            # checks value
+assert_err result, :not_found                   # checks error code
+assert_err result, :fail, message: /went wrong/ # checks message with regex
+refute_ok result                                # passes if Err
+refute_err result, :code                        # passes if Ok or different code
+```
+
+### One-Liner Assertions
+
+```ruby
+assert_operation(name: "Alice", returns: user)     # call + assert Ok + check value
+assert_operation_error(:invalid, name: "")         # call + assert Err with code
+```
+
+### Contract Assertions
+
+Inspect declarations without calling:
+
+```ruby
+assert_params(:name, :email)                       # exhaustive param names
+assert_accepts_param(:name)                        # subset check
+assert_success_type(Types::Ref(User))              # success type
+assert_error_codes(:not_found, :invalid)           # exhaustive error codes
+assert_contract(params: [:name], errors: [:invalid]) # full contract
+```
+
+### Stubbing
+
+Replace an operation entirely within a block:
+
+```ruby
+stub_operation(SendEmail, returns: true) do
+  call_operation!(name: "Alice")  # SendEmail returns true, bypasses perform
+end
+
+stub_operation(Gateway, error: :timeout) do
+  result = call_operation(amount: 100)
+  assert_err result, :timeout
+end
+```
+
+### Spying
+
+Observe real execution without modifying behavior:
+
+```ruby
+spy_on_operation(SendEmail) do |spy|
+  call_operation!(name: "Alice")
+  assert spy.called_once?
+  assert spy.called_with?(email: "a@b.com")
+end
+```
+
+### Other Assertions
+
+```ruby
+# Param validation
+assert_invalid_params(name: 123)                   # expects Dry::Struct::Error
+assert_valid_params(name: "Alice")                  # no error on construction
+
+# Transaction
+assert_rolls_back(User) { op.new(bad: true).call }
+assert_commits(User) { op.new(good: true).call }
+
+# Batch
+assert_all_succeed(params_list: [{ x: 1 }, { x: 2 }])
+assert_all_fail(code: :invalid, params_list: [{ x: -1 }])
+```
+
+### TestLog
+
+All operation calls are recorded to `Dex::TestLog` (automatically cleared between tests):
+
+```ruby
+Dex::TestLog.calls    # => [Entry, ...]
+Dex::TestLog.size     # => Integer
+Dex::TestLog.find(MyOp, name: "Alice")  # filter by class and params
+Dex::TestLog.summary  # human-readable table
+```
+
 ## AI Coding Assistant Setup
 
 Dexkit provides LLM-optimized documentation for AI coding agents. Copy the guide to your operations directory so agents automatically know the complete API when working on operations.
@@ -521,8 +644,10 @@ Dexkit provides LLM-optimized documentation for AI coding agents. Copy the guide
 
 ```bash
 cp $(bundle show dexkit)/guides/llm/OPERATION.md app/operations/CLAUDE.md
+cp $(bundle show dexkit)/guides/llm/TESTING.md test/CLAUDE.md
 # or for other AI assistants:
 cp $(bundle show dexkit)/guides/llm/OPERATION.md app/operations/AGENTS.md
+cp $(bundle show dexkit)/guides/llm/TESTING.md test/AGENTS.md
 ```
 
 The guide contains comprehensive documentation of all Operation features, optimized for AI comprehension. Commit it to your repository and customize with project-specific conventions.

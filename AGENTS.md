@@ -20,6 +20,12 @@ lib/
     parameters.rb        # Dex::Parameters (Dry::Struct subclass)
     types.rb             # Dex::Types::Extension (adds Ref() type)
     operation.rb         # All operation logic and wrapper modules
+    test_log.rb          # Dex::TestLog (global activity log for tests)
+    test_helpers.rb      # Dex::TestHelpers + Dex::TestWrapper
+    test_helpers/
+      execution.rb       # call_operation, call_operation!
+      assertions.rb      # All assertion methods
+      stubbing.rb        # stub_operation, spy_on_operation, Spy class
 
 test/
   test_helper.rb         # Minitest setup, Types module
@@ -28,6 +34,8 @@ test/
     database_helpers.rb  # setup_test_database()
   operation/
     test_*.rb            # Per-feature test files
+  test_helpers/
+    test_*.rb            # Per-feature test helper tests
   types/
     test_*.rb            # Per-type test files
 ```
@@ -149,6 +157,7 @@ Tests can be scoped per-area, each area in a separate file. Example: test/operat
 
 **Current files:**
 - `guides/llm/OPERATION.md` — Complete reference for Dex::Operation
+- `guides/llm/TESTING.md` — Complete reference for Dex::TestHelpers
 
 As new major features are added (e.g., Forms, Validators), create corresponding files like `guides/llm/FORM.md`.
 
@@ -185,6 +194,7 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ Advisory locking via `advisory_lock` DSL — wraps operation in database advisory lock (outside transaction boundary); supports static keys, dynamic blocks, symbol methods, timeout; uses `with_advisory_lock` gem as optional runtime dependency
 - ✅ `assert!` guard — inline nil/false guard: block form `assert!(:code) { expr }` returns value or errors; value form `assert!(value, :code)`; respects declared error codes; rolls back transaction on failure
 - ✅ `.contract` introspection — `MyOp.contract` returns a frozen `Dex::Operation::Contract` (`Data.define`) with `params` (Hash of attribute name → Dry::Types type), `success` (type or nil), `errors` (Array of Symbols); supports pattern matching and `to_h`; inherits from parent class
+- ✅ `Dex::TestHelpers` — Minitest module with `call_operation`/`call_operation!` execution helpers, result assertions (`assert_ok`/`assert_err`), one-liner assertions (`assert_operation`/`assert_operation_error`), contract assertions (`assert_params`/`assert_error_codes`/etc), `stub_operation`/`spy_on_operation`, batch assertions, and `Dex::TestLog` global activity log
 
 ### Future plans
 

@@ -902,4 +902,6 @@ CreateOrder.new(user: 123, items: [...], total: 99.99).async.call
 
 ---
 
+**Testing:** See `guides/llm/TESTING.md` for comprehensive test helpers (`Dex::TestHelpers`) — assertions, stubbing, spying, and the `Dex::TestLog` activity log.
+
 **End of reference.** For the latest features, check the dexkit repository or CHANGELOG.
