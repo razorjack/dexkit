@@ -594,21 +594,18 @@ module Dex
         _callback_validate!(callable, block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:before) << entry
-        _callback_invalidate_cache!
       end
 
       def after(callable = nil, &block)
         _callback_validate!(callable, block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:after) << entry
-        _callback_invalidate_cache!
       end
 
       def around(callable = nil, &block)
         _callback_validate!(callable, block)
         entry = callable.is_a?(Symbol) ? [:method, callable] : [:proc, callable || block]
         _callback_own(:around) << entry
-        _callback_invalidate_cache!
       end
 
       def _callback_list(type)
@@ -617,9 +614,7 @@ module Dex
       end
 
       def _callback_any?
-        return @_callback_any if defined?(@_callback_any)
-
-        @_callback_any = %i[before after around].any? { |type| _callback_list(type).any? }
+        %i[before after around].any? { |type| _callback_list(type).any? }
       end
 
       private
@@ -634,10 +629,6 @@ module Dex
         else
           raise ArgumentError, "callback must be a Symbol or callable, got: #{callable.class}"
         end
-      end
-
-      def _callback_invalidate_cache!
-        remove_instance_variable(:@_callback_any) if defined?(@_callback_any)
       end
 
       def _callback_own(type)
