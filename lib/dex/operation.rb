@@ -286,9 +286,10 @@ module Dex
 
     def _lock_execute(&block)
       _lock_ensure_loaded!
-      ActiveRecord::Base.with_advisory_lock!(_lock_key, **_lock_options, &block)
+      key = _lock_key
+      ActiveRecord::Base.with_advisory_lock!(key, **_lock_options, &block)
     rescue WithAdvisoryLock::FailedToAcquireLock
-      raise Dex::Error.new(:lock_timeout, "Could not acquire advisory lock: #{_lock_key}")
+      raise Dex::Error.new(:lock_timeout, "Could not acquire advisory lock: #{key}")
     end
 
     def _lock_ensure_loaded!
