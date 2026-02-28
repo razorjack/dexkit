@@ -1,14 +1,13 @@
 Dexkit. Module name: `Dex`
 
-This is a Ruby library for my Rails projects. Its purpose is to provide
-base classes for patterns such as services/operations or forms objects.
+Ruby library providing base classes for service/operation and form object patterns in Rails apps.
 
-## Library core values
+## Core Values
 
-1. It's Ruby, the API to use this library must be beautiful. It must read and feel good.
-2. Short is better than verbose but must remain unambiguous.
-3. Batteries should always be included by default but possible to opt out.
-4. Tests should read like examples. Avoid bloated test files. Test files should be succinct.
+1. Beautiful Ruby API — must read and feel good.
+2. Short over verbose, but unambiguous.
+3. Batteries included by default, opt-out possible.
+4. Tests read like examples — succinct, no bloat.
 
 ## File Structure
 
@@ -40,185 +39,49 @@ test/
     test_*.rb            # Per-type test files
 ```
 
-## Core dependencies
+## Core Dependencies
 
 **Runtime:** `dry-struct`, `zeitwerk`
 
 **Development:** `activejob`, `activerecord` (for testing Rails integration)
 
-## Operations
+## Development Conventions
 
-The basic API for operation is this:
+All operation logic lives in `lib/dex/operation.rb` — keep it this way until the API matures. Each behavior is a separate module registered as a named pipeline step via `use`. New wrapper modules follow the pattern: `self.included` + `ClassMethods` for DSL + `_name_wrap` instance method that calls `yield` to proceed. See existing wrappers for reference.
 
-```Ruby
-# Define
-class TestMyOperation < Dex::Operation
-  params do
-    attribute :name, Types::String
-  end
+**Naming internal methods**: All private/internal instance methods in Operation modules MUST be prefixed with underscore `_` (non-negotiable). Additionally, prefix them with `_modulename_` to indicate which module they belong to. Example: in `RecordWrapper` → `_record_enabled?`, `_record_save!`, `_record_attributes`. This prevents naming collisions and signals framework-internal methods.
 
-  def perform
-    puts "Welcome #{name}"
-  end
-end
+Tests are scoped per-area, each area in a separate file. Example: `test/operation/test_params.rb` for testing params.
 
+## Process
 
-# Call
-TestMyOperation.new(name: "Test Test!").call
-```
+When you're done adding a new feature or significantly modifying existing one:
+1. Update `README.md` accordingly.
+2. Update the corresponding file in `guides/llm/` — these are LLM-optimized docs copied into apps that use dexkit. They must be thorough, compact, accurate, and in sync with implementation. Current files: `guides/llm/OPERATION.md`, `guides/llm/TESTING.md`. New major features get new files (e.g., `guides/llm/FORM.md`).
 
-### Async operations
+## Code Quality
 
-```Ruby
-TestMyOperation.new(name: "Test Test!").async.call
-TestMyOperation.new(name: "Test Test!").async(at: 3.days.from.now).call
-TestMyOperation.new(name: "Test Test!").async(in: 3.minutes, queue: "low").call
-```
-
-### Settings
-
-Some classes may need class-level configuration. It looks like this:
-
-```Ruby
-class TestMyOperation < Dex::Operation
-  async queue: "low" # "shortcut" for most-used settings for good DX
-  # ...which is equivalent to:
-  set :async, queue: "low" # under the hood, all options use `set` API
-end
-```
-
-### Wrapper Modules
-
-Modules are registered as named pipeline steps via `use`. `Operation#call` invokes the pipeline, which executes steps in declared order (outermost first). Each step's `_xxx_wrap` method receives a block (continuation) and calls `yield` to proceed.
-
-**Pipeline steps (execution order):**
-
-| Step | Module | Purpose | Default |
-|------|--------|---------|---------|
-| `:result` | ResultWrapper | Contract declarations via `success`/`error`, flow control via `error!`/`success!` | Active |
-| `:lock` | LockWrapper | Advisory locking via `advisory_lock` | Opt-in |
-| `:transaction` | TransactionWrapper | Wraps `perform` in DB transaction | Enabled |
-| `:record` | RecordWrapper | Logs operation calls to database | Requires config |
-| `:rescue` | RescueWrapper | Maps exceptions to `Dex::Error` via `rescue_from` | Active |
-| `:callback` | CallbackWrapper | Lifecycle hooks via `before`, `after`, `around` | Active |
-
-**Non-pipeline modules (included directly):**
-
-| Module | Purpose | Default |
-|--------|---------|---------|
-| Settings | Class-level configuration via `set`/`settings_for` | Active |
-| ParamsWrapper | Typed parameters via `params` block (prepended) | Active |
-| AsyncWrapper | Background execution via `.async.call` | Opt-in |
-| SafeWrapper | Safe execution via `.safe` returning `Ok`/`Err` | Active |
-
-### Development
-
-All operation logic is in `lib/dex/operation.rb`. Keep it this way until the API matures. Each behavior is modularized via included modules with pipeline steps.
-
-Modularity: when it makes sense, keep existing pattern of modularizing each type of behavior as a separate module registered via `use` on the pipeline.
-
-#### Module Pattern
-
-The standard pattern for adding new wrapper functionality:
-
-```ruby
-module SomeWrapper
-  def self.included(base)
-    base.extend(ClassMethods)
-  end
-
-  module ClassMethods
-    def some_dsl(**opts)
-      set(:key, **opts)
-    end
-  end
-
-  def _some_wrap
-    # before logic
-    yield  # calls next step in pipeline
-    # after logic
-  end
-end
-```
-
-Then register in Operation: `use SomeWrapper` (step name derived as `:some`)
-
-#### Adapter Pattern
-
-Use `.for()` factory methods for adapters:
-- `RecordBackend.for(record_class)` - Returns appropriate backend for the model
-- `TransactionAdapter.for(adapter_name)` - Returns DB-specific transaction logic
-
-### Process
-
-When you're done adding a new feature or significantly modifying existing one, update README.md accordingly.
-
-**Naming internal methods**: All private/internal instance methods in Operation modules MUST be prefixed with underscore `_` (non-negotiable). Additionally, try hard to prefix them with `_modulename_` to clearly indicate which module they belong to. Example: in `RecordWrapper` module, internal methods should be named `_record_enabled?`, `_record_save!`, `_record_attributes`, etc. This prevents naming collisions and makes it clear these are framework-internal methods.
-
-Tests can be scoped per-area, each area in a separate file. Example: test/operation/test_params.rb for testing params.
-
-### LLM Documentation (`guides/llm/`)
-
-**CRITICAL:** This library provides LLM-optimized documentation in `guides/llm/` for use by AI coding agents.
-
-**Purpose:** Files in `guides/llm/` are designed to be copied into applications that use dexkit (e.g., `app/operations/CLAUDE.md` or `app/operations/AGENTS.md`). When developers work on operations in their apps, coding agents automatically load these instructions and know the complete API.
-
-**Maintenance rule:** Whenever you add a new feature or significantly modify an existing feature in any of the library's major components (Operation, etc.), you MUST update the corresponding file in `guides/llm/` to reflect the changes. These files must remain:
-
-1. **Thorough** — Document EVERY feature, DSL method, option, and behavior
-2. **Compact** — Optimize for information density; avoid unnecessary prose
-3. **LLM-optimized** — Use clear headings, code examples, tables, and structured lists that LLMs parse well
-4. **Accurate** — Keep in sync with implementation; test examples work
-
-**Current files:**
-- `guides/llm/OPERATION.md` — Complete reference for Dex::Operation
-- `guides/llm/TESTING.md` — Complete reference for Dex::TestHelpers
-
-As new major features are added (e.g., Forms, Validators), create corresponding files like `guides/llm/FORM.md`.
-
-### Code Quality
-
-**Rubocop is mandatory.** After modifying any Ruby files (`.rb`), always run:
+**Rubocop is mandatory.** After modifying any Ruby files:
 
 ```bash
 bundle exec rubocop
 ```
 
-To auto-fix issues: `bundle exec rubocop -a`
+Auto-fix: `bundle exec rubocop -a`
 
-For markdown files with Ruby code snippets:
+For markdown files with Ruby snippets:
 
 ```bash
 bundle exec rubocop -c .rubocop-md.yml
 ```
 
-**DSL validation:** All DSL methods (`error`, `rescue_from`, `async`, `record`, `advisory_lock`, `before`/`after`/`around`, `transaction`, etc.) validate their arguments at declaration time, raising `ArgumentError` for invalid inputs. This gives users immediate feedback when they make a mistake in their class definitions. The low-level `set` method stays unvalidated — it's the extensible foundation. When adding new DSL methods, always validate arguments early.
+**DSL validation:** All DSL methods (`error`, `rescue_from`, `async`, `record`, `advisory_lock`, `before`/`after`/`around`, `transaction`, etc.) validate their arguments at declaration time, raising `ArgumentError` for invalid inputs. The low-level `set` method stays unvalidated — it's the extensible foundation. When adding new DSL methods, always validate arguments early.
 
-### Implemented Features
-
-- ✅ Success type declaration via `success Type` — documents return type, drives recording serialization (e.g., `Types::Ref(Model)` → stores ID)
-- ✅ Error code declarations via `error :codes` — documents valid error codes; undeclared codes in `error!` raise `ArgumentError`
-- ✅ Flow control via `error!` and `success!` — both use `throw`/`catch` for immediate halt; `error!` rolls back transaction, `success!` commits
-- ✅ Monad-like result objects (`Ok`/`Err`) via `.safe` modifier
-- ✅ Pattern matching support for errors and outcomes
-- ✅ Operation response recording to database with granular control (`record params: false, response: false`)
-- ✅ `Types::Ref(Model)` - parameterized type for model instances with ID coercion and serialization
-- ✅ Lifecycle callbacks (`before`, `after`, `around`) with symbol, lambda, and block support
-- ✅ Exception mapping via `rescue_from` — converts third-party exceptions to `Dex::Error` with inheritance support
-- ✅ `.call` as public entry point, `perform` is private (user-implemented); `call` invokes an explicit `Pipeline` of named steps; each step wraps via `yield` — safe at any inheritance depth
-- ✅ Pipeline architecture with `use` DSL — modules register named steps; users can add custom steps with positioning (`before:`, `after:`, `at: :outer/:inner`); `pipeline.remove` to drop steps; child classes get independent pipeline copies
-- ✅ Parameter delegation — params accessible directly in `perform` (e.g., `name` instead of `params.name`), configurable via `delegate:` option
-- ✅ Record-based async strategy — when recording is enabled, async jobs store only a record ID in Redis instead of the full params payload; status tracking (`pending` → `running` → `done`/`failed`) with error field
-- ✅ Advisory locking via `advisory_lock` DSL — wraps operation in database advisory lock (outside transaction boundary); supports static keys, dynamic blocks, symbol methods, timeout; uses `with_advisory_lock` gem as optional runtime dependency
-- ✅ `assert!` guard — inline nil/false guard: block form `assert!(:code) { expr }` returns value or errors; value form `assert!(value, :code)`; respects declared error codes; rolls back transaction on failure
-- ✅ `.contract` introspection — `MyOp.contract` returns a frozen `Dex::Operation::Contract` (`Data.define`) with `params` (Hash of attribute name → Dry::Types type), `success` (type or nil), `errors` (Array of Symbols); supports pattern matching and `to_h`; inherits from parent class
-- ✅ `Dex::TestHelpers` — Minitest module with `call_operation`/`call_operation!` execution helpers, result assertions (`assert_ok`/`assert_err`), one-liner assertions (`assert_operation`/`assert_operation_error`), contract assertions (`assert_params`/`assert_error_codes`/etc), `stub_operation`/`spy_on_operation`, batch assertions, and `Dex::TestLog` global activity log
-
-### Future plans
+## Future Plans
 
 - Ability to define params contract (using dry-validation)
 - Performing an operation with nonce token (as used nonce tokens need to be saved somewhere)
 
-### Finishing up
+## Finishing Up
 
 When work is done, end with a short one-sentence summary appropriate for a commit message.
