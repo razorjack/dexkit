@@ -188,7 +188,7 @@ bundle exec rubocop -c .rubocop-md.yml
 - ✅ `Types::Ref(Model)` - parameterized type for model instances with ID coercion and serialization
 - ✅ Lifecycle callbacks (`before`, `after`, `around`) with symbol, lambda, and block support
 - ✅ Exception mapping via `rescue_from` — converts third-party exceptions to `Dex::Error` with inheritance support
-- ✅ `.call` as public entry point, `perform` is private (user-implemented); double-prepend guard for multi-level inheritance
+- ✅ `.call` as public entry point, `perform` is private (user-implemented); wrappers hook into `call` and are prepended once on Operation — safe at any inheritance depth
 - ✅ Parameter delegation — params accessible directly in `perform` (e.g., `name` instead of `params.name`), configurable via `delegate:` option
 - ✅ Record-based async strategy — when recording is enabled, async jobs store only a record ID in Redis instead of the full params payload; status tracking (`pending` → `running` → `done`/`failed`) with error field
 - ✅ Advisory locking via `advisory_lock` DSL — wraps operation in database advisory lock (outside transaction boundary); supports static keys, dynamic blocks, symbol methods, timeout; uses `with_advisory_lock` gem as optional runtime dependency
@@ -200,3 +200,7 @@ bundle exec rubocop -c .rubocop-md.yml
 
 - Ability to define params contract (using dry-validation)
 - Performing an operation with nonce token (as used nonce tokens need to be saved somewhere)
+
+### Finishing up
+
+When work is done, end with a short one-sentence summary appropriate for a commit message.

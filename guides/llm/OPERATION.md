@@ -846,6 +846,8 @@ params.as_json  # => {"user" => 123}  (not full User object)
 
 16. **Async + recording auto-optimizes** — When recording is enabled with params, `.async.call` stores only the record ID in Redis (via `RecordJob`) instead of the full params hash. This is automatic — no DSL changes needed. The record tracks `status` (`pending` → `running` → `done`/`failed`) and `error` (code or exception class name).
 
+17. **Multi-level inheritance is safe** — Wrapper modules (transactions, recording, callbacks, rescue, etc.) are prepended once on `Dex::Operation` and hook into `call`. Subclasses at any depth inherit them through normal Ruby MRO without duplication. Side effects (recording, transaction wrapping, callbacks) execute exactly once regardless of inheritance depth.
+
 ---
 
 ## Global Configuration

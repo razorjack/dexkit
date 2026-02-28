@@ -20,7 +20,7 @@ module Dex
       end
     end
 
-    def perform(*, **)
+    def call
       halted = nil
       result = catch(:_dex_halt) { super }
 
@@ -140,7 +140,7 @@ module Dex
       end
     end
 
-    def perform(*, **)
+    def call
       return super unless _transaction_enabled?
 
       halted = nil
@@ -205,7 +205,7 @@ module Dex
       end
     end
 
-    def perform(*, **)
+    def call
       _lock_enabled? ? _lock_execute { super } : super
     end
 
@@ -330,7 +330,7 @@ module Dex
       end
     end
 
-    def perform(*, **)
+    def call
       halted = catch(:_dex_halt) { super }
       if halted.is_a?(Operation::Halt)
         if halted.success?
@@ -472,7 +472,7 @@ module Dex
       end
     end
 
-    def perform(*, **)
+    def call
       super
     rescue Dex::Error
       raise
@@ -547,11 +547,9 @@ module Dex
       end
     end
 
-    def perform(*, **)
+    def call
       return super unless self.class._callback_any?
-      return super if @_callback_active
 
-      @_callback_active = true
       halted = nil
       result = _callback_run_around(self.class._callback_list(:around)) do
         _callback_run_before
@@ -571,8 +569,6 @@ module Dex
       end
       throw(:_dex_halt, halted) if halted
       result
-    ensure
-      @_callback_active = false
     end
 
     private
@@ -658,19 +654,16 @@ module Dex
       new(**kwargs).call
     end
 
-    def self.inherited(base)
-      super
-      base.prepend CallbackWrapper
-      base.prepend RescueWrapper
-      base.prepend RecordWrapper
-      base.prepend TransactionWrapper
-      base.prepend LockWrapper
-      base.prepend ResultWrapper
-      base.prepend ParamsWrapper
-      base.prepend Settings
-      base.prepend AsyncWrapper
-      base.prepend SafeWrapper
-    end
+    prepend CallbackWrapper
+    prepend RescueWrapper
+    prepend RecordWrapper
+    prepend TransactionWrapper
+    prepend LockWrapper
+    prepend ResultWrapper
+    prepend ParamsWrapper
+    prepend Settings
+    prepend AsyncWrapper
+    prepend SafeWrapper
 
     class AsyncProxy
       def initialize(operation, **runtime_options)
