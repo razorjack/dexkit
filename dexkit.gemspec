@@ -9,10 +9,10 @@ Gem::Specification.new do |spec|
   spec.email = ["jacek.galanciak@gmail.com"]
 
   spec.summary = "Dexkit: Rails Patterns Toolbelt. Equip to gain +4 DEX"
-  spec.description = "A toolbelt of patterns for your Rails applications: Operation, Event, Form"
+  spec.description = "A toolbelt of patterns for your Rails applications: Operation (more coming soon)"
   spec.homepage = "https://github.com/razorjack/dexkit"
   spec.license = "MIT"
-  spec.required_ruby_version = ">= 3.1.0"
+  spec.required_ruby_version = ">= 3.2.0"
 
   spec.metadata["allowed_push_host"] = "https://rubygems.org"
 

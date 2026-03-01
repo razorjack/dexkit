@@ -3,6 +3,7 @@
 require "zeitwerk"
 
 require "literal"
+require "time"
 
 loader = Zeitwerk::Loader.for_gem
 loader.ignore("#{__dir__}/dex")
