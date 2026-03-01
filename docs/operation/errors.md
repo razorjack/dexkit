@@ -23,9 +23,9 @@ The full signature:
 error!(code, message = nil, details: nil)
 ```
 
-- **code** (Symbol) — a machine-readable error identifier
-- **message** (String) — optional human-readable description; defaults to the code as a string
-- **details** (Hash) — optional structured data about the error
+- **code** (Symbol) – a machine-readable error identifier
+- **message** (String) – optional human-readable description; defaults to the code as a string
+- **details** (Hash) – optional structured data about the error
 
 ```ruby
 error!(:validation_failed, "Invalid input", details: { field: "email", reason: "bad format" })
@@ -82,7 +82,7 @@ class ShowUser < Dex::Operation
   prop :user_id, Integer
 
   def perform
-    # Block form — evaluate and guard in one step
+    # Block form – evaluate and guard in one step
     user = assert!(:not_found) { User.find_by(id: user_id) }
     user.as_json
   end
@@ -92,10 +92,10 @@ end
 Two forms are supported:
 
 ```ruby
-# Block form (preferred) — evaluates the block, errors if nil/false
+# Block form (preferred) – evaluates the block, errors if nil/false
 user = assert!(:not_found) { User.find_by(id: user_id) }
 
-# Value form — guards an already-evaluated value
+# Value form – guards an already-evaluated value
 user = User.find_by(id: user_id)
 assert!(user, :not_found)
 ```
@@ -116,7 +116,7 @@ class CreateUser < Dex::Operation
 end
 ```
 
-When error codes are declared, calling `error!` with an undeclared code raises `ArgumentError` immediately — a programming mistake caught at runtime. If no codes are declared, any code is allowed.
+When error codes are declared, calling `error!` with an undeclared code raises `ArgumentError` immediately – a programming mistake caught at runtime. If no codes are declared, any code is allowed.
 
 See also [Contracts](/operation/contracts) for introspecting declared errors.
 
@@ -152,7 +152,7 @@ rescue_from Net::OpenTimeout, Net::ReadTimeout, as: :timeout
 ### Behavior
 
 - The original exception is available in `details[:original]`
-- `Dex::Error` (from `error!`) passes through untouched — `rescue_from` never intercepts it
+- `Dex::Error` (from `error!`) passes through untouched – `rescue_from` never intercepts it
 - Unregistered exceptions propagate normally
 - Works naturally with `.safe`, transactions, and recording
 - Handlers inherit from parent classes; later declarations take priority

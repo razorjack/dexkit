@@ -34,7 +34,7 @@ Dex.configure do |config|
 end
 ```
 
-All columns except `name` are optional — dexkit only writes to columns that exist on the model. Add what you need, leave out what you don't.
+All columns except `name` are optional – dexkit only writes to columns that exist on the model. Add what you need, leave out what you don't.
 
 ## What gets recorded
 

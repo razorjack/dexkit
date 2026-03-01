@@ -8,7 +8,7 @@ Run operations in the background via ActiveJob. Properties are serialized to JSO
 SendWelcomeEmail.new(user_id: 123).async.call
 ```
 
-That's it — the operation is enqueued as an ActiveJob and runs in the background. ActiveJob must be available (it ships with Rails).
+That's it – the operation is enqueued as an ActiveJob and runs in the background. ActiveJob must be available (it ships with Rails).
 
 ## Scheduling options
 
@@ -47,7 +47,7 @@ SendWelcomeEmail.new(user_id: 123).async(queue: "urgent").call
 
 ## Serialization
 
-All properties must be JSON-serializable for async execution. Dexkit validates this at enqueue time — non-serializable properties raise `ArgumentError` immediately, not when the job runs.
+All properties must be JSON-serializable for async execution. Dexkit validates this at enqueue time – non-serializable properties raise `ArgumentError` immediately, not when the job runs.
 
 Types that survive the JSON round-trip automatically:
 
@@ -60,7 +60,7 @@ Types that survive the JSON round-trip automatically:
 | `_Ref(Model)` | model ID | found via `Model.find(id)` |
 | `Hash`, `Array` | JSON | Hash/Array with coerced values |
 
-You don't need to change your prop types for async — the same operation works for both sync and async calls.
+You don't need to change your prop types for async – the same operation works for both sync and async calls.
 
 ## Recording integration
 
@@ -71,7 +71,7 @@ When [Recording](/operation/recording) is enabled with params, async automatical
 | Recording enabled + params recorded | `RecordJob` | `{ class_name, record_id }` |
 | Everything else | `DirectJob` | `{ class_name, params }` |
 
-This is selected automatically — no configuration needed. The record tracks status through its lifecycle:
+This is selected automatically – no configuration needed. The record tracks status through its lifecycle:
 
 ```
 pending > running > done

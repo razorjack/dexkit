@@ -1,6 +1,6 @@
 # Contracts
 
-Contracts let you declare and introspect an operation's interface — what it accepts, what it returns, and which errors it can raise.
+Contracts let you declare and introspect an operation's interface – what it accepts, what it returns, and which errors it can raise.
 
 ## Declaring a success type
 
@@ -41,7 +41,7 @@ class CreateUser < Dex::Operation
 end
 ```
 
-When error codes are declared, calling `error!` with an undeclared code raises `ArgumentError` — a programming mistake caught at runtime. See [Error Handling](/operation/errors#declared-error-codes) for details.
+When error codes are declared, calling `error!` with an undeclared code raises `ArgumentError` – a programming mistake caught at runtime. See [Error Handling](/operation/errors#declared-error-codes) for details.
 
 ## Introspecting with .contract
 
@@ -91,21 +91,21 @@ class CreateUser < BaseOperation
   error :email_taken
 
   def perform
-    error!(:unauthorized)  # works — inherited from parent
-    error!(:email_taken)   # works — declared on this class
+    error!(:unauthorized)  # works – inherited from parent
+    error!(:email_taken)   # works – declared on this class
   end
 end
 
 CreateUser.contract.errors  # => [:unauthorized, :email_taken]
 ```
 
-Success types also inherit — a child class can override the parent's success type.
+Success types also inherit – a child class can override the parent's success type.
 
 ## Use cases
 
 Contracts are useful for:
 
-- **Documentation** — describe intent at the class level, not just in comments
-- **Testing** — assert the contract without calling the operation (see [Testing](/operation/testing#contract-assertions))
-- **Tooling** — build admin panels, API docs, or monitoring dashboards from contract data
-- **Catching mistakes** — typos in error codes and wrong return types are caught at runtime
+- **Documentation** – describe intent at the class level, not just in comments
+- **Testing** – assert the contract without calling the operation (see [Testing](/operation/testing#contract-assertions))
+- **Tooling** – build admin panels, API docs, or monitoring dashboards from contract data
+- **Catching mistakes** – typos in error codes and wrong return types are caught at runtime

@@ -35,31 +35,32 @@
 
 ### Voice & Tone
 
-- Natural, friendly, slightly enthusiastic — the library is genuinely cool, let that come through
+- Natural, friendly, slightly enthusiastic – the library is genuinely cool, let that come through
 - Write like a developer explaining to a peer, not a textbook or a corporate manual
 - Avoid LLM-isms: no "Let's dive in", "It's important to note", "In essence", "It's worth mentioning", "as we can see", "straightforward", "leverage", "utilize", "robust", "seamless"
-- Don't hedge — say "this works" not "this should work" or "this is designed to work"
+- Use en-dash ` – ` not em-dash ` — `. The em-dash is an LLM tell
+- Don't hedge – say "this works" not "this should work" or "this is designed to work"
 - Slightly conversational is fine; overly casual is not
 
 ### Structure
 
-- Code examples speak louder than words — show, don't tell
+- Code examples speak louder than words – show, don't tell
 - Lead with the most common use case, then show variations
 - Keep prose concise but not dry. One good sentence beats three filler sentences, but don't strip out all personality
-- Every page should be self-contained — a developer landing on it from a search should understand the feature without reading other pages
+- Every page should be self-contained – a developer landing on it from a search should understand the feature without reading other pages
 - Use tables for reference-style information (options, parameters, comparison)
 - Use headings to make pages scannable
 
 ### Code Examples
 
-- Examples should be realistic — use domain concepts like users, orders, payments rather than `Foo`/`Bar`
+- Examples should be realistic – use domain concepts like users, orders, payments rather than `Foo`/`Bar`
 - Show the calling code, not just the class definition
 - Keep examples short. If an example needs more than ~15 lines, it's probably demonstrating too many things at once
 - Don't add comments explaining what's obvious from the code. Only comment when the behavior is surprising or non-obvious
 
 ### What NOT to Do
 
-- Don't repeat information that's already on another page — link to it instead
+- Don't repeat information that's already on another page – link to it instead
 - Don't document internal implementation details (method names starting with `_`, internal modules)
 - Don't add "Note:" or "Important:" callouts for things that are just normal behavior
 - Don't use VitePress info/tip/warning boxes unless it's genuinely a warning (something that could break or surprise)

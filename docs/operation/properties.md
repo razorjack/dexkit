@@ -18,7 +18,7 @@ end
 SendEmail.call(to: "alice@example.com", subject: "Hi", body: "Hello!")
 ```
 
-Missing or wrongly-typed properties raise `Literal::TypeError` immediately — you never enter `perform` with bad inputs.
+Missing or wrongly-typed properties raise `Literal::TypeError` immediately – you never enter `perform` with bad inputs.
 
 ## Optional properties
 
@@ -80,12 +80,12 @@ class ArchiveProject < Dex::Operation
   end
 end
 
-# Both work — pass an instance or an ID
+# Both work – pass an instance or an ID
 ArchiveProject.call(project: Project.find(1), user: current_user)
 ArchiveProject.call(project: 1, user: 42)
 ```
 
-Inside `perform`, the property is always a model instance — the lookup happens during initialization.
+Inside `perform`, the property is always a model instance – the lookup happens during initialization.
 
 ### Optional refs
 
@@ -139,7 +139,7 @@ op = Example.new(user: 42, amount: 100)
 # Internal serialization: {"user" => 42, "amount" => 100}
 ```
 
-Types like `Date`, `Time`, `BigDecimal`, and `Symbol` automatically survive the JSON round-trip when used with async — no manual conversion needed.
+Types like `Date`, `Time`, `BigDecimal`, and `Symbol` automatically survive the JSON round-trip when used with async – no manual conversion needed.
 
 ## Reader visibility
 

@@ -10,7 +10,7 @@ result = CreateUser.new(email: "alice@example.com").safe.call
 if result.ok?
   puts "Created user: #{result.value.name}"
 else
-  puts "Failed: #{result.code} — #{result.message}"
+  puts "Failed: #{result.code} – #{result.message}"
 end
 ```
 
@@ -83,7 +83,7 @@ end
 
 ### How pattern matching works
 
-`Ok` deconstructs by delegating to its value — if the value is a Hash or responds to `deconstruct_keys`, you can match its contents directly:
+`Ok` deconstructs by delegating to its value – if the value is a Hash or responds to `deconstruct_keys`, you can match its contents directly:
 
 ```ruby
 case result

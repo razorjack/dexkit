@@ -1,6 +1,6 @@
 # Dex::Operation
 
-Operations are service objects that encapsulate a single business action. They bring typed properties, error handling, transactions, callbacks, and more — all in a clean, composable API.
+Operations are service objects that encapsulate a single business action. They bring typed properties, error handling, transactions, callbacks, and more – all in a clean, composable API.
 
 ## Basic anatomy
 
@@ -15,7 +15,7 @@ class CreateUser < Dex::Operation
 end
 ```
 
-Every operation has a `perform` method that contains the business logic. Properties declared with `prop` become the operation's inputs — typed, validated, and available as instance methods.
+Every operation has a `perform` method that contains the business logic. Properties declared with `prop` become the operation's inputs – typed, validated, and available as instance methods.
 
 ## Calling an operation
 
@@ -31,7 +31,7 @@ Both forms do the same thing: instantiate with properties, then execute the pipe
 
 ## What happens when you call
 
-Behind the scenes, `call` doesn't just run `perform` — it runs it through a pipeline of wrapper steps. The default pipeline, from outermost to innermost:
+Behind the scenes, `call` doesn't just run `perform` – it runs it through a pipeline of wrapper steps. The default pipeline, from outermost to innermost:
 
 ```
 result > lock > transaction > record > rescue > callbacks > perform
@@ -56,7 +56,7 @@ end
 FullName.call(first: "John", last: "Doe")  # => "John Doe"
 ```
 
-You can also halt early with `success!` or `error!` — see [Error Handling](/operation/errors) for the full story.
+You can also halt early with `success!` or `error!` – see [Error Handling](/operation/errors) for the full story.
 
 ## Inheritance
 
@@ -80,7 +80,7 @@ Settings, callbacks, error declarations, and pipeline steps all inherit from par
 
 ## What's next
 
-- [Properties & Types](/operation/properties) — defining inputs with type validation
-- [Error Handling](/operation/errors) — `error!`, `assert!`, `success!`, `rescue_from`
-- [Callbacks](/operation/callbacks) — `before`, `after`, `around`
-- [Transactions](/operation/transactions) — automatic database transactions
+- [Properties & Types](/operation/properties) – defining inputs with type validation
+- [Error Handling](/operation/errors) – `error!`, `assert!`, `success!`, `rescue_from`
+- [Callbacks](/operation/callbacks) – `before`, `after`, `around`
+- [Transactions](/operation/transactions) – automatic database transactions

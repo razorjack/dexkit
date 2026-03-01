@@ -28,7 +28,7 @@ user.name  # => "Alice"
 
 ### What you get out of the box
 
-**Typed properties** — powered by [literal](https://github.com/joeldrapper/literal). Plain classes, ranges, unions, arrays, nilable, and model references with auto-find:
+**Typed properties** – powered by [literal](https://github.com/joeldrapper/literal). Plain classes, ranges, unions, arrays, nilable, and model references with auto-find:
 
 ```ruby
 prop :amount,   _Integer(1..)
@@ -45,7 +45,7 @@ user = assert!(:not_found) { User.find_by(id: user_id) }
 rescue_from Stripe::CardError, as: :card_declined
 ```
 
-**Safe mode** — returns `Ok`/`Err` instead of raising, with pattern matching:
+**Safe mode** – returns `Ok`/`Err` instead of raising, with pattern matching:
 
 ```ruby
 include Dex::Match
@@ -64,7 +64,7 @@ end
 SendWelcomeEmail.new(user_id: 123).async(queue: "mailers").call
 ```
 
-**Transactions** on by default, **advisory locking**, **recording** to database, **callbacks**, and a customizable **pipeline** — all composable, all optional.
+**Transactions** on by default, **advisory locking**, **recording** to database, **callbacks**, and a customizable **pipeline** – all composable, all optional.
 
 ### Testing
 

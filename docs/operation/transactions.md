@@ -1,10 +1,10 @@
 # Transactions
 
-Operations run inside database transactions by default. If anything raises — including `error!` — the transaction is rolled back. If `perform` succeeds or calls `success!`, the transaction is committed.
+Operations run inside database transactions by default. If anything raises – including `error!` – the transaction is rolled back. If `perform` succeeds or calls `success!`, the transaction is committed.
 
 ## Default behavior
 
-You don't need to do anything — transactions are on by default:
+You don't need to do anything – transactions are on by default:
 
 ```ruby
 class CreateOrder < Dex::Operation
@@ -56,7 +56,7 @@ Supported adapters: `:active_record`, `:mongoid`.
 
 ## Interaction with error! and success!
 
-`error!` triggers a rollback — any database changes made during `perform` are undone. `success!` commits the transaction normally.
+`error!` triggers a rollback – any database changes made during `perform` are undone. `success!` commits the transaction normally.
 
 ```ruby
 class TransferMoney < Dex::Operation

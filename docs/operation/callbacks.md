@@ -26,7 +26,7 @@ class PlaceOrder < Dex::Operation
 end
 ```
 
-Calling `error!` in a `before` callback stops execution — `perform` is never reached.
+Calling `error!` in a `before` callback stops execution – `perform` is never reached.
 
 ## after
 
@@ -52,7 +52,7 @@ end
 
 ## around
 
-Wraps the entire before/perform/after sequence. Your callback must yield (or call the continuation) to proceed — otherwise `perform` is never invoked.
+Wraps the entire before/perform/after sequence. Your callback must yield (or call the continuation) to proceed – otherwise `perform` is never invoked.
 
 ```ruby
 class ImportData < Dex::Operation
@@ -79,13 +79,13 @@ All three callbacks accept a Symbol (method name), a block, or a callable (lambd
 
 ```ruby
 class ProcessOrder < Dex::Operation
-  # Symbol — calls the named method
+  # Symbol – calls the named method
   before :validate_stock
 
-  # Block — executed via instance_exec (has access to props, error!, etc.)
+  # Block – executed via instance_exec (has access to props, error!, etc.)
   before { error!(:closed) if store_closed? }
 
-  # Lambda — for around, receives a continuation
+  # Lambda – for around, receives a continuation
   around ->(cont) {
     Rails.logger.tagged("ProcessOrder") { cont.call }
   }

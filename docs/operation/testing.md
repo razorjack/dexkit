@@ -37,10 +37,10 @@ With `testing`, you don't need to pass the class to every helper call. You can s
 Two helpers that mirror the two calling conventions:
 
 ```ruby
-# Safe call — returns Ok or Err, never raises
+# Safe call – returns Ok or Err, never raises
 result = call_operation(name: "Alice")
 
-# Direct call — returns value or raises Dex::Error
+# Direct call – returns value or raises Dex::Error
 value = call_operation!(name: "Alice")
 
 # Explicit class (overrides `testing` subject)
@@ -95,10 +95,10 @@ assert_operation_error(:invalid, message: /required/, name: "")
 Inspect declarations without calling the operation:
 
 ```ruby
-# Exhaustive param names — fails if extra or missing
+# Exhaustive param names – fails if extra or missing
 assert_params(:name, :email)
 
-# Subset check — just verifies these exist
+# Subset check – just verifies these exist
 assert_accepts_param(:name)
 
 # Params with types

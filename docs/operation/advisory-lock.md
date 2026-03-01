@@ -1,8 +1,8 @@
 # Advisory Locking
 
-Wrap operations in database advisory locks for mutual exclusion. Only one instance with the same lock key can run at a time — others wait or time out.
+Wrap operations in database advisory locks for mutual exclusion. Only one instance with the same lock key can run at a time – others wait or time out.
 
-Requires the [`with_advisory_lock`](https://github.com/ClosureTree/with_advisory_lock) gem (not bundled with dexkit — add it to your Gemfile).
+Requires the [`with_advisory_lock`](https://github.com/ClosureTree/with_advisory_lock) gem (not bundled with dexkit – add it to your Gemfile).
 
 ## Basic usage
 
@@ -22,16 +22,16 @@ end
 ## Lock key forms
 
 ```ruby
-# Dynamic block — most common, has access to props
+# Dynamic block – most common, has access to props
 advisory_lock { "payment:#{charge_id}" }
 
-# Static string — same lock for all instances
+# Static string – same lock for all instances
 advisory_lock "generate-daily-report"
 
-# Symbol — calls an instance method
+# Symbol – calls an instance method
 advisory_lock :compute_lock_key
 
-# No argument — uses the class name as the lock key
+# No argument – uses the class name as the lock key
 advisory_lock
 ```
 
@@ -62,7 +62,7 @@ end
 
 ## Pipeline position
 
-Advisory locking runs outside the transaction boundary. The lock is acquired first, then the transaction begins. This is the correct ordering — you don't want to hold a transaction open while waiting for a lock.
+Advisory locking runs outside the transaction boundary. The lock is acquired first, then the transaction begins. This is the correct ordering – you don't want to hold a transaction open while waiting for a lock.
 
 ```
 lock > transaction > record > rescue > callbacks > perform

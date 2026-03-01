@@ -10,7 +10,7 @@ The default pipeline, from outermost to innermost:
 result > lock > transaction > record > rescue > callbacks > perform
 ```
 
-Each step wraps everything inside it. For example, `transaction` wraps `record`, `rescue`, `callbacks`, and `perform` — so all of those run inside a database transaction.
+Each step wraps everything inside it. For example, `transaction` wraps `record`, `rescue`, `callbacks`, and `perform` – so all of those run inside a database transaction.
 
 ## Inspecting the pipeline
 
@@ -73,7 +73,7 @@ By default, new steps are added at the inner end of the pipeline (just before `p
 # At the outermost position (before everything)
 use MyWrapper, at: :outer
 
-# At the innermost position (closest to perform) — the default
+# At the innermost position (closest to perform) – the default
 use MyWrapper, at: :inner
 
 # Before a specific step
@@ -91,8 +91,8 @@ If your module name doesn't follow the `XxxWrapper` convention, or you want a di
 use MyModule, as: :rate_limit, wrap: :_my_custom_wrap_method
 ```
 
-- `as:` — the step name (defaults to derived from module name)
-- `wrap:` — the wrap method name (defaults to `_#{step_name}_wrap`)
+- `as:` – the step name (defaults to derived from module name)
+- `wrap:` – the wrap method name (defaults to `_#{step_name}_wrap`)
 
 ## Removing steps
 
@@ -106,7 +106,7 @@ end
 
 ## How steps work
 
-Each step is a method that receives a block (the rest of the pipeline). It must call `yield` to continue execution. If it doesn't yield, the inner steps — including `perform` — are never called.
+Each step is a method that receives a block (the rest of the pipeline). It must call `yield` to continue execution. If it doesn't yield, the inner steps – including `perform` – are never called.
 
 ```ruby
 def _my_step_wrap
