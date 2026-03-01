@@ -75,7 +75,7 @@ Tests are scoped per-area, each area in a separate file. Example: `test/operatio
 
 When you're done adding a new feature or significantly modifying existing one:
 1. Update `README.md` accordingly.
-2. Update the corresponding file in `guides/llm/` — these are LLM-optimized docs copied into apps that use dexkit. They must be thorough, compact, accurate, and in sync with implementation. Current files: `guides/llm/OPERATION.md`, `guides/llm/TESTING.md`. New major features get new files (e.g., `guides/llm/FORM.md`).
+2. Update the corresponding file in `guides/llm/` — these are LLM-optimized docs copied into apps that use dexkit. They must be thorough, compact, accurate, and in sync with implementation. Current file: `guides/llm/OPERATION.md` (includes testing). New major features get new files (e.g., `guides/llm/FORM.md`).
 
 ## Code Quality
 
