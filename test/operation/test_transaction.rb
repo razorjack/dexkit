@@ -9,7 +9,7 @@ class TestOperationTransaction < Minitest::Test
   end
 
   def teardown
-    Dex.configure { |c| c.transaction_adapter = :active_record }
+    Dex.configure { |c| c.transaction_adapter = nil }
     super
   end
 

@@ -122,19 +122,19 @@ class TestDSLValidation < Minitest::Test
   # --- before / after / around ---
 
   def test_before_rejects_string
-    assert_raises(ArgumentError, /must be a Symbol or callable/) do
+    assert_raises(ArgumentError, /must be a Symbol or Proc/) do
       build_operation { before "not_valid" }
     end
   end
 
   def test_after_rejects_integer
-    assert_raises(ArgumentError, /must be a Symbol or callable/) do
+    assert_raises(ArgumentError, /must be a Symbol or Proc/) do
       build_operation { after 42 }
     end
   end
 
   def test_around_rejects_nil_without_block
-    assert_raises(ArgumentError, /requires a Symbol, callable, or block/) do
+    assert_raises(ArgumentError, /requires a Symbol, Proc, or block/) do
       build_operation { around }
     end
   end

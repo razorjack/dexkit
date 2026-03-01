@@ -69,7 +69,9 @@ module Dex
 
     def _transaction_enabled?
       settings = self.class.settings_for(:transaction)
-      settings.fetch(:enabled, true)
+      return false unless settings.fetch(:enabled, true)
+
+      !_transaction_adapter.nil?
     end
 
     def _transaction_adapter

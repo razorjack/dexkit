@@ -13,6 +13,7 @@ AllCops:
     - bin/*
     - tmp/**/*
     - vendor/**/*
+    - docs/**/*
     - Gemfile
 
 # Enforce spaces inside hash braces: { a: 1 } not {a: 1}

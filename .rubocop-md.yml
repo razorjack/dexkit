@@ -9,3 +9,7 @@ AllCops:
   Exclude:
     - "README.md"  # Contains placeholder code snippets
     - "guides/llm/**/*.md"  # LLM documentation with example snippets
+    - "docs/**/*.md"  # Third-party docs site
+
+Style/MixinUsage:
+  Enabled: false

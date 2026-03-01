@@ -9,8 +9,18 @@ module Dex
           ActiveRecordAdapter
         when :mongoid
           MongoidAdapter
+        when nil
+          detect
         else
           raise ArgumentError, "Unknown transaction adapter: #{adapter_name}"
+        end
+      end
+
+      def self.detect
+        if defined?(ActiveRecord::Base)
+          ActiveRecordAdapter
+        elsif defined?(Mongoid)
+          MongoidAdapter
         end
       end
 

@@ -43,5 +43,4 @@ Gem::Specification.new do |spec|
   # Development dependencies for testing recording
   spec.add_development_dependency "activerecord", ">= 6.1"
   spec.add_development_dependency "sqlite3", ">= 2.1"
-
 end

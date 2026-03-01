@@ -39,12 +39,12 @@ module Dex
       def _callback_validate!(callable, block)
         return if callable.is_a?(Symbol)
         return if callable.nil? && block
-        return if callable.respond_to?(:call)
+        return if callable.is_a?(Proc)
 
         if callable.nil?
-          raise ArgumentError, "callback requires a Symbol, callable, or block"
+          raise ArgumentError, "callback requires a Symbol, Proc, or block"
         else
-          raise ArgumentError, "callback must be a Symbol or callable, got: #{callable.class}"
+          raise ArgumentError, "callback must be a Symbol or Proc, got: #{callable.class}"
         end
       end
 

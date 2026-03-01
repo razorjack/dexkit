@@ -519,9 +519,9 @@ end
 
 | Method | Accepts | Description |
 |--------|---------|-------------|
-| `before(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Runs before `perform` |
-| `after(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Runs after `perform` succeeds |
-| `around(sym_or_callable = nil, &block)` | Symbol, Proc/lambda, or block | Wraps the full lifecycle |
+| `before(sym_or_proc = nil, &block)` | Symbol, Proc/lambda, or block | Runs before `perform` |
+| `after(sym_or_proc = nil, &block)` | Symbol, Proc/lambda, or block | Runs after `perform` succeeds |
+| `around(sym_or_proc = nil, &block)` | Symbol, Proc/lambda, or block | Wraps the full lifecycle |
 
 **Execution order:** `around` wraps everything → `before` callbacks → user `perform` → `after` callbacks
 
@@ -581,16 +581,16 @@ end
 **Global configuration:**
 ```ruby
 Dex.configure do |config|
-  config.transaction_adapter = :active_record  # default
+  config.transaction_adapter = nil  # auto-detect (default)
   # or
   config.transaction_adapter = :mongoid
 end
 ```
 
-**Available adapters:** `:active_record`, `:mongoid`
+**Available adapters:** `nil` (auto-detect, default), `:active_record`, `:mongoid`
 
 **Key facts:**
-- Enabled by default with `:active_record` adapter
+- Auto-detects adapter (AR → Mongoid); skips if neither loaded. Set explicitly to require.
 - Raising any exception (including `error!`) triggers rollback
 - Nested operations share outer transaction
 - Recording saves happen inside transaction (see Recording section)
@@ -812,9 +812,9 @@ When an ID is passed, uses `Model.lock.find(id)`. When an instance is passed dir
 | `prop?(name, type, **opts)` | Define optional typed property (nilable, defaults to nil) | `prop? :note, String` |
 | `success(type)` | Declare success return type (documentation + recording serialization) | `success _Ref(User)` |
 | `error(*codes)` | Declare valid error codes; undeclared codes raise ArgumentError in `error!` | `error :not_found, :invalid` |
-| `before(sym_or_callable = nil, &block)` | Register before callback | `before :validate` / `before { error!(:x) }` |
-| `after(sym_or_callable = nil, &block)` | Register after callback | `after :notify` / `after -> { log }` |
-| `around(sym_or_callable = nil, &block)` | Register around callback | `around :with_timing` / `around { \|c\| c.call }` |
+| `before(sym_or_proc = nil, &block)` | Register before callback | `before :validate` / `before { error!(:x) }` |
+| `after(sym_or_proc = nil, &block)` | Register after callback | `after :notify` / `after -> { log }` |
+| `around(sym_or_proc = nil, &block)` | Register around callback | `around :with_timing` / `around { \|c\| c.call }` |
 | `async(**opts)` | Set default async options | `async queue: "mailers"` |
 | `transaction(arg)` | Configure transactions | `transaction false` / `transaction :mongoid` |
 | `advisory_lock(key = nil, **opts, &block)` | Configure advisory locking | `advisory_lock "key"` / `advisory_lock { "pay:#{id}" }` |
@@ -955,7 +955,7 @@ MyOp.pipeline.steps.map(&:name)  # => [:result, :lock, :transaction, :record, :r
 # config/initializers/dexkit.rb
 Dex.configure do |config|
   config.record_class = OperationRecord        # Model for recording (default: nil)
-  config.transaction_adapter = :active_record   # :active_record or :mongoid (default: :active_record)
+  config.transaction_adapter = nil               # auto-detect (default); or :active_record / :mongoid
 end
 ```
 

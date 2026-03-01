@@ -19,7 +19,7 @@ module Dex
 
     def initialize
       @record_class = nil
-      @transaction_adapter = :active_record
+      @transaction_adapter = nil
     end
   end
 
