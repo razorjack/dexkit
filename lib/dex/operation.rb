@@ -100,7 +100,7 @@ module Dex
       coercion ? coercion.call(value) : value
     end
 
-    private_class_method :_dex_resolve_base_class, :_dex_coerce_value
+    private_class_method :_dex_resolve_base_class, :_dex_coerce_value, :_dex_find_ref_type, :_dex_coerce_serialized_hash
 
     def self.inherited(subclass)
       subclass.instance_variable_set(:@_pipeline, pipeline.dup)
@@ -157,7 +157,7 @@ module Dex
       result = {}
       self.class.literal_properties.each do |prop|
         value = public_send(prop.name)
-        ref = self.class._dex_find_ref_type(prop.type)
+        ref = self.class.send(:_dex_find_ref_type, prop.type)
         result[prop.name.to_s] = if ref && value
           value.id
         else

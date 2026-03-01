@@ -64,7 +64,7 @@ module Dex
       throw(:_dex_halt, Operation::Halt.new(type: :success, value: attrs.empty? ? value : attrs))
     end
 
-    def assert!(* args, &block)
+    def assert!(*args, &block)
       if block
         code = args[0]
         value = yield

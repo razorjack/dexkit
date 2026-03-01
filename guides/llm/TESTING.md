@@ -231,6 +231,11 @@ assert_all_succeed(MyOp, params_list: [{ x: 1 }, { x: 2 }])
 
 assert_all_fail(code: :invalid, params_list: [{ x: -1 }, { x: -2 }])
 assert_all_fail(MyOp, code: :invalid, params_list: [{ x: -1 }])
+
+# With message/details checks (applied to every result)
+assert_all_fail(code: :invalid, message: "bad input", params_list: [{ x: -1 }, { x: -2 }])
+assert_all_fail(code: :invalid, message: /bad/, params_list: [{ x: -1 }, { x: -2 }])
+assert_all_fail(code: :invalid, details: { field: "x" }, params_list: [{ x: -1 }])
 ```
 
 ---
