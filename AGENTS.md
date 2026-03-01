@@ -17,7 +17,26 @@ lib/
   dex/
     version.rb           # Version constant
     ref_type.rb          # Dex::RefType (Literal::Type for model references)
-    operation.rb         # All operation logic and wrapper modules
+    error.rb             # Dex::Error
+    match.rb             # Dex::Ok, Dex::Err aliases + Dex::Match
+    operation.rb         # Operation class orchestrator (requires all parts)
+    operation/
+      settings.rb        # Dex::Settings
+      props_setup.rb     # Dex::PropsSetup
+      result_wrapper.rb  # Dex::ResultWrapper
+      record_wrapper.rb  # Dex::RecordWrapper
+      transaction_wrapper.rb # Dex::TransactionWrapper
+      lock_wrapper.rb    # Dex::LockWrapper
+      async_wrapper.rb   # Dex::AsyncWrapper
+      safe_wrapper.rb    # Dex::SafeWrapper
+      rescue_wrapper.rb  # Dex::RescueWrapper
+      callback_wrapper.rb # Dex::CallbackWrapper
+      pipeline.rb        # Operation::Pipeline + Step
+      outcome.rb         # Operation::Ok, Err, SafeProxy
+      async_proxy.rb     # Operation::AsyncProxy
+      record_backend.rb  # Operation::RecordBackend + adapters
+      transaction_adapter.rb # Operation::TransactionAdapter + adapters
+      jobs.rb            # const_missing + lazy DirectJob/RecordJob
     test_log.rb          # Dex::TestLog (global activity log for tests)
     test_helpers.rb      # Dex::TestHelpers + Dex::TestWrapper
     test_helpers/
@@ -46,7 +65,7 @@ test/
 
 ## Development Conventions
 
-All operation logic lives in `lib/dex/operation.rb` — keep it this way until the API matures. Each behavior is a separate module registered as a named pipeline step via `use`. New wrapper modules follow the pattern: `self.included` + `ClassMethods` for DSL + `_name_wrap` instance method that calls `yield` to proceed. See existing wrappers for reference.
+Operation logic is split into per-module files under `lib/dex/operation/`. The orchestrator `lib/dex/operation.rb` requires all parts. Each behavior is a separate module registered as a named pipeline step via `use`. New wrapper modules follow the pattern: `self.included` + `ClassMethods` for DSL + `_name_wrap` instance method that calls `yield` to proceed. New wrappers go in `lib/dex/operation/` as their own file. See existing wrappers for reference.
 
 **Naming internal methods**: All private/internal instance methods in Operation modules MUST be prefixed with underscore `_` (non-negotiable). Additionally, prefix them with `_modulename_` to indicate which module they belong to. Example: in `RecordWrapper` → `_record_enabled?`, `_record_save!`, `_record_attributes`. This prevents naming collisions and signals framework-internal methods.
 
