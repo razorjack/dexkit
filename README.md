@@ -45,7 +45,7 @@ user = assert!(:not_found) { User.find_by(id: user_id) }
 rescue_from Stripe::CardError, as: :card_declined
 ```
 
-**Safe mode** – returns `Ok`/`Err` instead of raising, with pattern matching:
+**Ok / Err** – pattern match on operation outcomes with `.safe.call`:
 
 ```ruby
 include Dex::Match

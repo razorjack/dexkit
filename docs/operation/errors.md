@@ -1,6 +1,6 @@
 # Error Handling
 
-Operations provide structured error handling through `error!`, `success!`, `assert!`, and `rescue_from`. All of these integrate with transactions (errors roll back), safe mode (errors become `Err`), and recording.
+Operations provide structured error handling through `error!`, `success!`, `assert!`, and `rescue_from`. All of these integrate with transactions (errors roll back), [Ok / Err](/operation/safe-mode) (errors become `Err`), and recording.
 
 ## error!
 

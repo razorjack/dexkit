@@ -50,7 +50,7 @@ class ImportData < Dex::Operation
 end
 ```
 
-On timeout, a `Dex::Error` with code `:lock_timeout` is raised. This integrates naturally with safe mode:
+On timeout, a `Dex::Error` with code `:lock_timeout` is raised. This integrates naturally with `.safe`:
 
 ```ruby
 result = ImportData.new.safe.call

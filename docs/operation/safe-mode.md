@@ -1,16 +1,34 @@
-# Safe Mode (Ok / Err)
+# Ok / Err
 
-By default, operations raise `Dex::Error` on failure. Safe mode wraps the result in `Ok` or `Err` instead, making error handling explicit and enabling pattern matching.
+Call `.safe.call` on any operation to get an `Ok` or `Err` result instead of a raised exception. The real payoff is pattern matching – you can destructure the outcome in a `case/in` block and handle each case cleanly.
 
-## Basic usage
+## Pattern matching
 
 ```ruby
+include Dex::Match
+
 result = CreateUser.new(email: "alice@example.com").safe.call
 
-if result.ok?
-  puts "Created user: #{result.value.name}"
-else
-  puts "Failed: #{result.code} – #{result.message}"
+case result
+in Ok(name:, email:)
+  puts "Welcome, #{name} (#{email})"
+in Err(code: :email_taken)
+  puts "Already registered"
+in Err(code:, message:)
+  puts "Error #{code}: #{message}"
+end
+```
+
+`Ok` deconstructs by delegating to its value – if the value is a Hash or responds to `deconstruct_keys`, you can match its contents directly. `Err` deconstructs into `{ code:, message:, details: }`.
+
+Without `Dex::Match`, use the fully qualified names:
+
+```ruby
+case result
+in Dex::Ok
+  # ...
+in Dex::Err(code: :not_found)
+  # ...
 end
 ```
 
@@ -51,62 +69,9 @@ result.message  # => "This email is already in use"
 result.details  # => nil or Hash
 ```
 
-## Pattern matching
-
-Both `Ok` and `Err` support Ruby's pattern matching. Include `Dex::Match` for cleaner syntax:
+## In controllers
 
 ```ruby
-include Dex::Match
-
-result = FindUser.new(user_id: 123).safe.call
-
-case result
-in Ok(name:, email:)
-  puts "Found #{name} (#{email})"
-in Err(code: :not_found)
-  puts "User not found"
-in Err(code:, message:)
-  puts "Error #{code}: #{message}"
-end
-```
-
-Without `Dex::Match`, use the fully qualified names:
-
-```ruby
-case result
-in Dex::Ok
-  # ...
-in Dex::Err(code: :not_found)
-  # ...
-end
-```
-
-### How pattern matching works
-
-`Ok` deconstructs by delegating to its value – if the value is a Hash or responds to `deconstruct_keys`, you can match its contents directly:
-
-```ruby
-case result
-in Ok(name: /Alice/)
-  # matches when value[:name] matches /Alice/
-end
-```
-
-`Err` deconstructs into `{ code:, message:, details: }`:
-
-```ruby
-case result
-in Err(code: :not_found, message:)
-  puts message
-end
-```
-
-## When to use safe mode
-
-Safe mode is great when you want to handle errors as values rather than exceptions:
-
-```ruby
-# In a controller
 def create
   result = CreateUser.new(params.permit(:email, :name).to_h).safe.call
 
@@ -120,8 +85,9 @@ def create
 end
 ```
 
+## Composing operations
+
 ```ruby
-# Composing operations
 user_result = CreateUser.new(email: email).safe.call
 return if user_result.error?
 

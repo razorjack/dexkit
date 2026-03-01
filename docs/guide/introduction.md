@@ -37,7 +37,7 @@ That's a typed, transactional, self-documenting service object. Out of the box y
 - **Advisory locking** – database-level mutual exclusion
 - **Async execution** – run operations as background jobs via ActiveJob
 - **Recording** – log operation calls to your database for auditing
-- **Safe mode** – `Ok`/`Err` result types with pattern matching
+- **Ok / Err** – result types with pattern matching via `.safe.call`
 - **Contracts** – declare and introspect inputs, outputs, and error codes
 - **Testing helpers** – assertions, stubbing, spying for Minitest
 

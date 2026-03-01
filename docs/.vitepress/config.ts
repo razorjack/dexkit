@@ -32,7 +32,7 @@ export default defineConfig({
           { text: 'Advisory Locking', link: '/operation/advisory-lock' },
           { text: 'Async', link: '/operation/async' },
           { text: 'Recording', link: '/operation/recording' },
-          { text: 'Safe Mode (Ok / Err)', link: '/operation/safe-mode' },
+          { text: 'Ok / Err', link: '/operation/safe-mode' },
           { text: 'Pipeline & Steps', link: '/operation/pipeline' },
           { text: 'Contracts', link: '/operation/contracts' },
           { text: 'Testing', link: '/operation/testing' }
