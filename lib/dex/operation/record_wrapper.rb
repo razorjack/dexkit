@@ -114,7 +114,7 @@ module Dex
     def _record_serialize_typed_result(result, type)
       return nil if result.nil?
 
-      ref_type = self.class._dex_find_ref_type(type)
+      ref_type = self.class.send(:_dex_find_ref_type, type)
       if ref_type && result.respond_to?(:id)
         result.id
       else
