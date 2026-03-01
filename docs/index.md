@@ -4,7 +4,7 @@ layout: home
 hero:
   name: dexkit
   text: A toolkit of patterns for Ruby applications
-  tagline: Build Ruby apps with focused, reusable patterns under the Dex namespace.
+  tagline: Service objects, typed properties, and the patterns your Rails app needs to roll with advantage.
   actions:
     - theme: brand
       text: Get Started

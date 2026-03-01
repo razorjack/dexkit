@@ -1,6 +1,6 @@
 # Introduction
 
-Dexkit is a Ruby library that gives you base classes for common Rails patterns. Right now that's `Dex::Operation` – a service object with typed properties, structured errors, transactions, and a bunch more built in.
+Dexkit is a Ruby library that gives you base classes for common Rails patterns. Equip to gain +4 DEX. Right now that's `Dex::Operation` – a service object with typed properties, structured errors, transactions, and a bunch more built in.
 
 ## Why
 
