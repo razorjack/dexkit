@@ -30,4 +30,36 @@
 - Every page should use a single `# H1` as the page title.
 - VitePress frontmatter is optional, but recommended for page descriptions and metadata.
 - Docs are primarily written by LLM coding agents.
-- Keep writing clear, concise, and technical, with practical Ruby examples where applicable.
+
+## Documentation Style Guide
+
+### Voice & Tone
+
+- Natural, friendly, slightly enthusiastic — the library is genuinely cool, let that come through
+- Write like a developer explaining to a peer, not a textbook or a corporate manual
+- Avoid LLM-isms: no "Let's dive in", "It's important to note", "In essence", "It's worth mentioning", "as we can see", "straightforward", "leverage", "utilize", "robust", "seamless"
+- Don't hedge — say "this works" not "this should work" or "this is designed to work"
+- Slightly conversational is fine; overly casual is not
+
+### Structure
+
+- Code examples speak louder than words — show, don't tell
+- Lead with the most common use case, then show variations
+- Keep prose concise but not dry. One good sentence beats three filler sentences, but don't strip out all personality
+- Every page should be self-contained — a developer landing on it from a search should understand the feature without reading other pages
+- Use tables for reference-style information (options, parameters, comparison)
+- Use headings to make pages scannable
+
+### Code Examples
+
+- Examples should be realistic — use domain concepts like users, orders, payments rather than `Foo`/`Bar`
+- Show the calling code, not just the class definition
+- Keep examples short. If an example needs more than ~15 lines, it's probably demonstrating too many things at once
+- Don't add comments explaining what's obvious from the code. Only comment when the behavior is surprising or non-obvious
+
+### What NOT to Do
+
+- Don't repeat information that's already on another page — link to it instead
+- Don't document internal implementation details (method names starting with `_`, internal modules)
+- Don't add "Note:" or "Important:" callouts for things that are just normal behavior
+- Don't use VitePress info/tip/warning boxes unless it's genuinely a warning (something that could break or surprise)

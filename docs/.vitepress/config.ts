@@ -26,13 +26,16 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: 'Overview', link: '/operation/' },
-          { text: 'Defining Operations', link: '/operation/defining-operations' },
-          { text: 'Parameters', link: '/operation/parameters' },
-          { text: 'Pipeline & Steps', link: '/operation/pipeline' },
-          { text: 'Callbacks', link: '/operation/callbacks' },
+          { text: 'Properties & Types', link: '/operation/properties' },
           { text: 'Error Handling', link: '/operation/errors' },
-          { text: 'Async', link: '/operation/async' },
+          { text: 'Callbacks', link: '/operation/callbacks' },
           { text: 'Transactions', link: '/operation/transactions' },
+          { text: 'Advisory Locking', link: '/operation/advisory-lock' },
+          { text: 'Async', link: '/operation/async' },
+          { text: 'Recording', link: '/operation/recording' },
+          { text: 'Safe Mode (Ok / Err)', link: '/operation/safe-mode' },
+          { text: 'Pipeline & Steps', link: '/operation/pipeline' },
+          { text: 'Contracts', link: '/operation/contracts' },
           { text: 'Testing', link: '/operation/testing' }
         ]
       },

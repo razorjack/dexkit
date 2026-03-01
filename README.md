@@ -2,609 +2,106 @@
 
 Rails patterns toolbelt. Equip to gain +4 DEX.
 
-## Installation
-
-```ruby
-gem 'dexkit'
-```
+**[Documentation](https://dex.razorjack.net)**
 
 ## Operations
 
-Service objects with typed properties.
-
-```ruby
-class SendWelcomeEmail < Dex::Operation
-  prop :user_id,  Integer
-  prop :template, String, default: "default"
-
-  def perform
-    user = User.find(user_id)
-    Mailer.welcome(user, template: template).deliver_later
-  end
-end
-
-SendWelcomeEmail.call(user_id: 123)
-# Use `new(...)` form when chaining modifiers (`.safe.call`, `.async.call`).
-```
-
-Types are powered by the [literal](https://github.com/joeldrapper/literal) gem. Plain Ruby classes (`String`, `Integer`) work as types, plus constructors like `_Integer(1..)`, `_Array(String)`, `_Union("USD", "EUR")`, and `_Nilable(String)` are available inside operation class bodies.
-
-### Async Execution
-
-Requires ActiveJob. Enqueue operations as background jobs.
-
-```ruby
-# Enqueue immediately
-SendWelcomeEmail.new(user_id: 123).async.call
-
-# With options
-SendWelcomeEmail.new(user_id: 123).async(queue: "low").call
-SendWelcomeEmail.new(user_id: 123).async(in: 5.minutes).call
-SendWelcomeEmail.new(user_id: 123).async(at: 1.hour.from_now).call
-
-# Class-level defaults
-class SendWelcomeEmail < Dex::Operation
-  async queue: "mailers"
-  # ...
-end
-```
-
-Typed props (`Date`, `Time`, `BigDecimal`, `Symbol`, `Ref`) automatically survive the JSON round-trip — no need to switch types. Direct calls remain strict. Non-serializable props raise `ArgumentError` at enqueue time.
-
-### Operation Contract
-
-Declare what an operation returns and which errors it can raise. Both are optional — they document intent and catch mistakes.
+Service objects with typed properties, transactions, error handling, and more.
 
 ```ruby
 class CreateUser < Dex::Operation
-  prop :email, String
   prop :name,  String
+  prop :email, String
 
   success _Ref(User)
-  error :email_taken,
-        :invalid_email
+  error   :email_taken
 
   def perform
     error!(:email_taken) if User.exists?(email: email)
-    User.create!(email: email, name: name)
+    User.create!(name: name, email: email)
   end
 end
 
-user = CreateUser.call(email: "user@example.com", name: "John")
-user.name  # => "John" (actual User instance)
+user = CreateUser.call(name: "Alice", email: "alice@example.com")
+user.name  # => "Alice"
 ```
 
-When `success Type` is declared, the return value of `perform` is validated at runtime — returning a mismatched type raises `ArgumentError` immediately (nil is always allowed). When `error :codes` is declared, calling `error!` with an undeclared code raises `ArgumentError` immediately — a programming mistake, caught at runtime.
+### What you get out of the box
 
-Use `.contract` to introspect an operation's declared interface:
+**Typed properties** — powered by [literal](https://github.com/joeldrapper/literal). Plain classes, ranges, unions, arrays, nilable, and model references with auto-find:
 
 ```ruby
-CreateUser.contract
-# => #<data Dex::Operation::Contract
-#      params={email: String, name: String},
-#      success=_Ref(User),
-#      errors=[:email_taken, :invalid_email]>
-
-# Pattern matching
-CreateUser.contract => { params:, success:, errors: }
-
-# Hash conversion
-CreateUser.contract.to_h
+prop :amount,   _Integer(1..)
+prop :currency, _Union("USD", "EUR", "GBP")
+prop :user,     _Ref(User)           # accepts User instance or ID
+prop? :note,    String               # optional (nil by default)
 ```
 
-The returned object is frozen and inherits from parent classes automatically.
-
-### Flow Control
-
-`error!` and `success!` provide early return from `perform` (and any methods it calls). Both halt execution immediately — code after them is never reached.
+**Structured errors** with `error!`, `assert!`, and `rescue_from`:
 
 ```ruby
-class ProcessPayment < Dex::Operation
-  prop :amount, Integer
-
-  def perform
-    error!(:invalid_amount, "Amount must be positive") if amount < 0
-
-    charge = Gateway.charge(amount)
-    success!(charge_id: charge.id)
-
-    # Never reached
-  end
-end
-```
-
-**`error!(code, message = nil, details: nil)`** — Halt with failure. Rolls back the transaction. Raises `Dex::Error` to the caller.
-
-```ruby
-error!(:not_found, "User not found")
-error!(:validation_failed, "Invalid data", details: {field: "email", issue: "format"})
-```
-
-**`success!(value = nil, **attrs)`** — Halt with success. Commits the transaction. Returns the value as-is.
-
-```ruby
-success!(42)                          # positional value
-success!(name: "John", age: 30)      # keyword args (becomes Hash)
-success!                              # returns nil
-```
-
-**`assert!(code, &block)` / `assert!(value, code)`** — Guard against nil/false. Returns value if truthy, otherwise calls `error!(code)`. Rolls back transaction on failure.
-
-```ruby
-# Block form: evaluate + guard in one statement
 user = assert!(:not_found) { User.find_by(id: user_id) }
 
-# Value form: guard an already-evaluated value
-assert!(user, :not_found)
+rescue_from Stripe::CardError, as: :card_declined
 ```
 
-### Rescue Mapping
-
-Map third-party exceptions to structured `Dex::Error` codes declaratively, eliminating boilerplate `begin/rescue/error!` blocks.
+**Safe mode** — returns `Ok`/`Err` instead of raising, with pattern matching:
 
 ```ruby
-class ChargeCard < Dex::Operation
-  rescue_from Stripe::CardError,      as: :card_declined
-  rescue_from Stripe::RateLimitError, as: :rate_limited
-  rescue_from Stripe::APIError,       as: :provider_error, message: "Stripe is down"
-  rescue_from Net::OpenTimeout, Net::ReadTimeout, as: :timeout  # multiple classes
-
-  def perform
-    Stripe::Charge.create(amount: amount, source: token)
-  end
-end
-```
-
-Options:
-- `as:` (required) — the `Dex::Error` code
-- `message:` (optional) — overrides the original exception's message; uses exception's message by default
-
-The original exception is always available in `details[:original]`. `Dex::Error` (from `error!`) passes through untouched. Unregistered exceptions propagate normally. Works naturally with `.safe`, pattern matching, transactions, and recording.
-
-### Outcome Handling
-
-Use `.safe` to return `Ok`/`Err` instead of raising exceptions. Perfect for pattern matching.
-
-```ruby
-class FindUser < Dex::Operation
-  prop :user_id, Integer
-
-  error :not_found
-
-  def perform
-    user = User.find_by(id: user_id)
-    error!(:not_found, "User not found") unless user
-
-    {user: user.as_json}
-  end
-end
-
-# Include Dex::Match for cleaner pattern matching syntax
 include Dex::Match
 
-outcome = FindUser.new(user_id: 123).safe.call
-
-case outcome
-in Ok(user:)
-  puts "Found: #{user['name']}"
-in Err(code: :not_found)
-  puts "User not found"
+case CreateUser.new(email: email).safe.call
+in Ok(name:)
+  puts "Welcome, #{name}!"
+in Err(code: :email_taken)
+  puts "Already registered"
 end
 ```
 
-Check outcome status:
+**Async execution** via ActiveJob:
 
 ```ruby
-outcome.ok?      # => true/false
-outcome.error?   # => true/false
-outcome.value    # => result or nil
-outcome.code     # => error code (Err only)
-outcome.message  # => error message (Err only)
+SendWelcomeEmail.new(user_id: 123).async(queue: "mailers").call
 ```
 
-### Recording
+**Transactions** on by default, **advisory locking**, **recording** to database, **callbacks**, and a customizable **pipeline** — all composable, all optional.
 
-Record operation calls to database. Supports ActiveRecord and Mongoid.
+### Testing
 
-```ruby
-# config/initializers/dex.rb
-Dex.configure do |config|
-  config.record_class = OperationRecord
-end
-```
-
-```ruby
-# migration
-create_table :operation_records do |t|
-  t.string :name, null: false      # Required: operation class name
-  t.jsonb :params, default: {}     # Optional: operation params
-  t.jsonb :response                # Optional: operation response/result
-  t.string :status                 # Optional: pending/running/done/failed (for async+recording)
-  t.string :error                  # Optional: error code on failure (for async+recording)
-  t.datetime :performed_at         # Optional: execution timestamp
-  t.timestamps
-end
-```
-
-By default, both params and response are recorded. Granular control:
-
-```ruby
-class SensitiveOperation < Dex::Operation
-  record false                     # Disable recording entirely
-end
-
-class LargeResponseOperation < Dex::Operation
-  record response: false           # Save params, skip response
-end
-
-class AuditOperation < Dex::Operation
-  record params: false             # Save response, skip params
-end
-```
-
-### Async + Recording Integration
-
-When both async execution and recording are enabled (with params recording), Dexkit automatically optimizes Redis usage by storing only a record ID in the job payload instead of the full params hash. This is selected automatically — no new DSL needed.
-
-| Condition | Job class | Redis payload |
-|-----------|-----------|---------------|
-| Recording enabled + params recorded | `RecordJob` | `{ class_name:, record_id: }` |
-| Everything else | `DirectJob` | `{ class_name:, params: {} }` |
-
-The record tracks status through its lifecycle: `pending` → `running` → `done` / `failed`. On failure, the `error` field captures the error code (`Dex::Error`) or exception class name.
-
-```ruby
-# Sync calls also set status: "done" when status column exists
-MyOp.new(name: "test").call
-# OperationRecord: status: "done"
-
-# Async with recording: record-based strategy
-MyOp.new(name: "test").async.call
-# OperationRecord: status: "pending" → "running" → "done"/"failed"
-```
-
-### Callbacks
-
-Hook into the operation lifecycle with `before`, `after`, and `around`. Callbacks run inside the transaction boundary, so errors trigger rollback.
-
-```ruby
-class ProcessOrder < Dex::Operation
-  before :validate_stock          # symbol — calls method
-  before -> { log("starting") }   # lambda
-  before { log("starting") }      # block
-
-  after :send_confirmation        # runs after perform succeeds
-  after -> { log("done") }
-
-  around :with_timing             # symbol — method uses yield
-  around ->(cont) { cont.call }   # proc — receives continuation
-
-  def validate_stock
-    error!(:out_of_stock) unless in_stock?
-  end
-
-  def with_timing
-    start = Time.now
-    yield
-    puts Time.now - start
-  end
-end
-```
-
-**Behavior:**
-- `before` callbacks run in order before `perform`. Calling `error!` stops execution.
-- `after` callbacks run in order after `perform` succeeds or calls `success!`. Skipped if `perform` raises or calls `error!`.
-- `around` wraps the entire before/perform/after sequence. If the callback doesn't yield/call the continuation, `perform` is never invoked.
-- Callbacks inherit from parent classes (parent runs first).
-- Blocks and lambdas execute via `instance_exec`, giving access to props, `error!`, etc.
-
-### Transactions
-
-Operations run inside database transactions by default. Changes are rolled back on errors.
-
-```ruby
-class CreateOrder < Dex::Operation
-  def perform
-    Order.create!(...)
-    LineItem.create!(...)
-    # Both rolled back if error occurs
-  end
-end
-```
-
-Opt out for read-only operations:
-
-```ruby
-class ReadOnlyOperation < Dex::Operation
-  transaction false
-  # ...
-end
-```
-
-Configure adapter globally (default: `:active_record`):
-
-```ruby
-# config/initializers/dex.rb
-Dex.configure do |config|
-  config.transaction_adapter = :mongoid
-end
-```
-
-Override per-operation:
-
-```ruby
-class MongoidOperation < Dex::Operation
-  transaction adapter: :mongoid
-  # or shorthand:
-  transaction :mongoid
-  # ...
-end
-```
-
-### Advisory Locking
-
-Wrap operations in database advisory locks for mutual exclusion. Requires the [`with_advisory_lock`](https://github.com/ClosureTree/with_advisory_lock) gem (not included — add it to your Gemfile).
-
-```ruby
-class ProcessPayment < Dex::Operation
-  prop :charge_id, String
-
-  advisory_lock { "pay:#{charge_id}" }
-
-  def perform
-    # Only one instance with same charge_id runs at a time
-  end
-end
-```
-
-Multiple key forms:
-
-```ruby
-advisory_lock { "pay:#{charge_id}" }           # dynamic block
-advisory_lock "generate-daily-report"           # static string
-advisory_lock :compute_lock_key                 # calls instance method
-advisory_lock                                   # uses class name
-advisory_lock "report", timeout: 5              # with timeout (seconds)
-```
-
-On timeout, raises `Dex::Error` with code `:lock_timeout`. Works with `.safe`:
-
-```ruby
-result = ProcessPayment.new(charge_id: "ch_123").safe.call
-case result
-in Dex::Err(code: :lock_timeout)
-  puts "Could not acquire lock"
-end
-```
-
-### Settings
-
-Generic class-level configuration with inheritance.
-
-```ruby
-class BaseOperation < Dex::Operation
-  set :retry, attempts: 3, delay: 5
-end
-
-class ChildOperation < BaseOperation
-  set :retry, delay: 10  # inherits attempts: 3, overrides delay
-end
-
-ChildOperation.settings_for(:retry)
-# => { attempts: 3, delay: 10 }
-```
-
-## Ref Types
-
-`_Ref(ModelClass)` is a type constructor available inside operation class bodies. It accepts model instances or IDs, automatically finding records from the database. Works with ActiveRecord and Mongoid models.
-
-```ruby
-class SendEmail < Dex::Operation
-  prop :user, _Ref(User)
-
-  def perform
-    # user is an actual User instance
-    Mailer.welcome(user).deliver_later
-  end
-end
-
-# Both work - pass instance or ID
-SendEmail.new(user: User.find(123)).call
-SendEmail.new(user: 123).call
-```
-
-Declare `success _Ref(Model)` to record just the model ID in the response column (instead of the full serialized object):
-
-```ruby
-class FindUser < Dex::Operation
-  success _Ref(User)
-
-  def perform
-    user = User.find_by(id: user_id)
-    error!(:not_found) unless user
-    user
-  end
-end
-
-result = FindUser.new(user_id: 123).call
-result.name  # => "John Doe" (actual User instance)
-```
-
-Optional refs:
-
-```ruby
-class UpdateProfile < Dex::Operation
-  prop  :user,   _Ref(User)
-  prop? :avatar, _Ref(Avatar)
-end
-
-UpdateProfile.new(user: 1, avatar: nil).call  # avatar can be nil
-```
-
-Lock records on fetch with `lock: true` (uses `SELECT ... FOR UPDATE`):
-
-```ruby
-class TransferFunds < Dex::Operation
-  prop :account, _Ref(Account, lock: true)
-
-  def perform
-    account.update!(balance: account.balance - 100)
-  end
-end
-
-TransferFunds.new(account: 42).call  # Account.lock.find(42)
-```
-
-When recording to database, Ref types serialize as IDs (not full objects):
-
-```ruby
-# props as_json => {"user" => 123, "avatar" => 456}
-# Keeps your operation_records table clean and efficient
-```
-
-## Testing
-
-Dexkit ships test helpers for Minitest with assertions, stubbing, spying, and a global activity log.
-
-### Setup
-
-```ruby
-# test/test_helper.rb
-require "dex/test_helpers"
-
-class Minitest::Test
-  include Dex::TestHelpers
-end
-```
-
-### Subject Declaration
-
-Set a default operation for all helpers in a test class:
+First-class test helpers for Minitest:
 
 ```ruby
 class CreateUserTest < Minitest::Test
   testing CreateUser
 
   def test_creates_user
-    result = call_operation(name: "Alice", email: "a@b.com")
-    assert_ok result
+    assert_operation(name: "Alice", email: "alice@example.com")
+  end
+
+  def test_rejects_duplicate_email
+    assert_operation_error(:email_taken, name: "Alice", email: "taken@example.com")
   end
 end
 ```
 
-### Execution Helpers
+## Installation
 
 ```ruby
-result = call_operation(name: "Alice")          # => Ok or Err (safe)
-value  = call_operation!(name: "Alice")         # => value or raises Dex::Error
-
-result = call_operation(MyOp, name: "Alice")    # explicit class form
+gem "dexkit"
 ```
 
-### Result Assertions
+## Documentation
 
-```ruby
-assert_ok result                                # passes if Ok
-assert_ok result, 42                            # checks value
-assert_err result, :not_found                   # checks error code
-assert_err result, :fail, message: /went wrong/ # checks message with regex
-refute_ok result                                # passes if Err
-refute_err result, :code                        # passes if Ok or different code
-```
-
-### One-Liner Assertions
-
-```ruby
-assert_operation(name: "Alice", returns: user)     # call + assert Ok + check value
-assert_operation_error(:invalid, name: "")         # call + assert Err with code
-```
-
-### Contract Assertions
-
-Inspect declarations without calling:
-
-```ruby
-assert_params(:name, :email)                       # exhaustive param names
-assert_accepts_param(:name)                        # subset check
-assert_success_type(_Ref(User))                    # success type
-assert_error_codes(:not_found, :invalid)           # exhaustive error codes
-assert_contract(params: [:name], errors: [:invalid]) # full contract
-```
-
-### Stubbing
-
-Replace an operation entirely within a block:
-
-```ruby
-stub_operation(SendEmail, returns: true) do
-  call_operation!(name: "Alice")  # SendEmail returns true, bypasses perform
-end
-
-stub_operation(Gateway, error: :timeout) do
-  result = call_operation(amount: 100)
-  assert_err result, :timeout
-end
-```
-
-### Spying
-
-Observe real execution without modifying behavior:
-
-```ruby
-spy_on_operation(SendEmail) do |spy|
-  call_operation!(name: "Alice")
-  assert spy.called_once?
-  assert spy.called_with?(email: "a@b.com")
-end
-```
-
-### Other Assertions
-
-```ruby
-# Param validation
-assert_invalid_params(name: 123)                   # expects Literal::TypeError
-assert_valid_params(name: "Alice")                  # no error on construction
-
-# Transaction
-assert_rolls_back(User) { op.new(bad: true).call }
-assert_commits(User) { op.new(good: true).call }
-
-# Batch
-assert_all_succeed(params_list: [{ x: 1 }, { x: 2 }])
-assert_all_fail(code: :invalid, params_list: [{ x: -1 }])
-```
-
-### TestLog
-
-All operation calls are recorded to `Dex::TestLog` (automatically cleared between tests):
-
-```ruby
-Dex::TestLog.calls    # => [Entry, ...]
-Dex::TestLog.size     # => Integer
-Dex::TestLog.find(MyOp, name: "Alice")  # filter by class and params
-Dex::TestLog.summary  # human-readable table
-```
+Full documentation at **[dex.razorjack.net](https://dex.razorjack.net)**.
 
 ## AI Coding Assistant Setup
 
-Dexkit provides LLM-optimized documentation for AI coding agents. Copy the guide to your operations directory so agents automatically know the complete API when working on operations.
-
-**Setup:**
+Dexkit ships LLM-optimized guides. Copy them into your project so AI agents automatically know the API:
 
 ```bash
 cp $(bundle show dexkit)/guides/llm/OPERATION.md app/operations/CLAUDE.md
 cp $(bundle show dexkit)/guides/llm/TESTING.md test/CLAUDE.md
-# or for other AI assistants:
-cp $(bundle show dexkit)/guides/llm/OPERATION.md app/operations/AGENTS.md
-cp $(bundle show dexkit)/guides/llm/TESTING.md test/AGENTS.md
 ```
-
-The guide contains comprehensive documentation of all Operation features, optimized for AI comprehension. Commit it to your repository and customize with project-specific conventions.
-
-**Benefits:**
-- Agents automatically load Operation knowledge when working in `app/operations/`
-- Documentation matches your installed dexkit version
-- Extend with project-specific patterns and conventions
 
 ## License
 
