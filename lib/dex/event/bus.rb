@@ -8,9 +8,7 @@ module Dex
 
       class << self
         def subscribe(event_class, handler_class)
-          unless event_class.is_a?(Class) && event_class < Dex::Event
-            raise ArgumentError, "#{event_class.inspect} is not a Dex::Event subclass"
-          end
+          Event.validate_event_class!(event_class)
           unless handler_class.is_a?(Class) && handler_class < Dex::Event::Handler
             raise ArgumentError, "#{handler_class.inspect} is not a Dex::Event::Handler subclass"
           end
@@ -23,8 +21,11 @@ module Dex
 
         def unsubscribe(event_class, handler_class)
           @_mutex.synchronize do
-            @_subscribers[event_class]&.delete(handler_class)
-            @_subscribers.delete(event_class) if @_subscribers[event_class] && @_subscribers[event_class].empty?
+            list = @_subscribers[event_class]
+            return unless list
+
+            list.delete(handler_class)
+            @_subscribers.delete(event_class) if list.empty?
           end
         end
 
@@ -43,11 +44,11 @@ module Dex
         def publish(event, sync:)
           return if Suppression.suppressed?(event.class)
 
-          _event_bus_persist(event)
+          persist(event)
           handlers = subscribers_for(event.class)
           return if handlers.empty?
 
-          event_frame = { id: event.id, trace_id: event.trace_id }
+          event_frame = event.trace_frame
 
           handlers.each do |handler_class|
             if sync
@@ -55,7 +56,7 @@ module Dex
                 handler_class._event_handle(event)
               end
             else
-              _event_bus_enqueue(handler_class, event, event_frame)
+              enqueue(handler_class, event, event_frame)
             end
           end
         end
@@ -66,7 +67,7 @@ module Dex
 
         private
 
-        def _event_bus_persist(event)
+        def persist(event)
           store = Dex.configuration.event_store
           return unless store
 
@@ -79,7 +80,7 @@ module Dex
           Event._warn("Failed to persist event: #{e.message}")
         end
 
-        def _event_bus_enqueue(handler_class, event, trace_data)
+        def enqueue(handler_class, event, trace_data)
           ctx = event.context
 
           Dex::Event::Processor.perform_later(

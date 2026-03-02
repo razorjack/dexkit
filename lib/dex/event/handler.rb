@@ -7,10 +7,7 @@ module Dex
 
       def self.on(*event_classes)
         event_classes.each do |ec|
-          unless ec.is_a?(Class) && ec < Dex::Event
-            raise ArgumentError, "#{ec.inspect} is not a Dex::Event subclass"
-          end
-
+          Event.validate_event_class!(ec)
           Bus.subscribe(ec, self)
         end
       end
@@ -48,26 +45,29 @@ module Dex
         _event_handle(event)
       end
 
-      def self._event_reconstruct(event_class, payload, metadata_hash)
-        coerced = event_class.send(:_coerce_serialized_hash, payload)
-        instance = event_class.allocate
+      class << self
+        private
 
-        event_class.literal_properties.each do |prop|
-          instance.instance_variable_set(:"@#{prop.name}", coerced[prop.name])
+        def _event_reconstruct(event_class, payload, metadata_hash)
+          coerced = event_class.send(:_coerce_serialized_hash, payload)
+          instance = event_class.allocate
+
+          event_class.literal_properties.each do |prop|
+            instance.instance_variable_set(:"@#{prop.name}", coerced[prop.name])
+          end
+
+          metadata = Event::Metadata.new(
+            id: metadata_hash["id"],
+            timestamp: Time.parse(metadata_hash["timestamp"]),
+            trace_id: metadata_hash["trace_id"],
+            caused_by_id: metadata_hash["caused_by_id"],
+            context: metadata_hash["context"]
+          )
+          instance.instance_variable_set(:@metadata, metadata)
+          instance.freeze
+          instance
         end
-
-        metadata = Event::Metadata.new(
-          id: metadata_hash["id"],
-          timestamp: Time.parse(metadata_hash["timestamp"]),
-          trace_id: metadata_hash["trace_id"],
-          caused_by_id: metadata_hash["caused_by_id"],
-          context: metadata_hash["context"]
-        )
-        instance.instance_variable_set(:@metadata, metadata)
-        instance.freeze
-        instance
       end
-      private_class_method :_event_reconstruct
 
       def perform
         raise NotImplementedError, "#{self.class.name} must implement #perform"

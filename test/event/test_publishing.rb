@@ -156,7 +156,7 @@ class TestEventPublishing < Minitest::Test
     trace_data = { id: event.id, trace_id: event.trace_id }
 
     assert_enqueued_with(job: Dex::Event::Processor) do
-      Dex::Event::Bus.send(:_event_bus_enqueue, TestAsyncEnqueueHandler, event, trace_data)
+      Dex::Event::Bus.send(:enqueue, TestAsyncEnqueueHandler, event, trace_data)
     end
   end
 

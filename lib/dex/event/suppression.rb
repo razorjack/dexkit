@@ -15,10 +15,7 @@ module Dex
             new_set << :all
           else
             classes.each do |klass|
-              unless klass.is_a?(Class) && klass < Dex::Event
-                raise ArgumentError, "#{klass.inspect} is not a Dex::Event subclass"
-              end
-
+              Event.validate_event_class!(klass)
               new_set << klass
             end
           end

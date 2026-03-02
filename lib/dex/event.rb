@@ -22,6 +22,12 @@ module Dex
       Dex.warn("Event: #{message}")
     end
 
+    def self.validate_event_class!(klass)
+      return if klass.is_a?(Class) && klass < Dex::Event
+
+      raise ArgumentError, "#{klass.inspect} is not a Dex::Event subclass"
+    end
+
     # --- Instance ---
 
     attr_reader :metadata
@@ -37,6 +43,7 @@ module Dex
     def trace_id = metadata.trace_id
     def caused_by_id = metadata.caused_by_id
     def context = metadata.context
+    def trace_frame = { id: id, trace_id: trace_id }
 
     # Publishing
     def publish(sync: false)

@@ -10,8 +10,7 @@ module Dex
 
         def with_event(event, &block)
           stack = _stack
-          frame = { id: event.id, trace_id: event.trace_id }
-          stack.push(frame)
+          stack.push(event.trace_frame)
           yield
         ensure
           stack.pop
