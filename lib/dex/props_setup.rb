@@ -8,10 +8,12 @@ module Dex
   #   2. reader: :public by default (Literal defaults to private)
   #   3. Automatic RefType coercion — _Ref(Model) props auto-coerce IDs to records
   module PropsSetup
+    extend Dex::Concern
+
     def self.included(base)
       base.extend(Literal::Properties)
       base.extend(Literal::Types)
-      base.extend(ClassMethods)
+      super
     end
 
     module ClassMethods

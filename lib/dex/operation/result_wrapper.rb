@@ -32,23 +32,16 @@ module Dex
       end
     end
 
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
+    extend Dex::Concern
 
     def _result_wrap
-      halted = catch(:_dex_halt) { yield }
-      if halted.is_a?(Operation::Halt)
-        if halted.success?
-          _result_validate_success_type!(halted.value)
-          halted.value
-        else
-          raise Dex::Error.new(halted.error_code, halted.error_message, details: halted.error_details)
-        end
-      else
-        _result_validate_success_type!(halted)
-        halted
+      interceptor = Operation::HaltInterceptor.new { yield }
+      if interceptor.error?
+        h = interceptor.halt
+        raise Dex::Error.new(h.error_code, h.error_message, details: h.error_details)
       end
+      _result_validate_success_type!(interceptor.result)
+      interceptor.result
     end
 
     def error!(code, message = nil, details: nil)

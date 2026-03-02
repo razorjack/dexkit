@@ -19,13 +19,8 @@ module Dex
     include TypeCoercion
 
     def self._warn(message)
-      if defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
-        Rails.logger.warn "[Dex::Event] #{message}"
-      end
+      Dex.warn("Event: #{message}")
     end
-
-    private_class_method :_find_ref_type, :_resolve_base_class, :_coerce_value,
-      :_serialize_value, :_coerce_serialized_hash
 
     # --- Instance ---
 

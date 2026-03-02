@@ -10,6 +10,7 @@ loader.ignore("#{__dir__}/dex")
 loader.setup
 
 require_relative "dex/version"
+require_relative "dex/concern"
 require_relative "dex/ref_type"
 require_relative "dex/type_coercion"
 require_relative "dex/props_setup"
@@ -31,6 +32,12 @@ module Dex
   end
 
   class << self
+    def warn(message)
+      return unless defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
+
+      Rails.logger.warn("[Dex] #{message}")
+    end
+
     def configuration
       @configuration ||= Configuration.new
     end

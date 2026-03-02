@@ -1,5 +1,14 @@
 ## [Unreleased]
 
+### Changed
+
+- Extracted `HaltInterceptor` to encapsulate the halt catch/throw pattern used across pipeline wrappers
+- Extracted shared `validate_options!` helper for DSL option validation
+- Added `Dex.warn` for unified warning logging
+- Added `Dex::Concern` to reduce module inclusion boilerplate
+- Moved method privacy declarations into module definitions (removed `private_class_method` from includers)
+- Simplified internal method names in standalone classes (AsyncProxy, Pipeline, Jobs, Processor)
+
 ## [0.2.0] - 2026-03-02
 
 ### Added

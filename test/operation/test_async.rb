@@ -249,7 +249,7 @@ class TestOperationAsync < Minitest::Test
     op = TestSerializeOp.new(model: model, due: Date.new(2025, 6, 15))
     proxy = op.async
 
-    serialized = proxy.send(:_async_serialized_params)
+    serialized = proxy.send(:serialized_params)
 
     assert_equal model.id, serialized["model"]
     assert_equal "2025-06-15", serialized["due"]

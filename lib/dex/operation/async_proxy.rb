@@ -9,41 +9,41 @@ module Dex
       end
 
       def call
-        _async_ensure_active_job_loaded!
-        if _async_use_record_strategy?
-          _async_enqueue_record_job
+        ensure_active_job_loaded!
+        if use_record_strategy?
+          enqueue_record_job
         else
-          _async_enqueue_direct_job
+          enqueue_direct_job
         end
       end
 
       private
 
-      def _async_enqueue_direct_job
-        job = _async_apply_options(Operation::DirectJob)
-        job.perform_later(class_name: _async_operation_class_name, params: _async_serialized_params)
+      def enqueue_direct_job
+        job = apply_options(Operation::DirectJob)
+        job.perform_later(class_name: operation_class_name, params: serialized_params)
       end
 
-      def _async_enqueue_record_job
+      def enqueue_record_job
         record = Dex.record_backend.create_record(
-          name: _async_operation_class_name,
-          params: _async_serialized_params,
+          name: operation_class_name,
+          params: serialized_params,
           status: "pending"
         )
         begin
-          job = _async_apply_options(Operation::RecordJob)
-          job.perform_later(class_name: _async_operation_class_name, record_id: record.id)
+          job = apply_options(Operation::RecordJob)
+          job.perform_later(class_name: operation_class_name, record_id: record.id)
         rescue => e
           begin
             record.destroy
           rescue => destroy_error
-            _async_log_warning("Failed to clean up pending record #{record.id}: #{destroy_error.message}")
+            Dex.warn("Failed to clean up pending record #{record.id}: #{destroy_error.message}")
           end
           raise e
         end
       end
 
-      def _async_use_record_strategy?
+      def use_record_strategy?
         return false unless Dex.record_backend
         return false unless @operation.class.name
 
@@ -54,54 +54,48 @@ module Dex
         true
       end
 
-      def _async_apply_options(job_class)
+      def apply_options(job_class)
         options = {}
-        options[:queue] = _async_queue if _async_queue
-        options[:wait_until] = _async_scheduled_at if _async_scheduled_at
-        options[:wait] = _async_scheduled_in if _async_scheduled_in
+        options[:queue] = queue if queue
+        options[:wait_until] = scheduled_at if scheduled_at
+        options[:wait] = scheduled_in if scheduled_in
         options.empty? ? job_class : job_class.set(**options)
       end
 
-      def _async_ensure_active_job_loaded!
+      def ensure_active_job_loaded!
         return if defined?(ActiveJob::Base)
 
         raise LoadError, "ActiveJob is required for async operations. Add 'activejob' to your Gemfile."
       end
 
-      def _async_merged_options
+      def merged_options
         @operation.class.settings_for(:async).merge(@runtime_options)
       end
 
-      def _async_queue = _async_merged_options[:queue]
-      def _async_scheduled_at = _async_merged_options[:at]
-      def _async_scheduled_in = _async_merged_options[:in]
-      def _async_operation_class_name = @operation.class.name
+      def queue = merged_options[:queue]
+      def scheduled_at = merged_options[:at]
+      def scheduled_in = merged_options[:in]
+      def operation_class_name = @operation.class.name
 
-      def _async_serialized_params
-        @_async_serialized_params ||= begin
+      def serialized_params
+        @serialized_params ||= begin
           hash = @operation._props_as_json
-          _async_validate_serializable!(hash)
+          validate_serializable!(hash)
           hash
         end
       end
 
-      def _async_log_warning(message)
-        if defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
-          Rails.logger.warn "[Dex] #{message}"
-        end
-      end
-
-      def _async_validate_serializable!(hash, path: "")
+      def validate_serializable!(hash, path: "")
         hash.each do |key, value|
           current = path.empty? ? key.to_s : "#{path}.#{key}"
           case value
           when String, Integer, Float, NilClass, TrueClass, FalseClass
             next
           when Hash
-            _async_validate_serializable!(value, path: current)
+            validate_serializable!(value, path: current)
           when Array
             value.each_with_index do |v, i|
-              _async_validate_serializable!({ i => v }, path: current)
+              validate_serializable!({ i => v }, path: current)
             end
           else
             raise ArgumentError,

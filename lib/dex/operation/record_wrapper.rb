@@ -2,41 +2,26 @@
 
 module Dex
   module RecordWrapper
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
+    extend Dex::Concern
 
     def _record_wrap
-      halted = nil
-      result = catch(:_dex_halt) { yield }
+      interceptor = Operation::HaltInterceptor.new { yield }
 
-      if result.is_a?(Operation::Halt)
-        halted = result
-        result = halted.success? ? halted.value : nil
-      end
-
-      if halted.nil? || halted.success?
+      if interceptor.success?
         if _record_has_pending_record?
-          _record_update_done!(result)
+          _record_update_done!(interceptor.result)
         elsif _record_enabled?
-          _record_save!(result)
+          _record_save!(interceptor.result)
         end
       end
 
-      throw(:_dex_halt, halted) if halted
-      result
+      interceptor.rethrow!
+      interceptor.result
     end
-
-    RECORD_KNOWN_OPTIONS = %i[params response].freeze
 
     module ClassMethods
       def record(enabled = nil, **options)
-        unknown = options.keys - RecordWrapper::RECORD_KNOWN_OPTIONS
-        if unknown.any?
-          raise ArgumentError,
-            "unknown record option(s): #{unknown.map(&:inspect).join(", ")}. " \
-            "Known: #{RecordWrapper::RECORD_KNOWN_OPTIONS.map(&:inspect).join(", ")}"
-        end
+        validate_options!(options, %i[params response], :record)
 
         if enabled == false
           set :record, enabled: false
@@ -101,7 +86,7 @@ module Dex
       success_type = self.class.respond_to?(:_success_type) && self.class._success_type
 
       if success_type
-        _record_serialize_typed_result(result, success_type)
+        result.nil? ? nil : self.class.send(:_serialize_value, success_type, result)
       else
         case result
         when nil then nil
@@ -111,20 +96,12 @@ module Dex
       end
     end
 
-    def _record_serialize_typed_result(result, type)
-      return nil if result.nil?
-
-      self.class.send(:_serialize_value, type, result)
-    end
-
     def _record_current_time
       Time.respond_to?(:current) ? Time.current : Time.now
     end
 
     def _record_handle_error(error)
-      if defined?(Rails) && Rails.respond_to?(:logger) && Rails.logger
-        Rails.logger.warn "[Dex] Failed to record operation: #{error.message}"
-      end
+      Dex.warn("Failed to record operation: #{error.message}")
     end
   end
 end

@@ -2,9 +2,7 @@
 
 module Dex
   module TypeCoercion
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
+    extend Dex::Concern
 
     module ClassMethods
       def _serialized_coercions
@@ -17,6 +15,8 @@ module Dex
           h[BigDecimal] = ->(v) { v.is_a?(String) ? BigDecimal(v) : v } if defined?(BigDecimal)
         end.freeze
       end
+
+      private
 
       def _find_ref_type(type)
         return type if type.is_a?(Dex::RefType)

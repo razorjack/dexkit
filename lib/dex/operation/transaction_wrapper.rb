@@ -2,40 +2,27 @@
 
 module Dex
   module TransactionWrapper
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
+    extend Dex::Concern
 
     def _transaction_wrap
       return yield unless _transaction_enabled?
 
-      halted = nil
+      interceptor = nil
       result = _transaction_execute do
-        halted_value = catch(:_dex_halt) { yield }
-        if halted_value.is_a?(Operation::Halt)
-          halted = halted_value
-          raise _transaction_adapter.rollback_exception_class if halted.error?
-          halted.value
-        else
-          halted_value
-        end
+        interceptor = Operation::HaltInterceptor.new { yield }
+        raise _transaction_adapter.rollback_exception_class if interceptor.error?
+        interceptor.result
       end
 
-      throw(:_dex_halt, halted) if halted
+      interceptor&.rethrow!
       result
     end
 
     TRANSACTION_KNOWN_ADAPTERS = %i[active_record mongoid].freeze
-    TRANSACTION_KNOWN_OPTIONS = %i[adapter].freeze
 
     module ClassMethods
       def transaction(enabled_or_options = nil, **options)
-        unknown = options.keys - TransactionWrapper::TRANSACTION_KNOWN_OPTIONS
-        if unknown.any?
-          raise ArgumentError,
-            "unknown transaction option(s): #{unknown.map(&:inspect).join(", ")}. " \
-            "Known: #{TransactionWrapper::TRANSACTION_KNOWN_OPTIONS.map(&:inspect).join(", ")}"
-        end
+        validate_options!(options, %i[adapter], :transaction)
 
         case enabled_or_options
         when false

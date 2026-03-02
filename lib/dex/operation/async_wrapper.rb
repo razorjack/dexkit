@@ -2,33 +2,17 @@
 
 module Dex
   module AsyncWrapper
-    ASYNC_KNOWN_OPTIONS = %i[queue in at].freeze
-
     module ClassMethods
       def async(**options)
-        unknown = options.keys - AsyncWrapper::ASYNC_KNOWN_OPTIONS
-        if unknown.any?
-          raise ArgumentError,
-            "unknown async option(s): #{unknown.map(&:inspect).join(", ")}. " \
-            "Known: #{AsyncWrapper::ASYNC_KNOWN_OPTIONS.map(&:inspect).join(", ")}"
-        end
-
+        validate_options!(options, %i[queue in at], :async)
         set(:async, **options)
       end
     end
 
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
+    extend Dex::Concern
 
     def async(**options)
-      unknown = options.keys - AsyncWrapper::ASYNC_KNOWN_OPTIONS
-      if unknown.any?
-        raise ArgumentError,
-          "unknown async option(s): #{unknown.map(&:inspect).join(", ")}. " \
-          "Known: #{AsyncWrapper::ASYNC_KNOWN_OPTIONS.map(&:inspect).join(", ")}"
-      end
-
+      self.class.validate_options!(options, %i[queue in at], :async)
       Operation::AsyncProxy.new(self, **options)
     end
   end

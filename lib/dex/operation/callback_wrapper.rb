@@ -2,9 +2,7 @@
 
 module Dex
   module CallbackWrapper
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
+    extend Dex::Concern
 
     module ClassMethods
       def before(callable = nil, &block)
@@ -57,24 +55,22 @@ module Dex
     def _callback_wrap
       return yield unless self.class._callback_any?
 
-      halted = nil
+      success_halt = nil
       result = _callback_run_around(self.class._callback_list(:around)) do
         _callback_run_before
-        caught = catch(:_dex_halt) { yield }
-        if caught.is_a?(Operation::Halt)
-          if caught.success?
-            halted = caught
-            _callback_run_after
-            caught.value
-          else
-            throw(:_dex_halt, caught)
-          end
+        interceptor = Operation::HaltInterceptor.new { yield }
+        if interceptor.error?
+          interceptor.rethrow!
+        elsif interceptor.halted?
+          success_halt = interceptor
+          _callback_run_after
+          interceptor.result
         else
           _callback_run_after
-          caught
+          interceptor.result
         end
       end
-      throw(:_dex_halt, halted) if halted
+      success_halt&.rethrow!
       result
     end
 

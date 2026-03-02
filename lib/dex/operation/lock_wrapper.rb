@@ -2,20 +2,11 @@
 
 module Dex
   module LockWrapper
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
-
-    LOCK_KNOWN_OPTIONS = %i[timeout].freeze
+    extend Dex::Concern
 
     module ClassMethods
       def advisory_lock(key = nil, **options, &block)
-        unknown = options.keys - LockWrapper::LOCK_KNOWN_OPTIONS
-        if unknown.any?
-          raise ArgumentError,
-            "unknown advisory_lock option(s): #{unknown.map(&:inspect).join(", ")}. " \
-            "Known: #{LockWrapper::LOCK_KNOWN_OPTIONS.map(&:inspect).join(", ")}"
-        end
+        validate_options!(options, %i[timeout], :advisory_lock)
 
         lock_key = block || key
 

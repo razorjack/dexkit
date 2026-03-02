@@ -16,6 +16,7 @@ lib/
   dexkit.rb              # Entry point, configuration, Zeitwerk loader
   dex/
     version.rb           # Version constant
+    concern.rb           # Dex::Concern (module inclusion helper)
     ref_type.rb          # Dex::RefType (Literal::Type for model references)
     type_coercion.rb     # Dex::TypeCoercion (shared serialization/coercion for Operation + Event)
     props_setup.rb       # Dex::PropsSetup (shared prop/prop?/_Ref DSL for Operation + Event)
@@ -84,7 +85,7 @@ test/
 
 Operation logic is split into per-module files under `lib/dex/operation/`. The orchestrator `lib/dex/operation.rb` requires all parts. Each behavior is a separate module registered as a named pipeline step via `use`. New wrapper modules follow the pattern: `self.included` + `ClassMethods` for DSL + `_name_wrap` instance method that calls `yield` to proceed. New wrappers go in `lib/dex/operation/` as their own file. See existing wrappers for reference.
 
-**Naming internal methods**: All private/internal instance methods in Operation modules MUST be prefixed with underscore `_` (non-negotiable). Additionally, prefix them with `_modulename_` to indicate which module they belong to. Example: in `RecordWrapper` → `_record_enabled?`, `_record_save!`, `_record_attributes`. This prevents naming collisions and signals framework-internal methods.
+**Naming internal methods**: The `_modulename_` prefix is required only for methods that end up in `Dex::Operation`'s method table — i.e., wrapper modules mixed into Operation via `include`/`use`. This prevents collisions with user-defined methods in Operation subclasses (e.g., in `RecordWrapper` → `_record_enabled?`, `_record_save!`). Standalone classes that are never mixed into or inherited from Operation (e.g., `AsyncProxy`, `Pipeline`, `Jobs`, `Processor`) use plain method names since there is no collision risk.
 
 Tests are scoped per-area, each area in a separate file. Example: `test/operation/test_params.rb` for testing params.
 

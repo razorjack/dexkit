@@ -21,60 +21,81 @@ module Dex
       def error? = type == :error
     end
 
+    class HaltInterceptor
+      attr_reader :result, :halt
+
+      def initialize
+        raw = catch(:_dex_halt) { yield }
+        if raw.is_a?(Halt)
+          @halt = raw
+          @result = raw.success? ? raw.value : nil
+        else
+          @halt = nil
+          @result = raw
+        end
+      end
+
+      def halted? = !@halt.nil?
+      def success? = !error?
+      def error? = @halt&.error? || false
+
+      def rethrow!
+        throw(:_dex_halt, @halt) if halted?
+      end
+    end
+
     RESERVED_PROP_NAMES = %i[call perform async safe initialize].to_set.freeze
 
     include PropsSetup
     include TypeCoercion
 
-    private_class_method :_find_ref_type, :_resolve_base_class, :_coerce_value,
-      :_serialize_value, :_coerce_serialized_hash
-
     Contract = Data.define(:params, :success, :errors)
 
-    def self.contract
-      Contract.new(
-        params: _contract_params,
-        success: _success_type,
-        errors: _declared_errors
-      )
-    end
+    class << self
+      def contract
+        Contract.new(
+          params: _contract_params,
+          success: _success_type,
+          errors: _declared_errors
+        )
+      end
 
-    def self._contract_params
-      return {} unless respond_to?(:literal_properties)
+      def inherited(subclass)
+        subclass.instance_variable_set(:@_pipeline, pipeline.dup)
+        super
+      end
 
-      literal_properties.each_with_object({}) do |prop, hash|
-        hash[prop.name] = prop.type
+      def pipeline
+        @_pipeline ||= Pipeline.new
+      end
+
+      def use(mod, as: nil, wrap: nil, before: nil, after: nil, at: nil)
+        step_name = as || _derive_step_name(mod)
+        wrap_method = wrap || :"_#{step_name}_wrap"
+        pipeline.add(step_name, method: wrap_method, before: before, after: after, at: at)
+        include mod
+      end
+
+      private
+
+      def _contract_params
+        return {} unless respond_to?(:literal_properties)
+
+        literal_properties.each_with_object({}) do |prop, hash|
+          hash[prop.name] = prop.type
+        end
+      end
+
+      def _derive_step_name(mod)
+        base = mod.name&.split("::")&.last
+        raise ArgumentError, "anonymous modules require explicit as: parameter" unless base
+
+        base.sub(/Wrapper\z/, "")
+          .gsub(/([a-z])([A-Z])/, '\1_\2')
+          .downcase
+          .to_sym
       end
     end
-
-    private_class_method :_contract_params
-
-    def self.inherited(subclass)
-      subclass.instance_variable_set(:@_pipeline, pipeline.dup)
-      super
-    end
-
-    def self.pipeline
-      @_pipeline ||= Pipeline.new
-    end
-
-    def self.use(mod, as: nil, wrap: nil, before: nil, after: nil, at: nil)
-      step_name = as || _derive_step_name(mod)
-      wrap_method = wrap || :"_#{step_name}_wrap"
-      pipeline.add(step_name, method: wrap_method, before: before, after: after, at: at)
-      include mod
-    end
-
-    def self._derive_step_name(mod)
-      base = mod.name&.split("::")&.last
-      raise ArgumentError, "anonymous modules require explicit as: parameter" unless base
-
-      base.sub(/Wrapper\z/, "")
-        .gsub(/([a-z])([A-Z])/, '\1_\2')
-        .downcase
-        .to_sym
-    end
-    private_class_method :_derive_step_name
 
     def perform(*, **)
     end

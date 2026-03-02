@@ -2,9 +2,7 @@
 
 module Dex
   module RescueWrapper
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
+    extend Dex::Concern
 
     module ClassMethods
       def rescue_from(*exception_classes, as:, message: nil)

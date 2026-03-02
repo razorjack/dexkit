@@ -110,9 +110,11 @@ module Dex
   end
 
   module TestHelpers
+    extend Dex::Concern
+
     def self.included(base)
       Dex::TestWrapper.install!
-      base.extend(ClassMethods)
+      super
     end
 
     def setup

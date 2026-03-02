@@ -8,7 +8,7 @@ module Dex
 
       const_set(:Processor, Class.new(ActiveJob::Base) do
         def perform(handler_class:, event_class:, payload:, metadata:, trace: nil, context: nil, attempt_number: 1)
-          _processor_restore_context(context)
+          restore_context(context)
 
           handler = Object.const_get(handler_class)
           retry_config = handler._event_handler_retry_config
@@ -18,7 +18,7 @@ module Dex
           end
         rescue => _e
           if retry_config && attempt_number <= retry_config[:count]
-            delay = _processor_compute_delay(retry_config, attempt_number)
+            delay = compute_delay(retry_config, attempt_number)
             self.class.set(wait: delay).perform_later(
               handler_class: handler_class,
               event_class: event_class,
@@ -35,7 +35,7 @@ module Dex
 
         private
 
-        def _processor_restore_context(context)
+        def restore_context(context)
           return unless context
 
           restorer = Dex.configuration.restore_event_context
@@ -46,7 +46,7 @@ module Dex
           Dex::Event._warn("restore_event_context failed: #{e.message}")
         end
 
-        def _processor_compute_delay(config, attempt)
+        def compute_delay(config, attempt)
           wait = config[:wait]
           case wait
           when Numeric then wait

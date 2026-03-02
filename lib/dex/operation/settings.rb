@@ -8,6 +8,15 @@ module Dex
         @_settings[key] = (@_settings[key] || {}).merge(options)
       end
 
+      def validate_options!(options, known, dsl_name)
+        unknown = options.keys - known
+        return if unknown.empty?
+
+        raise ArgumentError,
+          "unknown #{dsl_name} option(s): #{unknown.map(&:inspect).join(", ")}. " \
+          "Known: #{known.map(&:inspect).join(", ")}"
+      end
+
       def settings_for(key)
         parent_settings = if superclass.respond_to?(:settings_for)
           superclass.settings_for(key) || {}
@@ -19,8 +28,6 @@ module Dex
       end
     end
 
-    def self.included(base)
-      base.extend(ClassMethods)
-    end
+    extend Dex::Concern
   end
 end
