@@ -45,8 +45,14 @@ export default defineConfig({
       },
       {
         text: 'Event',
-        collapsed: true,
-        items: [{ text: 'Dex::Event', link: '/event/' }]
+        collapsed: false,
+        items: [
+          { text: 'Overview', link: '/event/' },
+          { text: 'Publishing', link: '/event/publishing' },
+          { text: 'Handling', link: '/event/handling' },
+          { text: 'Tracing & Suppression', link: '/event/tracing' },
+          { text: 'Testing', link: '/event/testing' }
+        ]
       }
     ],
     socialLinks: [{ icon: 'github', link: 'https://github.com/razorjack/dexkit' }]

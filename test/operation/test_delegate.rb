@@ -45,7 +45,7 @@ class TestOperationProps < Minitest::Test
     end
 
     assert_includes error.message, ":call"
-    assert_includes error.message, "conflicts with core Operation methods"
+    assert_includes error.message, "is reserved"
   end
 
   def test_reserved_perform_name_raises

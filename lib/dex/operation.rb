@@ -2,7 +2,6 @@
 
 # Wrapper modules (loaded before class body so `include`/`use` can find them)
 require_relative "operation/settings"
-require_relative "operation/props_setup"
 require_relative "operation/result_wrapper"
 require_relative "operation/record_wrapper"
 require_relative "operation/transaction_wrapper"
@@ -22,16 +21,13 @@ module Dex
       def error? = type == :error
     end
 
-    def self._serialized_coercions
-      @_serialized_coercions ||= {
-        Time => ->(v) { v.is_a?(String) ? Time.parse(v) : v },
-        Symbol => ->(v) { v.is_a?(String) ? v.to_sym : v }
-      }.tap do |h|
-        h[Date] = ->(v) { v.is_a?(String) ? Date.parse(v) : v } if defined?(Date)
-        h[DateTime] = ->(v) { v.is_a?(String) ? DateTime.parse(v) : v } if defined?(DateTime)
-        h[BigDecimal] = ->(v) { v.is_a?(String) ? BigDecimal(v) : v } if defined?(BigDecimal)
-      end.freeze
-    end
+    RESERVED_PROP_NAMES = %i[call perform async safe initialize].to_set.freeze
+
+    include PropsSetup
+    include TypeCoercion
+
+    private_class_method :_find_ref_type, :_resolve_base_class, :_coerce_value,
+      :_serialize_value, :_coerce_serialized_hash
 
     Contract = Data.define(:params, :success, :errors)
 
@@ -52,55 +48,6 @@ module Dex
     end
 
     private_class_method :_contract_params
-
-    def self._dex_find_ref_type(type)
-      return type if type.is_a?(Dex::RefType)
-
-      if type.respond_to?(:type)
-        inner = type.type
-        return inner if inner.is_a?(Dex::RefType)
-      end
-      nil
-    end
-
-    def self._dex_coerce_serialized_hash(hash)
-      return hash.transform_keys(&:to_sym) unless respond_to?(:literal_properties)
-
-      result = {}
-      literal_properties.each do |prop|
-        name = prop.name
-        raw = hash.key?(name) ? hash[name] : hash[name.to_s]
-        result[name] = _dex_coerce_value(prop.type, raw)
-      end
-      result
-    end
-
-    def self._dex_resolve_base_class(type)
-      return type.model_class if type.is_a?(Dex::RefType)
-      return _dex_resolve_base_class(type.type) if type.respond_to?(:type)
-
-      type if type.is_a?(Class)
-    end
-
-    def self._dex_coerce_value(type, value)
-      return value unless value
-      return value if _dex_find_ref_type(type)
-
-      if type.respond_to?(:type) && type.is_a?(Literal::Types::ArrayType)
-        return value.map { |v| _dex_coerce_value(type.type, v) } if value.is_a?(Array)
-        return value
-      end
-
-      if type.respond_to?(:type) && type.is_a?(Literal::Types::NilableType)
-        return _dex_coerce_value(type.type, value)
-      end
-
-      base = _dex_resolve_base_class(type)
-      coercion = _serialized_coercions[base]
-      coercion ? coercion.call(value) : value
-    end
-
-    private_class_method :_dex_resolve_base_class, :_dex_coerce_value, :_dex_find_ref_type, :_dex_coerce_serialized_hash
 
     def self.inherited(subclass)
       subclass.instance_variable_set(:@_pipeline, pipeline.dup)
@@ -149,28 +96,9 @@ module Dex
       new(**kwargs).call
     end
 
-    # Serialization helpers
-
-    def _props_as_json
-      return {} unless self.class.respond_to?(:literal_properties)
-
-      result = {}
-      self.class.literal_properties.each do |prop|
-        value = public_send(prop.name)
-        ref = self.class.send(:_dex_find_ref_type, prop.type)
-        result[prop.name.to_s] = if ref && value
-          value.id
-        else
-          value.respond_to?(:as_json) ? value.as_json : value
-        end
-      end
-      result
-    end
-
     include Settings
     include AsyncWrapper
     include SafeWrapper
-    include PropsSetup
 
     use ResultWrapper
     use LockWrapper

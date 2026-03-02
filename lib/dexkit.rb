@@ -11,16 +11,22 @@ loader.setup
 
 require_relative "dex/version"
 require_relative "dex/ref_type"
+require_relative "dex/type_coercion"
+require_relative "dex/props_setup"
 require_relative "dex/error"
 require_relative "dex/operation"
+require_relative "dex/event"
 
 module Dex
   class Configuration
-    attr_accessor :record_class, :transaction_adapter
+    attr_accessor :record_class, :transaction_adapter, :event_store, :event_context, :restore_event_context
 
     def initialize
       @record_class = nil
       @transaction_adapter = nil
+      @event_store = nil
+      @event_context = nil
+      @restore_event_context = nil
     end
   end
 

@@ -1,6 +1,6 @@
 Dexkit. Module name: `Dex`
 
-Ruby library providing base classes for service/operation and form object patterns in Rails apps.
+Ruby library providing base classes for service/operation, event, and form object patterns in Rails apps.
 
 ## Core Values
 
@@ -17,12 +17,13 @@ lib/
   dex/
     version.rb           # Version constant
     ref_type.rb          # Dex::RefType (Literal::Type for model references)
+    type_coercion.rb     # Dex::TypeCoercion (shared serialization/coercion for Operation + Event)
+    props_setup.rb       # Dex::PropsSetup (shared prop/prop?/_Ref DSL for Operation + Event)
     error.rb             # Dex::Error
     match.rb             # Dex::Ok, Dex::Err aliases + Dex::Match
     operation.rb         # Operation class orchestrator (requires all parts)
     operation/
       settings.rb        # Dex::Settings
-      props_setup.rb     # Dex::PropsSetup
       result_wrapper.rb  # Dex::ResultWrapper
       record_wrapper.rb  # Dex::RecordWrapper
       transaction_wrapper.rb # Dex::TransactionWrapper
@@ -37,22 +38,38 @@ lib/
       record_backend.rb  # Operation::RecordBackend + adapters
       transaction_adapter.rb # Operation::TransactionAdapter + adapters
       jobs.rb            # const_missing + lazy DirectJob/RecordJob
+    event.rb             # Event class orchestrator (requires all parts)
+    event/
+      metadata.rb        # Dex::Event::Metadata (id, timestamp, trace_id, caused_by_id, context)
+      trace.rb           # Dex::Event::Trace (stack-based causality tracing)
+      suppression.rb     # Dex::Event::Suppression (block-scoped suppression)
+      bus.rb             # Dex::Event::Bus (global pub/sub, sync/async dispatch, persistence)
+      handler.rb         # Dex::Event::Handler (on, retries DSL, perform contract)
+      processor.rb       # Dex::Event::Processor (ActiveJob, lazy-loaded via const_missing)
     test_log.rb          # Dex::TestLog (global activity log for tests)
     test_helpers.rb      # Dex::TestHelpers + Dex::TestWrapper
     test_helpers/
       execution.rb       # call_operation, call_operation!
       assertions.rb      # All assertion methods
       stubbing.rb        # stub_operation, spy_on_operation, Spy class
+    event_test_helpers.rb # Dex::Event::TestHelpers + EventTestWrapper
+    event_test_helpers/
+      assertions.rb      # assert_event_published, refute_event_published, etc.
 
 test/
   test_helper.rb         # Minitest setup
   support/
     operation_helpers.rb # define_operation(), with_recording()
     database_helpers.rb  # setup_test_database()
+    event_helpers.rb     # define_event(), build_event(), define_handler(), build_handler()
   operation/
     test_*.rb            # Per-feature test files
+  event/
+    test_*.rb            # Per-feature event test files
   test_helpers/
     test_*.rb            # Per-feature test helper tests
+  event_test_helpers/
+    test_*.rb            # Per-feature event test helper tests
   types/
     test_*.rb            # Per-type test files
 ```
@@ -75,7 +92,7 @@ Tests are scoped per-area, each area in a separate file. Example: `test/operatio
 
 When you're done adding a new feature or significantly modifying existing one:
 1. Update `README.md` accordingly.
-2. Update the corresponding file in `guides/llm/` — these are LLM-optimized docs copied into apps that use dexkit. They must be thorough, compact, accurate, and in sync with implementation. Current file: `guides/llm/OPERATION.md` (includes testing). New major features get new files (e.g., `guides/llm/FORM.md`).
+2. Update the corresponding file in `guides/llm/` — these are LLM-optimized docs copied into apps that use dexkit. They must be thorough, compact, accurate, and in sync with implementation. Current files: `guides/llm/OPERATION.md` (includes testing), `guides/llm/EVENT.md` (includes testing). New major features get new files (e.g., `guides/llm/FORM.md`).
 
 ## Code Quality
 

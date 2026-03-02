@@ -1,13 +1,9 @@
 # frozen_string_literal: true
 
 module OperationHelpers
-  def self.included(base)
-    base.class_eval do
-      def teardown
-        _cleanup_operation_constants
-        super
-      end
-    end
+  def teardown
+    _cleanup_operation_constants
+    super
   end
 
   # Defines a named operation class and tracks it for automatic cleanup

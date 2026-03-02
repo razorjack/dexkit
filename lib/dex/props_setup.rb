@@ -1,8 +1,12 @@
 # frozen_string_literal: true
 
-require "set"
-
 module Dex
+  # Shared prop DSL for Operation and Event.
+  #
+  # Wraps Literal::Properties' prop/prop? with three Dex-specific behaviors:
+  #   1. Reserved name validation — each class defines RESERVED_PROP_NAMES
+  #   2. reader: :public by default (Literal defaults to private)
+  #   3. Automatic RefType coercion — _Ref(Model) props auto-coerce IDs to records
   module PropsSetup
     def self.included(base)
       base.extend(Literal::Properties)
@@ -11,10 +15,10 @@ module Dex
     end
 
     module ClassMethods
-      RESERVED_PROP_NAMES = %i[call perform async safe initialize].to_set.freeze
-
       def prop(name, type, kind = :keyword, **options, &block)
-        _props_validate_name!(name)
+        if const_defined?(:RESERVED_PROP_NAMES) && self::RESERVED_PROP_NAMES.include?(name)
+          raise ArgumentError, "Property :#{name} is reserved."
+        end
         options[:reader] = :public unless options.key?(:reader)
         if type.is_a?(Dex::RefType) && !block
           ref = type
@@ -35,15 +39,6 @@ module Dex
 
       def _Ref(model_class, lock: false) # rubocop:disable Naming/MethodName
         Dex::RefType.new(model_class, lock: lock)
-      end
-
-      private
-
-      def _props_validate_name!(name)
-        return unless RESERVED_PROP_NAMES.include?(name)
-
-        raise ArgumentError,
-          "Property :#{name} conflicts with core Operation methods."
       end
     end
   end

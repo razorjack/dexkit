@@ -114,12 +114,7 @@ module Dex
     def _record_serialize_typed_result(result, type)
       return nil if result.nil?
 
-      ref_type = self.class.send(:_dex_find_ref_type, type)
-      if ref_type && result.respond_to?(:id)
-        result.id
-      else
-        result.respond_to?(:as_json) ? result.as_json : result
-      end
+      self.class.send(:_serialize_value, type, result)
     end
 
     def _record_current_time

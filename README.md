@@ -84,6 +84,60 @@ class CreateUserTest < Minitest::Test
 end
 ```
 
+## Events
+
+Typed, immutable event objects with publish/subscribe, async dispatch, and causality tracing.
+
+```ruby
+class OrderPlaced < Dex::Event
+  prop :order_id, Integer
+  prop :total, BigDecimal
+  prop? :coupon_code, String
+end
+
+class NotifyWarehouse < Dex::Event::Handler
+  on OrderPlaced
+  retries 3
+
+  def perform
+    WarehouseApi.notify(event.order_id)
+  end
+end
+
+OrderPlaced.publish(order_id: 1, total: 99.99)
+```
+
+### What you get out of the box
+
+**Zero-config pub/sub** — define events and handlers, publish. No bus setup needed.
+
+**Async by default** — handlers dispatched via ActiveJob. `sync: true` for inline.
+
+**Causality tracing** — link events in chains with shared `trace_id`:
+
+```ruby
+order_placed.trace do
+  InventoryReserved.publish(order_id: 1)
+end
+```
+
+**Suppression**, optional **persistence**, **context capture**, and **retries** with exponential backoff.
+
+### Testing
+
+```ruby
+class CreateOrderTest < Minitest::Test
+  include Dex::Event::TestHelpers
+
+  def test_publishes_order_placed
+    capture_events do
+      CreateOrder.call(item_id: 1)
+      assert_event_published(OrderPlaced, order_id: 1)
+    end
+  end
+end
+```
+
 ## Installation
 
 ```ruby
@@ -100,7 +154,7 @@ Dexkit ships LLM-optimized guides. Copy them into your project so AI agents auto
 
 ```bash
 cp $(bundle show dexkit)/guides/llm/OPERATION.md app/operations/CLAUDE.md
-cp $(bundle show dexkit)/guides/llm/TESTING.md test/CLAUDE.md
+cp $(bundle show dexkit)/guides/llm/EVENT.md app/event_handlers/CLAUDE.md
 ```
 
 ## License
