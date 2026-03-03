@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    dexkit (0.2.0)
+    dexkit (0.3.0)
       activemodel (>= 6.1)
       literal (~> 1.9)
       zeitwerk (~> 2.6)
