@@ -15,6 +15,7 @@ module Dex
     end
 
     include Nesting
+    include Match
 
     class ValidationError < StandardError
       attr_reader :form

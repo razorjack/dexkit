@@ -1,4 +1,5 @@
 ## [Unreleased]
+
 ## [0.3.0] - 2026-03-03
 
 ### Added
@@ -23,6 +24,10 @@
   - Declaration-time validation of `model:` and `conditions:` options
 - Added `actionpack` as development dependency for testing Rails controller integration
 - Added `activemodel >= 6.1` as runtime dependency
+
+### Changed
+
+- `Dex::Match` is now included in `Dex::Operation` – `Ok`/`Err` are available without prefix inside operations. External contexts (controllers, POROs) can still use `Dex::Ok`/`Dex::Err` or `include Dex::Match`.
 
 ## [0.2.0] - 2026-03-02
 

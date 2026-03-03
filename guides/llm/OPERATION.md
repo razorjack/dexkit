@@ -187,7 +187,7 @@ in Dex::Err(code: :email_taken) then puts "Already exists"
 end
 ```
 
-`include Dex::Match` to use `Ok`/`Err` without `Dex::` prefix.
+`Ok`/`Err` are available inside operations without prefix. In other contexts (controllers, POROs), use `Dex::Ok`/`Dex::Err` or `include Dex::Match`.
 
 ---
 

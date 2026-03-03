@@ -139,3 +139,6 @@ require_relative "operation/jobs"
 
 # Top-level aliases (depend on Operation::Ok/Err)
 require_relative "match"
+
+# Make Ok/Err available without prefix inside operations
+Dex::Operation.include(Dex::Match)

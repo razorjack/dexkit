@@ -5,8 +5,6 @@ Call `.safe.call` on any operation to get an `Ok` or `Err` result instead of a r
 ## Pattern matching
 
 ```ruby
-include Dex::Match
-
 result = CreateUser.new(email: "alice@example.com").safe.call
 
 case result
@@ -19,18 +17,9 @@ in Err(code:, message:)
 end
 ```
 
+`Ok` and `Err` are available without prefix inside operations and forms. In other contexts (controllers, POROs), use `Dex::Ok`/`Dex::Err` or `include Dex::Match`.
+
 `Ok` deconstructs by delegating to its value – if the value is a Hash or responds to `deconstruct_keys`, you can match its contents directly. `Err` deconstructs into `{ code:, message:, details: }`.
-
-Without `Dex::Match`, use the fully qualified names:
-
-```ruby
-case result
-in Dex::Ok
-  # ...
-in Dex::Err(code: :not_found)
-  # ...
-end
-```
 
 ## Ok
 

@@ -87,8 +87,6 @@ The `save` method validates the form and delegates persistence to whatever makes
 
 ```ruby
 class OnboardingForm < Dex::Form
-  include Dex::Match
-
   # ... attributes, validations, nested forms ...
 
   def save

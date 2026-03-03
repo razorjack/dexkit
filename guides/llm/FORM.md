@@ -375,8 +375,6 @@ end
 
 ```ruby
 class OnboardingForm < Dex::Form
-  include Dex::Match
-
   def save
     return false unless valid?
 
@@ -407,8 +405,6 @@ A form spanning User, Employee, and Address — the core reason form objects exi
 
 ```ruby
 class OnboardingForm < Dex::Form
-  include Dex::Match
-
   attribute :first_name, :string
   attribute :last_name, :string
   attribute :email, :string

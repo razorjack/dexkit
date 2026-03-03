@@ -48,8 +48,6 @@ rescue_from Stripe::CardError, as: :card_declined
 **Ok / Err** – pattern match on operation outcomes with `.safe.call`:
 
 ```ruby
-include Dex::Match
-
 case CreateUser.new(email: email).safe.call
 in Ok(name:)
   puts "Welcome, #{name}!"
@@ -188,8 +186,6 @@ end
 **Multi-model forms** — when a form spans User, Employee, and Address, define a `.for` convention method to map records and a `#save` method that delegates to a `Dex::Operation`:
 
 ```ruby
-include Dex::Match
-
 def save
   return false unless valid?
 
