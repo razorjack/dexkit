@@ -56,6 +56,10 @@ lib/
     event_test_helpers.rb # Dex::Event::TestHelpers + EventTestWrapper
     event_test_helpers/
       assertions.rb      # assert_event_published, refute_event_published, etc.
+    form.rb              # Form class orchestrator (requires all parts)
+    form/
+      nesting.rb         # Dex::Form::Nesting (nested_one, nested_many DSL)
+      uniqueness_validator.rb # Dex::Form::UniquenessValidator (validates :x, uniqueness: true)
 
 test/
   test_helper.rb         # Minitest setup
@@ -63,10 +67,13 @@ test/
     operation_helpers.rb # define_operation(), with_recording()
     database_helpers.rb  # setup_test_database()
     event_helpers.rb     # define_event(), build_event(), define_handler(), build_handler()
+    form_helpers.rb      # define_form(), build_form()
   operation/
     test_*.rb            # Per-feature test files
   event/
     test_*.rb            # Per-feature event test files
+  form/
+    test_*.rb            # Per-feature form test files
   test_helpers/
     test_*.rb            # Per-feature test helper tests
   event_test_helpers/
@@ -77,7 +84,7 @@ test/
 
 ## Core Dependencies
 
-**Runtime:** `literal`, `zeitwerk`
+**Runtime:** `activemodel`, `literal`, `zeitwerk`
 
 **Development:** `activejob`, `activerecord` (for testing Rails integration)
 
@@ -93,7 +100,7 @@ Tests are scoped per-area, each area in a separate file. Example: `test/operatio
 
 When you're done adding a new feature or significantly modifying existing one:
 1. Update `README.md` accordingly.
-2. Update the corresponding file in `guides/llm/` — these are LLM-optimized docs copied into apps that use dexkit. They must be thorough, compact, accurate, and in sync with implementation. Current files: `guides/llm/OPERATION.md` (includes testing), `guides/llm/EVENT.md` (includes testing). New major features get new files (e.g., `guides/llm/FORM.md`).
+2. Update the corresponding file in `guides/llm/` — these are LLM-optimized docs copied into apps that use dexkit. They must be thorough, compact, accurate, and in sync with implementation. Current files: `guides/llm/OPERATION.md` (includes testing), `guides/llm/EVENT.md` (includes testing), `guides/llm/FORM.md` (includes testing).
 
 ## Code Quality
 

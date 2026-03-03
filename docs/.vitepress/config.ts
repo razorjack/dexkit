@@ -40,8 +40,15 @@ export default defineConfig({
       },
       {
         text: 'Form',
-        collapsed: true,
-        items: [{ text: 'Dex::Form', link: '/form/' }]
+        collapsed: false,
+        items: [
+          { text: 'Overview', link: '/form/' },
+          { text: 'Attributes & Normalization', link: '/form/attributes' },
+          { text: 'Validation', link: '/form/validation' },
+          { text: 'Nested Forms', link: '/form/nesting' },
+          { text: 'Rails Integration', link: '/form/rails' },
+          { text: 'Conventions', link: '/form/conventions' }
+        ]
       },
       {
         text: 'Event',

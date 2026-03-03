@@ -1,4 +1,28 @@
 ## [Unreleased]
+## [0.3.0] - 2026-03-03
+
+### Added
+
+- **Form objects** — `Dex::Form` base class for user-facing input handling
+  - Typed attributes via ActiveModel (`attribute :name, :string`)
+  - Normalization on assignment (`normalizes :email, with: -> { _1&.strip&.downcase }`)
+  - Full ActiveModel validation support, including custom `uniqueness` validator with scope, case-insensitive matching, conditions, and record exclusion
+  - `model` DSL for binding a form to an ActiveRecord model class (drives `model_name`, `persisted?`, `to_key`, `to_param`)
+  - `record` reader and `with_record` chainable method for edit/update forms — record is excluded from form attributes and protected from mass assignment
+  - `nested_one` / `nested_many` DSL for nested form objects with auto-generated constants, `build_` methods, and `_attributes=` setters
+  - Hash coercion, Rails numbered hash format, and `_destroy` filtering in nested forms
+  - Validation propagation from nested forms with prefixed error keys (`address.street`, `documents[0].doc_type`)
+  - `ActionController::Parameters` support — strong parameters (`permit`) not required; the form's attribute declarations are the whitelist
+  - `to_h` / `to_hash` serialization including nested forms
+  - `ValidationError` for bang-style save patterns
+  - Full Rails `form_with` / `fields_for` compatibility
+- **Form uniqueness validator** — `validates :email, uniqueness: true`
+  - Model resolution chain: explicit `model:` option, `model` DSL, or infer from class name (`UserForm` → `User`)
+  - Options: `scope`, `case_sensitive`, `conditions` (zero-arg or form-arg lambda), `attribute` mapping, `message`
+  - Excludes current record via model's `primary_key` (not hardcoded `id`)
+  - Declaration-time validation of `model:` and `conditions:` options
+- Added `actionpack` as development dependency for testing Rails controller integration
+- Added `activemodel >= 6.1` as runtime dependency
 
 ## [0.2.0] - 2026-03-02
 

@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.email = ["jacek.galanciak@gmail.com"]
 
   spec.summary = "Dexkit: Rails Patterns Toolbelt. Equip to gain +4 DEX"
-  spec.description = "A toolbelt of patterns for your Rails applications: Operation (more coming soon)"
+  spec.description = "A toolbelt of patterns for your Rails applications: Operation, Event, Form"
   spec.homepage = "https://github.com/razorjack/dexkit"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
@@ -34,6 +34,7 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
+  spec.add_dependency "activemodel", ">= 6.1"
   spec.add_dependency "literal", "~> 1.9"
   spec.add_dependency "zeitwerk", "~> 2.6"
 
@@ -41,7 +42,8 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency "activejob", ">= 6.1"
   spec.add_development_dependency "activesupport", ">= 6.1"
 
-  # Development dependencies for testing recording
+  # Development dependencies for testing Rails integration
+  spec.add_development_dependency "actionpack", ">= 6.1"
   spec.add_development_dependency "activerecord", ">= 6.1"
   spec.add_development_dependency "sqlite3", ">= 2.1"
 end

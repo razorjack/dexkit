@@ -138,6 +138,68 @@ class CreateOrderTest < Minitest::Test
 end
 ```
 
+## Forms
+
+Form objects with typed attributes, normalization, nested forms, and Rails form builder compatibility.
+
+```ruby
+class OnboardingForm < Dex::Form
+  model User
+
+  attribute :first_name, :string
+  attribute :last_name, :string
+  attribute :email, :string
+
+  normalizes :email, with: -> { _1&.strip&.downcase.presence }
+
+  validates :email, presence: true, uniqueness: true
+  validates :first_name, :last_name, presence: true
+
+  nested_one :address do
+    attribute :street, :string
+    attribute :city, :string
+    validates :street, :city, presence: true
+  end
+end
+
+form = OnboardingForm.new(email: "  ALICE@EXAMPLE.COM  ", first_name: "Alice", last_name: "Smith")
+form.email  # => "alice@example.com"
+form.valid?
+```
+
+### What you get out of the box
+
+**ActiveModel attributes** with type casting, normalization, and full Rails validation DSL.
+
+**Nested forms** — `nested_one` and `nested_many` with automatic Hash coercion, `_destroy` support, and error propagation:
+
+```ruby
+nested_many :documents do
+  attribute :document_type, :string
+  attribute :document_number, :string
+  validates :document_type, :document_number, presence: true
+end
+```
+
+**Rails form compatibility** — works with `form_with`, `fields_for`, and nested attributes out of the box.
+
+**Uniqueness validation** against the database, with scope, case-sensitivity, and current-record exclusion.
+
+**Multi-model forms** — when a form spans User, Employee, and Address, define a `.for` convention method to map records and a `#save` method that delegates to a `Dex::Operation`:
+
+```ruby
+include Dex::Match
+
+def save
+  return false unless valid?
+
+  case operation.safe.call
+  in Ok then true
+  in Err => e then errors.add(:base, e.message) and false
+  end
+end
+```
+
 ## Installation
 
 ```ruby
@@ -155,6 +217,7 @@ Dexkit ships LLM-optimized guides. Copy them into your project so AI agents auto
 ```bash
 cp $(bundle show dexkit)/guides/llm/OPERATION.md app/operations/CLAUDE.md
 cp $(bundle show dexkit)/guides/llm/EVENT.md app/event_handlers/CLAUDE.md
+cp $(bundle show dexkit)/guides/llm/FORM.md app/forms/CLAUDE.md
 ```
 
 ## License

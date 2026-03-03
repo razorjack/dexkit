@@ -17,10 +17,12 @@ ActiveRecord::Base.logger = nil
 require_relative "support/operation_helpers"
 require_relative "support/database_helpers"
 require_relative "support/event_helpers"
+require_relative "support/form_helpers"
 
 # Include helpers in all test cases
 class Minitest::Test
   include OperationHelpers
   include DatabaseHelpers
   include EventHelpers
+  include FormHelpers
 end
