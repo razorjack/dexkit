@@ -18,6 +18,7 @@ require_relative "dex/error"
 require_relative "dex/operation"
 require_relative "dex/event"
 require_relative "dex/form"
+require_relative "dex/query"
 
 module Dex
   class Configuration

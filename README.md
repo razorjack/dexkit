@@ -196,6 +196,49 @@ def save
 end
 ```
 
+## Queries
+
+Declarative query objects for filtering and sorting ActiveRecord relations.
+
+```ruby
+class UserSearch < Dex::Query
+  scope { User.all }
+
+  prop? :name,   String
+  prop? :role,   _Array(String)
+  prop? :age_min, Integer
+
+  filter :name,    :contains
+  filter :role,    :in
+  filter :age_min, :gte, column: :age
+
+  sort :name, :created_at, default: "-created_at"
+end
+
+users = UserSearch.call(name: "ali", role: %w[admin], sort: "name")
+```
+
+### What you get out of the box
+
+**11 built-in filter strategies** — `:eq`, `:not_eq`, `:contains`, `:starts_with`, `:ends_with`, `:gt`, `:gte`, `:lt`, `:lte`, `:in`, `:not_in`. Custom blocks for complex logic.
+
+**Sorting** with ascending/descending column sorts, custom sort blocks, and defaults.
+
+**`from_params`** — HTTP boundary handling with automatic coercion, blank stripping, and invalid value fallback:
+
+```ruby
+class UsersController < ApplicationController
+  def index
+    query = UserSearch.from_params(params, scope: policy_scope(User))
+    @users = pagy(query.resolve)
+  end
+end
+```
+
+**Form binding** — works with `form_with` for search forms. Queries respond to `model_name`, `param_key`, `persisted?`, and `to_params`.
+
+**Scope injection** — narrow the base scope at call time without modifying the query class.
+
 ## Installation
 
 ```ruby
@@ -214,6 +257,7 @@ Dexkit ships LLM-optimized guides. Copy them into your project so AI agents auto
 cp $(bundle show dexkit)/guides/llm/OPERATION.md app/operations/CLAUDE.md
 cp $(bundle show dexkit)/guides/llm/EVENT.md app/event_handlers/CLAUDE.md
 cp $(bundle show dexkit)/guides/llm/FORM.md app/forms/CLAUDE.md
+cp $(bundle show dexkit)/guides/llm/QUERY.md app/queries/CLAUDE.md
 ```
 
 ## License

@@ -1,0 +1,12 @@
+P2
+Preserve explicit nils in `from_params` initialization
+from_params explicitly assigns nil for blank optional values, but new(**kwargs.compact) removes those keys before initialization. This breaks the documented "blank/invalid to nil" behavior whenever an optional prop has a non-nil default (prop? ... default: ...), because blank or uncoercible input silently falls back to the default and applies unintended filters.
+
+
+
+/Users/razorjack/Projects/OpenSource/dexkit/lib/dex/query.rb:134-134
+P3
+Validate `param_key` input before caching model name
+param_key accepts any truthy value and stores key.to_s without validation, so param_key "" is accepted but later crashes in model_name when ActiveModel::Name.new receives a blank class name. This turns a declaration-time DSL error into a runtime failure in form binding/from_params, which is harder to diagnose.
+/Users/razorjack/Projects/OpenSource/dexkit/lib/dex/query.rb:58-60
+

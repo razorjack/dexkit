@@ -60,6 +60,11 @@ lib/
     form/
       nesting.rb         # Dex::Form::Nesting (nested_one, nested_many DSL)
       uniqueness_validator.rb # Dex::Form::UniquenessValidator (validates :x, uniqueness: true)
+    query.rb             # Query class orchestrator (requires all parts)
+    query/
+      backend.rb         # Dex::Query::Backend (AR + Mongoid adapters, strategy implementations)
+      filtering.rb       # Dex::Query::Filtering (filter DSL, registry, _apply_filters)
+      sorting.rb         # Dex::Query::Sorting (sort DSL, registry, _apply_sort)
 
 test/
   test_helper.rb         # Minitest setup
@@ -68,12 +73,15 @@ test/
     database_helpers.rb  # setup_test_database()
     event_helpers.rb     # define_event(), build_event(), define_handler(), build_handler()
     form_helpers.rb      # define_form(), build_form()
+    query_helpers.rb     # define_query(), build_query(), setup_query_database()
   operation/
     test_*.rb            # Per-feature test files
   event/
     test_*.rb            # Per-feature event test files
   form/
     test_*.rb            # Per-feature form test files
+  query/
+    test_*.rb            # Per-feature query test files
   test_helpers/
     test_*.rb            # Per-feature test helper tests
   event_test_helpers/
@@ -100,7 +108,7 @@ Tests are scoped per-area, each area in a separate file. Example: `test/operatio
 
 When you're done adding a new feature or significantly modifying existing one:
 1. Update `README.md` accordingly.
-2. Update the corresponding file in `guides/llm/` — these are LLM-optimized docs copied into apps that use dexkit. They must be thorough, compact, accurate, and in sync with implementation. Current files: `guides/llm/OPERATION.md` (includes testing), `guides/llm/EVENT.md` (includes testing), `guides/llm/FORM.md` (includes testing).
+2. Update the corresponding file in `guides/llm/` — these are LLM-optimized docs copied into apps that use dexkit. They must be thorough, compact, accurate, and in sync with implementation. Current files: `guides/llm/OPERATION.md` (includes testing), `guides/llm/EVENT.md` (includes testing), `guides/llm/FORM.md` (includes testing), `guides/llm/QUERY.md` (includes testing).
 
 ## Code Quality
 

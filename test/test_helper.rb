@@ -18,6 +18,7 @@ require_relative "support/operation_helpers"
 require_relative "support/database_helpers"
 require_relative "support/event_helpers"
 require_relative "support/form_helpers"
+require_relative "support/query_helpers"
 
 # Include helpers in all test cases
 class Minitest::Test
@@ -25,4 +26,5 @@ class Minitest::Test
   include DatabaseHelpers
   include EventHelpers
   include FormHelpers
+  include QueryHelpers
 end
