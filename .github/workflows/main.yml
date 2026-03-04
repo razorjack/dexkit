@@ -28,3 +28,56 @@ jobs:
           bundler-cache: true
       - name: Run the default task
         run: bundle exec rake
+
+  mongoid:
+    runs-on: ubuntu-latest
+    name: Mongoid (Ruby 3.3)
+    env:
+      DEX_MONGOID_TESTS: "1"
+      DEX_MONGODB_URI: mongodb://127.0.0.1:27017/dexkit_test_ci?replicaSet=rs0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+
+      - name: Start MongoDB replica set
+        run: |
+          docker run -d --name dexkit-mongo -p 27017:27017 mongo:8.0 --replSet rs0 --bind_ip_all
+
+          ready=0
+          for _ in {1..60}; do
+            if docker exec dexkit-mongo mongosh --quiet --eval "db.adminCommand({ ping: 1 }).ok" | grep -q 1; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "${ready}" -ne 1 ]; then
+            echo "MongoDB failed to start"
+            exit 1
+          fi
+
+          docker exec dexkit-mongo mongosh --quiet --eval 'rs.initiate({_id: "rs0", members: [{_id: 0, host: "127.0.0.1:27017"}]})'
+
+          initiated=0
+          for _ in {1..60}; do
+            if docker exec dexkit-mongo mongosh --quiet --eval "rs.status().ok" | grep -q 1; then
+              initiated=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "${initiated}" -ne 1 ]; then
+            echo "MongoDB replica set failed to initialize"
+            exit 1
+          fi
+
+      - name: Run Mongoid test suite
+        run: >
+          bundle exec ruby -Itest -e
+          'Dir["test/operation/test_mongoid_*.rb", "test/query/test_mongoid_*.rb"].sort.each { |file| require File.expand_path(file) }'

@@ -203,7 +203,7 @@ end
 
 ## Queries
 
-Declarative query objects for filtering and sorting ActiveRecord relations.
+Declarative query objects for filtering and sorting ActiveRecord relations and Mongoid criteria.
 
 ```ruby
 class UserSearch < Dex::Query
