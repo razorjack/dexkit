@@ -19,6 +19,7 @@ require_relative "support/database_helpers"
 require_relative "support/event_helpers"
 require_relative "support/form_helpers"
 require_relative "support/query_helpers"
+require_relative "support/mongoid_helpers"
 
 # Include helpers in all test cases
 class Minitest::Test
@@ -27,4 +28,5 @@ class Minitest::Test
   include EventHelpers
   include FormHelpers
   include QueryHelpers
+  include MongoidHelpers
 end

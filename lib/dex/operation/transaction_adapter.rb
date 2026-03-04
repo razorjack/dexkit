@@ -53,10 +53,23 @@ module Dex
             raise LoadError, "Mongoid is required for transactions"
           end
 
-          outermost = !Thread.current[AFTER_COMMIT_KEY]
-          Thread.current[AFTER_COMMIT_KEY] ||= []
-          snapshot = Thread.current[AFTER_COMMIT_KEY].length
+          callbacks = Thread.current[AFTER_COMMIT_KEY]
+          outermost = callbacks.nil?
 
+          unless outermost
+            snapshot = callbacks.length
+            begin
+              return block.call
+            rescue rollback_exception_class
+              callbacks.slice!(snapshot..)
+              return nil
+            rescue StandardError # rubocop:disable Style/RescueStandardError
+              callbacks.slice!(snapshot..)
+              raise
+            end
+          end
+
+          Thread.current[AFTER_COMMIT_KEY] = []
           block_completed = false
           result = Mongoid.transaction do
             value = block.call
@@ -64,17 +77,11 @@ module Dex
             value
           end
 
-          if outermost && block_completed
+          if block_completed
             Thread.current[AFTER_COMMIT_KEY].each(&:call)
-          elsif !block_completed
-            # Mongoid swallowed a Rollback exception — discard callbacks from this level
-            Thread.current[AFTER_COMMIT_KEY].slice!(snapshot..)
           end
 
           result
-        rescue StandardError # rubocop:disable Style/RescueStandardError
-          Thread.current[AFTER_COMMIT_KEY]&.slice!(snapshot..) unless outermost
-          raise
         ensure
           Thread.current[AFTER_COMMIT_KEY] = nil if outermost
         end

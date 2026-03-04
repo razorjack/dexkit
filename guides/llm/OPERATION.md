@@ -371,6 +371,8 @@ end
 
 Not autoloaded — stays out of production. TestLog and stubs are auto-cleared in `setup`.
 
+For Mongoid-backed operation tests, run against a MongoDB replica set (MongoDB transactions require it).
+
 ### Subject & Execution
 
 ```ruby

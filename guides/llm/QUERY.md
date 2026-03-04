@@ -159,7 +159,7 @@ Only one default per class. Applied when no sort is provided.
 
 ### `.call`
 
-Returns an ActiveRecord relation:
+Returns a queryable scope (`ActiveRecord::Relation` or `Mongoid::Criteria`):
 
 ```ruby
 users = UserSearch.call(name: "ali", role: %w[admin], sort: "-name")
@@ -295,7 +295,7 @@ end
 
 ## Testing
 
-Queries return standard ActiveRecord relations. Test them with plain Minitest:
+Queries return standard scopes (`ActiveRecord::Relation` or `Mongoid::Criteria`). Test them with plain Minitest:
 
 ```ruby
 class UserSearchTest < Minitest::Test

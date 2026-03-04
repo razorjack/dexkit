@@ -32,7 +32,7 @@ module Dex
         )
         begin
           job = apply_options(Operation::RecordJob)
-          job.perform_later(class_name: operation_class_name, record_id: record.id)
+          job.perform_later(class_name: operation_class_name, record_id: record.id.to_s)
         rescue => e
           begin
             record.destroy

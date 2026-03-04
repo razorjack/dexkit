@@ -41,9 +41,11 @@ Gem::Specification.new do |spec|
   # Development dependencies for testing async operations
   spec.add_development_dependency "activejob", ">= 6.1"
   spec.add_development_dependency "activesupport", ">= 6.1"
+  spec.add_development_dependency "ostruct"
 
   # Development dependencies for testing Rails integration
   spec.add_development_dependency "actionpack", ">= 6.1"
   spec.add_development_dependency "activerecord", ">= 6.1"
+  spec.add_development_dependency "mongoid", ">= 8.0"
   spec.add_development_dependency "sqlite3", ">= 2.1"
 end
