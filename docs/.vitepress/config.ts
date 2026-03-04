@@ -9,7 +9,8 @@ export default defineConfig({
       { text: 'Guide', link: '/guide/introduction' },
       { text: 'Operation', link: '/operation/' },
       { text: 'Form', link: '/form/' },
-      { text: 'Event', link: '/event/' }
+      { text: 'Event', link: '/event/' },
+      { text: 'Query', link: '/query/' }
     ],
     sidebar: [
       {
@@ -60,6 +61,17 @@ export default defineConfig({
           { text: 'Handling', link: '/event/handling' },
           { text: 'Tracing & Suppression', link: '/event/tracing' },
           { text: 'Testing', link: '/event/testing' }
+        ]
+      },
+      {
+        text: 'Query',
+        collapsed: false,
+        items: [
+          { text: 'Overview', link: '/query/' },
+          { text: 'Filtering', link: '/query/filtering' },
+          { text: 'Sorting', link: '/query/sorting' },
+          { text: 'Rails Integration', link: '/query/rails' },
+          { text: 'Testing', link: '/query/testing' }
         ]
       }
     ],
