@@ -18,6 +18,17 @@ module Dex
       result
     end
 
+    def after_commit(&block)
+      raise ArgumentError, "after_commit requires a block" unless block
+
+      adapter = _transaction_adapter
+      if adapter
+        adapter.after_commit(&block)
+      else
+        block.call
+      end
+    end
+
     TRANSACTION_KNOWN_ADAPTERS = %i[active_record mongoid].freeze
 
     module ClassMethods

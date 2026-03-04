@@ -25,7 +25,12 @@ class CreateUser < Dex::Operation
 
   def perform
     error!(:email_taken) if User.exists?(email: email)
-    User.create!(name: name, email: email, role: role)
+
+    user = User.create!(name: name, email: email, role: role)
+
+    after_commit { WelcomeMailer.with(user: user).deliver_later }
+
+    user
   end
 end
 

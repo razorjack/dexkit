@@ -20,7 +20,12 @@ class CreateUser < Dex::Operation
   def perform
     error!(:invalid_email) unless email.include?("@")
     error!(:email_taken) if User.exists?(email: email)
-    User.create!(email: email, name: name, role: role)
+
+    user = User.create!(email: email, name: name, role: role)
+
+    after_commit { WelcomeMailer.with(user: user).deliver_later }
+
+    user
   end
 end
 ```
@@ -254,6 +259,25 @@ transaction :mongoid     # adapter override (default: auto-detect AR → Mongoid
 ```
 
 Child classes can re-enable: `transaction true`.
+
+### after_commit
+
+Register blocks to run after the transaction commits. Use for side effects that should only happen on success (emails, webhooks, cache invalidation):
+
+```ruby
+def perform
+  user = User.create!(name: name, email: email)
+  after_commit { WelcomeMailer.with(user: user).deliver_later }
+  after_commit { Analytics.track(:user_created, user_id: user.id) }
+  user
+end
+```
+
+On rollback (`error!` or exception), callbacks are discarded. When no transaction is open anywhere, executes immediately. Multiple blocks run in registration order.
+
+**ActiveRecord:** fully nesting-aware — callbacks are deferred until the outermost transaction commits, even across nested operations or ambient `ActiveRecord::Base.transaction` blocks. Requires Rails 7.2+.
+
+**Mongoid:** callbacks are deferred across nested Dex operations. Ambient `Mongoid.transaction` blocks opened outside Dex are not detected — callbacks will fire immediately in that case.
 
 ---
 

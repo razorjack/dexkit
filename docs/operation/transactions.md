@@ -74,6 +74,46 @@ class TransferMoney < Dex::Operation
 end
 ```
 
+## after_commit
+
+Register blocks inside `perform` that run only after the transaction commits. Use this for side effects that shouldn't fire on rollback – emails, webhooks, cache invalidation:
+
+```ruby
+class CreateUser < Dex::Operation
+  prop :email, String
+  prop :name, String
+
+  error :email_taken
+
+  def perform
+    error!(:email_taken) if User.exists?(email: email)
+
+    user = User.create!(name: name, email: email)
+
+    after_commit { WelcomeMailer.with(user: user).deliver_later }
+    after_commit { Analytics.track(:user_created, user_id: user.id) }
+
+    user
+  end
+end
+```
+
+Multiple blocks run in registration order.
+
+**On rollback** (`error!` or exception), callbacks are discarded – they never fire.
+
+**Without a transaction** (no open transaction anywhere), `after_commit` executes the block immediately.
+
+**Nested operations** work correctly – an inner operation's `after_commit` blocks are deferred until the outermost transaction commits. If the outer transaction rolls back, inner callbacks are discarded too.
+
+::: warning ActiveRecord requires Rails 7.2+
+`after_commit` uses `ActiveRecord.after_all_transactions_commit` under the hood, which was introduced in Rails 7.2. On older Rails versions, calling `after_commit` raises `LoadError`.
+:::
+
+::: info Mongoid limitation
+The Mongoid adapter tracks transactions opened by Dex operations. Ambient `Mongoid.transaction` blocks opened outside of Dex are not detected – `after_commit` will execute immediately in that case.
+:::
+
 ## Inheritance
 
 Transaction settings inherit. A common pattern is a base class that disables transactions:
