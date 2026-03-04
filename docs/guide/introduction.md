@@ -2,11 +2,12 @@
 
 Dexkit is a Ruby library that gives you base classes for common Rails patterns. Equip to gain +4 DEX.
 
-Three building blocks, each independent – use one or all:
+Four building blocks, each independent – use one or all:
 
 - **[Dex::Operation](/operation/)** – service objects with typed properties, structured errors, transactions, callbacks, async execution, and more
 - **[Dex::Event](/event/)** – typed immutable event objects with pub/sub, async dispatch, causality tracing, and optional persistence
 - **[Dex::Form](/form/)** – form objects with typed attributes, normalization, validation, nested forms, and Rails form builder compatibility
+- **[Dex::Query](/query/)** – query objects with declarative filters, sorting, type coercion from params, and Rails form binding
 
 ## A quick taste
 
@@ -74,6 +75,26 @@ end
 form = RegistrationForm.new(params.require(:registration))
 ```
 
+### Queries
+
+Declarative filtering and sorting for ActiveRecord (and Mongoid) scopes:
+
+```ruby
+class UserSearch < Dex::Query
+  scope { User.all }
+
+  prop? :name, String
+  prop? :role, _Array(String)
+
+  filter :name, :contains
+  filter :role, :in
+
+  sort :name, :created_at, default: "-created_at"
+end
+
+users = UserSearch.call(name: "ali", role: %w[admin viewer], sort: "name")
+```
+
 ## Why
 
 Rails apps accumulate the same patterns over and over – service objects, event systems, form objects – but everyone rolls their own. You end up with inconsistent interfaces, manual error handling, no type checking, and testing that's more boilerplate than assertion. Dexkit gives you a solid foundation so you can focus on business logic.
@@ -88,3 +109,4 @@ Dexkit works with both **ActiveRecord** and **Mongoid**. Transactions, recording
 - [Operation Overview](/operation/) – typed service objects
 - [Event Overview](/event/) – domain events and handlers
 - [Form Overview](/form/) – form objects and nested forms
+- [Query Overview](/query/) – declarative filtering and sorting
