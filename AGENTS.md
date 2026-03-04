@@ -94,7 +94,7 @@ test/
 
 **Runtime:** `activemodel`, `literal`, `zeitwerk`
 
-**Development:** `activejob`, `activerecord` (for testing Rails integration)
+**Development:** `activejob`, `activerecord`, `mongoid` (for testing Rails/Mongoid integration)
 
 ## Development Conventions
 
@@ -124,6 +124,52 @@ For markdown files with Ruby snippets:
 
 ```bash
 bundle exec rubocop -c .rubocop-md.yml
+```
+
+### Mongoid test suite
+
+Mongoid tests are **optional** and **not part of the default local run**. Do not run them unless:
+- the user explicitly asks for Mongoid coverage, or
+- you are working on Mongoid-specific behavior.
+
+Mongoid transaction tests require MongoDB in replica set mode. A standalone `mongod` process is not enough.
+
+Start a temporary local replica set instance (recommended, isolated):
+
+```bash
+mkdir -p tmp/mongoid-test-db
+
+mongod \
+  --dbpath tmp/mongoid-test-db \
+  --replSet rs0 \
+  --bind_ip 127.0.0.1 \
+  --port 27018 \
+  --fork \
+  --logpath tmp/mongoid-test.log
+
+mongosh --port 27018 --quiet --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"127.0.0.1:27018"}]})' || true
+```
+
+Run only Mongoid-focused tests:
+
+```bash
+DEX_MONGOID_TESTS=1 \
+DEX_MONGODB_URI='mongodb://127.0.0.1:27018/dexkit_test?replicaSet=rs0' \
+bundle exec ruby -Itest -e 'Dir["test/operation/test_mongoid_*.rb", "test/query/test_mongoid_*.rb"].sort.each { |file| require File.expand_path(file) }'
+```
+
+If needed, run the full suite including Mongoid tests:
+
+```bash
+DEX_MONGOID_TESTS=1 \
+DEX_MONGODB_URI='mongodb://127.0.0.1:27018/dexkit_test?replicaSet=rs0' \
+bundle exec rake test
+```
+
+Stop the temporary replica set instance:
+
+```bash
+mongosh --port 27018 --quiet --eval 'db.adminCommand({shutdown:1})'
 ```
 
 **DSL validation:** All DSL methods (`error`, `rescue_from`, `async`, `record`, `advisory_lock`, `before`/`after`/`around`, `transaction`, etc.) validate their arguments at declaration time, raising `ArgumentError` for invalid inputs. The low-level `set` method stays unvalidated — it's the extensible foundation. When adding new DSL methods, always validate arguments early.
