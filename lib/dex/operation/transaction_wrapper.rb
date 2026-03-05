@@ -4,26 +4,37 @@ module Dex
   module TransactionWrapper
     extend Dex::Concern
 
-    def _transaction_wrap
-      return yield unless _transaction_enabled?
+    DEFERRED_CALLBACKS_KEY = :_dex_after_commit_queue
 
-      interceptor = nil
-      result = _transaction_execute do
-        interceptor = Operation::HaltInterceptor.new { yield }
-        raise _transaction_adapter.rollback_exception_class if interceptor.error?
-        interceptor.result
+    def _transaction_wrap
+      deferred = Thread.current[DEFERRED_CALLBACKS_KEY]
+      outermost = deferred.nil?
+      Thread.current[DEFERRED_CALLBACKS_KEY] = [] if outermost
+      snapshot = Thread.current[DEFERRED_CALLBACKS_KEY].length
+
+      result, interceptor = if _transaction_enabled?
+        _transaction_run_adapter(snapshot) { yield }
+      else
+        _transaction_run_deferred(snapshot) { yield }
       end
+
+      _transaction_flush_deferred if outermost
 
       interceptor&.rethrow!
       result
+    rescue # rubocop:disable Style/RescueStandardError -- explicit for clarity
+      Thread.current[DEFERRED_CALLBACKS_KEY]&.slice!(snapshot..)
+      raise
+    ensure
+      Thread.current[DEFERRED_CALLBACKS_KEY] = nil if outermost
     end
 
     def after_commit(&block)
       raise ArgumentError, "after_commit requires a block" unless block
 
-      adapter = _transaction_adapter
-      if adapter
-        adapter.after_commit(&block)
+      deferred = Thread.current[DEFERRED_CALLBACKS_KEY]
+      if deferred
+        deferred << block
       else
         block.call
       end
@@ -65,6 +76,33 @@ module Dex
 
     private
 
+    def _transaction_run_adapter(snapshot)
+      interceptor = nil
+      result = _transaction_execute do
+        interceptor = Operation::HaltInterceptor.new { yield }
+        raise _transaction_adapter.rollback_exception_class if interceptor.error?
+        interceptor.result
+      end
+
+      if interceptor&.error?
+        Thread.current[DEFERRED_CALLBACKS_KEY]&.slice!(snapshot..)
+        interceptor.rethrow!
+      end
+
+      [result, interceptor]
+    end
+
+    def _transaction_run_deferred(snapshot)
+      interceptor = Operation::HaltInterceptor.new { yield }
+
+      if interceptor.error?
+        Thread.current[DEFERRED_CALLBACKS_KEY]&.slice!(snapshot..)
+        interceptor.rethrow!
+      end
+
+      [interceptor.result, interceptor]
+    end
+
     def _transaction_enabled?
       settings = self.class.settings_for(:transaction)
       return false unless settings.fetch(:enabled, true)
@@ -76,6 +114,19 @@ module Dex
       settings = self.class.settings_for(:transaction)
       adapter_name = settings.fetch(:adapter, Dex.transaction_adapter)
       Operation::TransactionAdapter.for(adapter_name)
+    end
+
+    def _transaction_flush_deferred
+      callbacks = Thread.current[DEFERRED_CALLBACKS_KEY]
+      return if callbacks.empty?
+
+      flush = -> { callbacks.each(&:call) }
+      adapter = _transaction_adapter
+      if adapter
+        adapter.after_commit(&flush)
+      else
+        flush.call
+      end
     end
 
     def _transaction_execute(&block)

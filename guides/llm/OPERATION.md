@@ -273,11 +273,18 @@ def perform
 end
 ```
 
-On rollback (`error!` or exception), callbacks are discarded. When no transaction is open anywhere, executes immediately. Multiple blocks run in registration order.
+Callbacks are always deferred — they run after the outermost operation boundary succeeds:
 
-**ActiveRecord:** fully nesting-aware — callbacks are deferred until the outermost transaction commits, even across nested operations or ambient `ActiveRecord::Base.transaction` blocks. Requires Rails 7.2+.
+- **Transactional operations:** deferred until the DB transaction commits.
+- **Non-transactional operations:** queued in memory, flushed after the operation pipeline completes successfully.
+- **Nested operations:** callbacks queue up and flush once at the outermost successful boundary.
+- **On error (`error!` or exception):** queued callbacks are discarded.
 
-**Mongoid:** callbacks are deferred across nested Dex operations. Ambient `Mongoid.transaction` blocks opened outside Dex are not detected — callbacks will fire immediately in that case.
+Multiple blocks run in registration order.
+
+**ActiveRecord:** requires Rails 7.2+ (`after_all_transactions_commit`).
+
+**Mongoid:** deferred across nested Dex operations. Ambient `Mongoid.transaction` blocks opened outside Dex are not detected — callbacks will fire immediately in that case.
 
 ---
 

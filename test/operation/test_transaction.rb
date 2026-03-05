@@ -264,20 +264,105 @@ class TestOperationTransaction < Minitest::Test
     assert_empty log
   end
 
-  def test_after_commit_runs_immediately_without_transaction
+  def test_after_commit_deferred_without_transaction
     log = []
 
     op = build_operation do
       transaction false
 
       define_method(:perform) do
-        after_commit { log << :immediate }
+        after_commit { log << :deferred }
         log << :after_call
       end
     end
 
     op.new.call
-    assert_equal %i[immediate after_call], log
+    assert_equal %i[after_call deferred], log
+  end
+
+  def test_after_commit_not_run_on_error_halt_without_transaction
+    log = []
+
+    op = build_operation do
+      transaction false
+      error :boom
+
+      define_method(:perform) do
+        after_commit { log << :committed }
+        error!(:boom)
+      end
+    end
+
+    assert_raises(Dex::Error) { op.new.call }
+    assert_empty log
+  end
+
+  def test_after_commit_not_run_on_exception_without_transaction
+    log = []
+
+    op = build_operation do
+      transaction false
+
+      define_method(:perform) do
+        after_commit { log << :committed }
+        raise "boom"
+      end
+    end
+
+    assert_raises(RuntimeError) { op.new.call }
+    assert_empty log
+  end
+
+  def test_after_commit_nested_non_transactional_flushes_at_outermost
+    Dex.configure { |c| c.transaction_adapter = nil }
+    log = []
+
+    inner_op = build_operation do
+      transaction false
+
+      define_method(:perform) do
+        after_commit { log << :inner_committed }
+        log << :inner_done
+      end
+    end
+
+    outer_op = build_operation do
+      transaction false
+
+      define_method(:perform) do
+        inner_op.new.call
+        after_commit { log << :outer_committed }
+        log << :outer_done
+      end
+    end
+
+    outer_op.new.call
+    assert_equal %i[inner_done outer_done inner_committed outer_committed], log
+  end
+
+  def test_after_commit_nested_non_transactional_discarded_on_outer_error
+    Dex.configure { |c| c.transaction_adapter = nil }
+    log = []
+
+    inner_op = build_operation do
+      transaction false
+
+      define_method(:perform) do
+        after_commit { log << :inner_committed }
+      end
+    end
+
+    outer_op = build_operation do
+      transaction false
+
+      define_method(:perform) do
+        inner_op.new.call
+        raise "outer failed"
+      end
+    end
+
+    assert_raises(RuntimeError) { outer_op.new.call }
+    assert_empty log
   end
 
   def test_after_commit_multiple_callbacks_run_in_order
@@ -427,5 +512,45 @@ class TestOperationTransaction < Minitest::Test
 
     assert_raises(RuntimeError) { outer_op.new.call }
     assert_empty log
+  end
+
+  def test_after_commit_respects_ambient_transaction_rollback
+    log = []
+
+    op = build_operation do
+      define_method(:perform) do
+        TestModel.create!(name: "Test")
+        after_commit { log << :committed }
+      end
+    end
+
+    ActiveRecord::Base.transaction do
+      op.new.call
+      raise ActiveRecord::Rollback
+    end
+
+    assert_empty log
+    assert_equal 0, TestModel.count
+  end
+
+  def test_after_commit_respects_ambient_transaction_on_non_transactional_op
+    log = []
+
+    op = build_operation do
+      transaction false
+
+      define_method(:perform) do
+        TestModel.create!(name: "Test")
+        after_commit { log << :committed }
+      end
+    end
+
+    ActiveRecord::Base.transaction do
+      op.new.call
+      raise ActiveRecord::Rollback
+    end
+
+    assert_empty log
+    assert_equal 0, TestModel.count
   end
 end

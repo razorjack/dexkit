@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Changed
+
+- **`after_commit` now always defers** — non-transactional operations queue callbacks in memory and flush them after the operation pipeline succeeds, matching the behavior of transactional operations. Previously, `after_commit` fired immediately inline when no transaction was active. Callbacks are discarded on `error!` or exception. Nested operations flush once at the outermost successful boundary. Ambient database transactions (e.g., `ActiveRecord::Base.transaction { op.call }`) are still respected via the adapter.
+
 ## [0.4.1] - 2026-03-04
 
 ### Added
