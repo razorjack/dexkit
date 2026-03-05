@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## 0.5.0 - 2026-03-05
+
 ### Added
 
 - **Verified Mongoid support** — operations (transactions, recording, async) and queries now have dedicated Mongoid test coverage running against a MongoDB replica set
