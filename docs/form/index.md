@@ -5,7 +5,7 @@ Form objects that handle the messy reality of user input – typed attributes, n
 ## Quick Start
 
 ```ruby
-class RegistrationForm < Dex::Form
+class Employee::Form < Dex::Form
   attribute :email, :string
   attribute :first_name, :string
   attribute :last_name, :string
@@ -23,7 +23,7 @@ end
 ```
 
 ```ruby
-form = RegistrationForm.new(
+form = Employee::Form.new(
   email: "  ALICE@EXAMPLE.COM  ",
   first_name: "Alice",
   last_name: "Smith",
@@ -39,9 +39,9 @@ form.to_h         # => { email: "alice@example.com", first_name: "Alice", ... }
 
 Rails form builders work great when a form maps directly to a single model. But real forms rarely do:
 
-- An onboarding form might touch User, Employee, and Address – three separate models
+- An onboarding form might touch Employee, Department, and Position – three separate models
 - A checkout form collects payment details, shipping info, and order notes – none of which map 1:1 to a model
-- A registration form needs an email uniqueness check but doesn't want `accepts_nested_attributes_for` gymnastics
+- An employee form needs an email uniqueness check but doesn't want `accepts_nested_attributes_for` gymnastics
 
 `Dex::Form` gives you a clean place to define the shape of your form, validate it, and serialize it – without coupling to any particular model structure.
 

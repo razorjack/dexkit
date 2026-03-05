@@ -7,7 +7,7 @@ Operations run inside database transactions by default. If anything raises – i
 You don't need to do anything – transactions are on by default:
 
 ```ruby
-class CreateOrder < Dex::Operation
+class Order::Place < Dex::Operation
   def perform
     order = Order.create!(total: 100)
     LineItem.create!(order: order, product: "Widget")
@@ -22,7 +22,7 @@ end
 For read-only operations or cases where you manage transactions yourself:
 
 ```ruby
-class FetchReport < Dex::Operation
+class Order::Report < Dex::Operation
   transaction false
 
   def perform
@@ -59,16 +59,16 @@ Supported adapters: `:active_record`, `:mongoid`.
 `error!` triggers a rollback – any database changes made during `perform` are undone. `success!` commits the transaction normally.
 
 ```ruby
-class TransferMoney < Dex::Operation
-  prop :from, _Ref(Account, lock: true)
-  prop :to, _Ref(Account, lock: true)
+class Order::Refund < Dex::Operation
+  prop :order, _Ref(Order, lock: true)
+  prop :customer, _Ref(Customer, lock: true)
   prop :amount, Integer
 
   def perform
-    from.update!(balance: from.balance - amount)
-    to.update!(balance: to.balance + amount)
+    order.update!(refunded_amount: order.refunded_amount + amount)
+    customer.update!(credit: customer.credit + amount)
 
-    error!(:insufficient_funds) if from.balance < 0
+    error!(:exceeds_total) if order.refunded_amount > order.total
     # Both updates are rolled back
   end
 end
@@ -79,21 +79,21 @@ end
 Register blocks inside `perform` that run only after the transaction commits. Use this for side effects that shouldn't fire on rollback – emails, webhooks, cache invalidation:
 
 ```ruby
-class CreateUser < Dex::Operation
+class Employee::Onboard < Dex::Operation
   prop :email, String
   prop :name, String
 
   error :email_taken
 
   def perform
-    error!(:email_taken) if User.exists?(email: email)
+    error!(:email_taken) if Employee.exists?(email: email)
 
-    user = User.create!(name: name, email: email)
+    employee = Employee.create!(name: name, email: email)
 
-    after_commit { WelcomeMailer.with(user: user).deliver_later }
-    after_commit { Analytics.track(:user_created, user_id: user.id) }
+    after_commit { OnboardingMailer.with(employee: employee).deliver_later }
+    after_commit { Analytics.track(:employee_onboarded, employee_id: employee.id) }
 
-    user
+    employee
   end
 end
 ```
@@ -123,9 +123,9 @@ class ReadOperation < Dex::Operation
   transaction false
 end
 
-class ListUsers < ReadOperation
+class Employee::List < ReadOperation
   def perform
-    User.all.to_a
+    Employee.all.to_a
   end
 end
 ```

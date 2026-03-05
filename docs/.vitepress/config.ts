@@ -29,13 +29,13 @@ export default defineConfig({
           { text: 'Overview', link: '/operation/' },
           { text: 'Properties & Types', link: '/operation/properties' },
           { text: 'Error Handling', link: '/operation/errors' },
+          { text: 'Ok / Err', link: '/operation/safe-mode' },
           { text: 'Callbacks', link: '/operation/callbacks' },
           { text: 'Transactions', link: '/operation/transactions' },
           { text: 'Advisory Locking', link: '/operation/advisory-lock' },
           { text: 'Async', link: '/operation/async' },
           { text: 'Recording', link: '/operation/recording' },
-          { text: 'Ok / Err', link: '/operation/safe-mode' },
-          { text: 'Pipeline & Steps', link: '/operation/pipeline' },
+          { text: 'Middleware', link: '/operation/pipeline' },
           { text: 'Contracts', link: '/operation/contracts' },
           { text: 'Testing', link: '/operation/testing' }
         ]

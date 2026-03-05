@@ -15,17 +15,17 @@ Dexkit ships [LLM-optimized guides](https://github.com/razorjack/dexkit/tree/mas
 ## Code as documentation
 
 ```ruby
-class CreateUser < Dex::Operation
-  prop :email, String
-  prop :name, String
-  prop? :role, _Union("admin", "member"), default: "member"
+class Order::Place < Dex::Operation
+  prop :customer, _Ref(Customer)
+  prop :line_items, _Array(Hash)
+  prop? :note, String
 
-  success _Ref(User)
-  error :email_taken, :invalid_email
+  success _Ref(Order)
+  error :out_of_stock, :invalid_items
 end
 ```
 
-Five lines. Inputs, types, optionality, return type, failure modes – all without reading `perform`. A typical service object requires tracing the entire method body. When an agent writes a controller calling `CreateUser`, the contract tells it what to pass and what to handle. No need to open the implementation.
+Five lines. Inputs, types, optionality, return type, failure modes – all without reading `perform`. A typical service object requires tracing the entire method body. When an agent writes a controller calling `Order::Place`, the contract tells it what to pass and what to handle. No need to open the implementation.
 
 ## Quick feedback
 

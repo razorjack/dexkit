@@ -5,14 +5,14 @@ Sorts declare which columns (or custom orderings) are available. At call time, t
 ## Column sorts
 
 ```ruby
-sort :name, :created_at, :age
+sort :name, :created_at, :salary
 ```
 
 Declare multiple columns at once or one at a time. At call time, prefix with `-` for descending:
 
 ```ruby
-UserSearch.call(sort: "name")          # ORDER BY name ASC
-UserSearch.call(sort: "-created_at")   # ORDER BY created_at DESC
+Employee::Query.call(sort: "name")          # ORDER BY name ASC
+Employee::Query.call(sort: "-created_at")   # ORDER BY created_at DESC
 ```
 
 ## Custom sorts
@@ -38,7 +38,7 @@ Only one default per class hierarchy. Attempting to set a second one raises `Arg
 ## Introspection
 
 ```ruby
-UserSearch.sorts   # => [:name, :created_at, :age, :relevance]
+Employee::Query.sorts   # => [:name, :created_at, :salary, :relevance]
 ```
 
 ## Validation rules

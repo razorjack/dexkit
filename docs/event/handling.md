@@ -6,7 +6,7 @@ Subclass `Dex::Event::Handler` and implement `perform`:
 
 ```ruby
 class NotifyWarehouse < Dex::Event::Handler
-  on OrderPlaced
+  on Order::Placed
 
   def perform
     WarehouseApi.notify(event.order_id)
@@ -22,9 +22,9 @@ Subscribe to multiple events in one handler:
 
 ```ruby
 class AuditLogger < Dex::Event::Handler
-  on OrderPlaced
-  on OrderCancelled
-  on PaymentReceived
+  on Order::Placed
+  on Order::Cancelled
+  on Order::Paid
 
   def perform
     AuditLog.create!(
@@ -41,14 +41,14 @@ end
 Configure automatic retries for transient failures:
 
 ```ruby
-class ProcessPayment < Dex::Event::Handler
-  on PaymentReceived
+class ProcessOrderPayment < Dex::Event::Handler
+  on Order::Paid
   retries 3                                           # exponential backoff
   retries 3, wait: 10                                 # fixed 10s delay
   retries 3, wait: ->(attempt) { attempt * 5 }        # custom delay
 
   def perform
-    PaymentGateway.process(event.payment_id)
+    PaymentGateway.process(event.order_id)
   end
 end
 ```
@@ -78,8 +78,8 @@ end
 You can also subscribe/unsubscribe programmatically:
 
 ```ruby
-Dex::Event::Bus.subscribe(OrderPlaced, NotifyWarehouse)
-Dex::Event::Bus.unsubscribe(OrderPlaced, NotifyWarehouse)
+Dex::Event::Bus.subscribe(Order::Placed, NotifyWarehouse)
+Dex::Event::Bus.unsubscribe(Order::Placed, NotifyWarehouse)
 ```
 
 Subscriptions are idempotent — duplicate calls are harmless.

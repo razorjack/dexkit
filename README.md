@@ -9,26 +9,28 @@ Rails patterns toolbelt. Equip to gain +4 DEX.
 Service objects with typed properties, transactions, error handling, and more.
 
 ```ruby
-class CreateUser < Dex::Operation
-  prop :name,  String
-  prop :email, String
+class Order::Place < Dex::Operation
+  prop :customer, _Ref(Customer)
+  prop :product, _Ref(Product)
+  prop :quantity, _Integer(1..)
+  prop? :note, String
 
-  success _Ref(User)
-  error   :email_taken
+  success _Ref(Order)
+  error :out_of_stock
 
   def perform
-    error!(:email_taken) if User.exists?(email: email)
+    error!(:out_of_stock) unless product.in_stock?
 
-    user = User.create!(name: name, email: email)
+    order = Order.create!(customer: customer, product: product, quantity: quantity, note: note)
 
-    after_commit { WelcomeMailer.with(user: user).deliver_later }
+    after_commit { Order::Placed.publish(order_id: order.id, total: order.total) }
 
-    user
+    order
   end
 end
 
-user = CreateUser.call(name: "Alice", email: "alice@example.com")
-user.name  # => "Alice"
+order = Order::Place.call(customer: 42, product: 7, quantity: 2)
+order.id  # => 1
 ```
 
 ### What you get out of the box
@@ -36,35 +38,35 @@ user.name  # => "Alice"
 **Typed properties** – powered by [literal](https://github.com/joeldrapper/literal). Plain classes, ranges, unions, arrays, nilable, and model references with auto-find:
 
 ```ruby
-prop :amount,   _Integer(1..)
+prop :quantity, _Integer(1..)
 prop :currency, _Union("USD", "EUR", "GBP")
-prop :user,     _Ref(User)           # accepts User instance or ID
-prop? :note,    String               # optional (nil by default)
+prop :customer, _Ref(Customer)        # accepts Customer instance or ID
+prop? :note, String                    # optional (nil by default)
 ```
 
 **Structured errors** with `error!`, `assert!`, and `rescue_from`:
 
 ```ruby
-user = assert!(:not_found) { User.find_by(id: user_id) }
+product = assert!(:not_found) { Product.find_by(id: product_id) }
 
-rescue_from Stripe::CardError, as: :card_declined
+rescue_from Stripe::CardError, as: :payment_declined
 ```
 
 **Ok / Err** – pattern match on operation outcomes with `.safe.call`:
 
 ```ruby
-case CreateUser.new(email: email).safe.call
-in Ok(name:)
-  puts "Welcome, #{name}!"
-in Err(code: :email_taken)
-  puts "Already registered"
+case Order::Place.new(customer: 42, product: 7, quantity: 2).safe.call
+in Ok => result
+  redirect_to order_path(result.id)
+in Err(code: :out_of_stock)
+  flash[:error] = "Product is out of stock"
 end
 ```
 
 **Async execution** via ActiveJob:
 
 ```ruby
-SendWelcomeEmail.new(user_id: 123).async(queue: "mailers").call
+Order::Fulfill.new(order_id: 123).async(queue: "fulfillment").call
 ```
 
 **Transactions** on by default, **advisory locking**, **recording** to database, **callbacks**, and a customizable **pipeline** – all composable, all optional.
@@ -74,15 +76,16 @@ SendWelcomeEmail.new(user_id: 123).async(queue: "mailers").call
 First-class test helpers for Minitest:
 
 ```ruby
-class CreateUserTest < Minitest::Test
-  testing CreateUser
+class PlaceOrderTest < Minitest::Test
+  testing Order::Place
 
-  def test_creates_user
-    assert_operation(name: "Alice", email: "alice@example.com")
+  def test_places_order
+    assert_operation(customer: customer.id, product: product.id, quantity: 2)
   end
 
-  def test_rejects_duplicate_email
-    assert_operation_error(:email_taken, name: "Alice", email: "taken@example.com")
+  def test_rejects_out_of_stock
+    assert_operation_error(:out_of_stock, customer: customer.id,
+      product: out_of_stock_product.id, quantity: 1)
   end
 end
 ```
@@ -92,14 +95,14 @@ end
 Typed, immutable event objects with publish/subscribe, async dispatch, and causality tracing.
 
 ```ruby
-class OrderPlaced < Dex::Event
+class Order::Placed < Dex::Event
   prop :order_id, Integer
   prop :total, BigDecimal
   prop? :coupon_code, String
 end
 
 class NotifyWarehouse < Dex::Event::Handler
-  on OrderPlaced
+  on Order::Placed
   retries 3
 
   def perform
@@ -107,7 +110,7 @@ class NotifyWarehouse < Dex::Event::Handler
   end
 end
 
-OrderPlaced.publish(order_id: 1, total: 99.99)
+Order::Placed.publish(order_id: 1, total: 99.99)
 ```
 
 ### What you get out of the box
@@ -120,7 +123,7 @@ OrderPlaced.publish(order_id: 1, total: 99.99)
 
 ```ruby
 order_placed.trace do
-  InventoryReserved.publish(order_id: 1)
+  Shipment::Reserved.publish(order_id: 1)
 end
 ```
 
@@ -129,13 +132,13 @@ end
 ### Testing
 
 ```ruby
-class CreateOrderTest < Minitest::Test
+class PlaceOrderTest < Minitest::Test
   include Dex::Event::TestHelpers
 
   def test_publishes_order_placed
     capture_events do
-      CreateOrder.call(item_id: 1)
-      assert_event_published(OrderPlaced, order_id: 1)
+      Order::Place.call(customer: customer.id, product: product.id, quantity: 2)
+      assert_event_published(Order::Placed)
     end
   end
 end
@@ -146,8 +149,8 @@ end
 Form objects with typed attributes, normalization, nested forms, and Rails form builder compatibility.
 
 ```ruby
-class OnboardingForm < Dex::Form
-  model User
+class Employee::Form < Dex::Form
+  model Employee
 
   attribute :first_name, :string
   attribute :last_name, :string
@@ -165,7 +168,7 @@ class OnboardingForm < Dex::Form
   end
 end
 
-form = OnboardingForm.new(email: "  ALICE@EXAMPLE.COM  ", first_name: "Alice", last_name: "Smith")
+form = Employee::Form.new(email: "  ALICE@EXAMPLE.COM  ", first_name: "Alice", last_name: "Smith")
 form.email  # => "alice@example.com"
 form.valid?
 ```
@@ -177,10 +180,10 @@ form.valid?
 **Nested forms** — `nested_one` and `nested_many` with automatic Hash coercion, `_destroy` support, and error propagation:
 
 ```ruby
-nested_many :documents do
-  attribute :document_type, :string
-  attribute :document_number, :string
-  validates :document_type, :document_number, presence: true
+nested_many :emergency_contacts do
+  attribute :name, :string
+  attribute :phone, :string
+  validates :name, :phone, presence: true
 end
 ```
 
@@ -188,7 +191,7 @@ end
 
 **Uniqueness validation** against the database, with scope, case-sensitivity, and current-record exclusion.
 
-**Multi-model forms** — when a form spans User, Employee, and Address, define a `.for` convention method to map records and a `#save` method that delegates to a `Dex::Operation`:
+**Multi-model forms** — when a form spans Employee, Department, and Address, define a `.for` convention method to map records and a `#save` method that delegates to a `Dex::Operation`:
 
 ```ruby
 def save
@@ -206,21 +209,21 @@ end
 Declarative query objects for filtering and sorting ActiveRecord relations and Mongoid criteria.
 
 ```ruby
-class UserSearch < Dex::Query
-  scope { User.all }
+class Order::Query < Dex::Query
+  scope { Order.all }
 
-  prop? :name,   String
-  prop? :role,   _Array(String)
-  prop? :age_min, Integer
+  prop? :status, String
+  prop? :customer, _Ref(Customer)
+  prop? :total_min, Integer
 
-  filter :name,    :contains
-  filter :role,    :in
-  filter :age_min, :gte, column: :age
+  filter :status
+  filter :customer
+  filter :total_min, :gte, column: :total
 
-  sort :name, :created_at, default: "-created_at"
+  sort :created_at, :total, default: "-created_at"
 end
 
-users = UserSearch.call(name: "ali", role: %w[admin], sort: "name")
+orders = Order::Query.call(status: "pending", sort: "-total")
 ```
 
 ### What you get out of the box
@@ -232,10 +235,10 @@ users = UserSearch.call(name: "ali", role: %w[admin], sort: "name")
 **`from_params`** — HTTP boundary handling with automatic coercion, blank stripping, and invalid value fallback:
 
 ```ruby
-class UsersController < ApplicationController
+class OrdersController < ApplicationController
   def index
-    query = UserSearch.from_params(params, scope: policy_scope(User))
-    @users = pagy(query.resolve)
+    query = Order::Query.from_params(params, scope: policy_scope(Order))
+    @orders = pagy(query.resolve)
   end
 end
 ```

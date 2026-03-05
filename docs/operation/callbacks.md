@@ -7,7 +7,7 @@ Hook into the operation lifecycle with `before`, `after`, and `around`. Callback
 Runs before `perform`. Use it for validation, setup, or precondition checks.
 
 ```ruby
-class PlaceOrder < Dex::Operation
+class Order::Place < Dex::Operation
   prop :product_id, Integer
   prop :quantity, _Integer(1..)
 
@@ -33,19 +33,19 @@ Calling `error!` in a `before` callback stops execution – `perform` is never r
 Runs after `perform` succeeds (or after `success!`). Skipped if `perform` raises or calls `error!`.
 
 ```ruby
-class CreateUser < Dex::Operation
+class Employee::Onboard < Dex::Operation
   prop :email, String
 
-  after :send_welcome_email
+  after :send_onboarding_email
 
   def perform
-    User.create!(email: email)
+    Employee.create!(email: email)
   end
 
   private
 
-  def send_welcome_email
-    WelcomeMailer.deliver_later(email: email)
+  def send_onboarding_email
+    OnboardingMailer.deliver_later(email: email)
   end
 end
 ```
@@ -55,7 +55,7 @@ end
 Wraps the entire before/perform/after sequence. Your callback must yield (or call the continuation) to proceed – otherwise `perform` is never invoked.
 
 ```ruby
-class ImportData < Dex::Operation
+class Product::Import < Dex::Operation
   around :with_timing
 
   def perform
@@ -68,7 +68,7 @@ class ImportData < Dex::Operation
     start = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     yield
     elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start
-    Rails.logger.info "ImportData took #{elapsed.round(2)}s"
+    Rails.logger.info "Product::Import took #{elapsed.round(2)}s"
   end
 end
 ```
@@ -78,7 +78,7 @@ end
 All three callbacks accept a Symbol (method name), a block, or a callable (lambda/proc):
 
 ```ruby
-class ProcessOrder < Dex::Operation
+class Order::Process < Dex::Operation
   # Symbol – calls the named method
   before :validate_stock
 
@@ -87,7 +87,7 @@ class ProcessOrder < Dex::Operation
 
   # Lambda – for around, receives a continuation
   around ->(cont) {
-    Rails.logger.tagged("ProcessOrder") { cont.call }
+    Rails.logger.tagged("Order::Process") { cont.call }
   }
 
   # ...
@@ -99,7 +99,7 @@ end
 Multiple callbacks of the same type run in declaration order:
 
 ```ruby
-class Example < Dex::Operation
+class Order::Place < Dex::Operation
   before :first
   before :second
   before :third

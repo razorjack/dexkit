@@ -5,8 +5,8 @@
 The most common way to publish:
 
 ```ruby
-OrderPlaced.publish(order_id: 1, total: 99.99)              # async (default)
-OrderPlaced.publish(order_id: 1, total: 99.99, sync: true)   # sync
+Order::Placed.publish(order_id: 1, total: 99.99)              # async (default)
+Order::Placed.publish(order_id: 1, total: 99.99, sync: true)   # sync
 ```
 
 ## Instance-level publish
@@ -14,7 +14,7 @@ OrderPlaced.publish(order_id: 1, total: 99.99, sync: true)   # sync
 Create the event first, then publish:
 
 ```ruby
-event = OrderPlaced.new(order_id: 1, total: 99.99)
+event = Order::Placed.new(order_id: 1, total: 99.99)
 event.publish                    # async
 event.publish(sync: true)        # sync
 ```
@@ -32,8 +32,8 @@ Useful when you need the event object (e.g., for tracing).
 Link an event to its cause:
 
 ```ruby
-order_event = OrderPlaced.new(order_id: 1, total: 99.99)
-InventoryReserved.publish(order_id: 1, caused_by: order_event)
+order_event = Order::Placed.new(order_id: 1, total: 99.99)
+Shipment::Reserved.publish(order_id: 1, caused_by: order_event)
 ```
 
 The child event's `caused_by_id` is set to the parent's `id`, and they share the same `trace_id`. See [Tracing](./tracing) for details.

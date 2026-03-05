@@ -5,7 +5,7 @@
 ## Standard validators
 
 ```ruby
-class RegistrationForm < Dex::Form
+class Employee::Form < Dex::Form
   attribute :email, :string
   attribute :name, :string
   attribute :age, :integer
@@ -21,7 +21,7 @@ end
 ## Checking validity
 
 ```ruby
-form = RegistrationForm.new(email: "", name: "A")
+form = Employee::Form.new(email: "", name: "A")
 
 form.valid?    # => false
 form.invalid?  # => true
@@ -36,18 +36,18 @@ form.errors.full_messages   # => ["Email can't be blank", "Email is invalid", ..
 Use `validate` with a method name for cross-field checks:
 
 ```ruby
-class BookingForm < Dex::Form
-  attribute :check_in, :date
-  attribute :check_out, :date
+class Leave::RequestForm < Dex::Form
+  attribute :start_date, :date
+  attribute :end_date, :date
 
-  validates :check_in, :check_out, presence: true
-  validate :check_out_after_check_in
+  validates :start_date, :end_date, presence: true
+  validate :end_date_after_start_date
 
   private
 
-  def check_out_after_check_in
-    return if check_in.blank? || check_out.blank?
-    errors.add(:check_out, "must be after check-in") if check_out <= check_in
+  def end_date_after_start_date
+    return if start_date.blank? || end_date.blank?
+    errors.add(:end_date, "must be after start date") if end_date <= start_date
   end
 end
 ```
@@ -55,17 +55,17 @@ end
 ## Validation contexts
 
 ```ruby
-class ArticleForm < Dex::Form
+class Product::Form < Dex::Form
   attribute :title, :string
-  attribute :body, :string
+  attribute :description, :string
 
   validates :title, presence: true
-  validates :body, presence: true, on: :publish
+  validates :description, presence: true, on: :launch
 end
 
-form = ArticleForm.new(title: "Draft")
-form.valid?           # => true (body not required)
-form.valid?(:publish) # => false (body required for publishing)
+form = Product::Form.new(title: "Draft")
+form.valid?          # => true (description not required)
+form.valid?(:launch) # => false (description required for launch)
 ```
 
 ## Uniqueness
@@ -73,8 +73,8 @@ form.valid?(:publish) # => false (body required for publishing)
 `Dex::Form` ships a `UniquenessValidator` that checks values against the database:
 
 ```ruby
-class RegistrationForm < Dex::Form
-  model User
+class Employee::Form < Dex::Form
+  model Employee
 
   attribute :email, :string
   validates :email, uniqueness: true
@@ -87,7 +87,7 @@ The validator queries the model declared with `model` to check for duplicates. W
 
 | Option | Description | Example |
 |--------|-------------|---------|
-| `model:` | Explicit model class (overrides `model` DSL) | `uniqueness: { model: User }` |
+| `model:` | Explicit model class (overrides `model` DSL) | `uniqueness: { model: Employee }` |
 | `attribute:` | Column name when it differs from the form attribute | `uniqueness: { attribute: :email }` |
 | `scope:` | Scope the check to other attributes | `uniqueness: { scope: :tenant_id }` |
 | `case_sensitive:` | Case-insensitive comparison (uses SQL `LOWER()`) | `uniqueness: { case_sensitive: false }` |
@@ -100,20 +100,20 @@ The validator figures out which model to query in this order:
 
 1. The `model:` option on the validator itself
 2. The class-level `model` declaration
-3. Inferred from the form class name – `RegistrationForm` → `Registration`
+3. Inferred from the form class name – `Employee::Form` → `Employee`
 
 If none of these resolve to a model, the validation silently passes.
 
 ### Scoped uniqueness
 
 ```ruby
-class InviteForm < Dex::Form
-  model Invitation
+class Employee::InviteForm < Dex::Form
+  model Employee
 
   attribute :email, :string
-  attribute :team_id, :integer
+  attribute :department_id, :integer
 
-  validates :email, uniqueness: { scope: :team_id }
+  validates :email, uniqueness: { scope: :department_id }
 end
 ```
 
@@ -130,7 +130,7 @@ When the model supports Arel (ActiveRecord models do), this generates a `LOWER(c
 For cases where you want to raise on invalid forms:
 
 ```ruby
-form = RegistrationForm.new(email: "")
+form = Employee::Form.new(email: "")
 form.valid?
 
 error = Dex::Form::ValidationError.new(form)

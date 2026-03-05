@@ -1,13 +1,13 @@
 # Nested Forms
 
-Forms often contain groups of related fields – an address block, a list of line items, a set of documents. `nested_one` and `nested_many` let you define these as nested form objects with their own attributes, validations, and error reporting.
+Forms often contain groups of related fields – an address block, a list of line items, a set of emergency contacts. `nested_one` and `nested_many` let you define these as nested form objects with their own attributes, validations, and error reporting.
 
 ## nested_one
 
 Defines a single nested form:
 
 ```ruby
-class OrderForm < Dex::Form
+class Order::Form < Dex::Form
   attribute :notes, :string
 
   nested_one :shipping_address do
@@ -21,13 +21,13 @@ end
 ```
 
 ```ruby
-form = OrderForm.new(
+form = Order::Form.new(
   notes: "Leave at door",
   shipping_address: { street: "123 Main", city: "NYC", zip: "10001" }
 )
 
 form.shipping_address.street  # => "123 Main"
-form.shipping_address.class   # => OrderForm::ShippingAddress
+form.shipping_address.class   # => Order::Form::ShippingAddress
 ```
 
 ### Hash coercion
@@ -44,7 +44,7 @@ form.shipping_address.city  # => "LA"
 When you don't provide a nested_one value, it initializes as an empty form:
 
 ```ruby
-form = OrderForm.new
+form = Order::Form.new
 form.shipping_address        # => an empty ShippingAddress (not nil)
 form.shipping_address.street # => nil
 ```
@@ -61,7 +61,7 @@ form.shipping_address.city  # => "SF"
 Defines a collection of nested forms:
 
 ```ruby
-class InvoiceForm < Dex::Form
+class Order::InvoiceForm < Dex::Form
   attribute :number, :string
 
   nested_many :line_items do
@@ -75,7 +75,7 @@ end
 ```
 
 ```ruby
-form = InvoiceForm.new(line_items: [
+form = Order::InvoiceForm.new(line_items: [
   { description: "Widget", quantity: 2, price: "9.99" },
   { description: "Gadget", quantity: 1, price: "24.99" }
 ])
@@ -90,7 +90,7 @@ form.line_items[0].price          # => #<BigDecimal: 9.99>
 When you don't provide a nested_many value, it initializes as an empty array:
 
 ```ruby
-form = InvoiceForm.new
+form = Order::InvoiceForm.new
 form.line_items  # => []
 ```
 
@@ -106,7 +106,7 @@ form.line_items.size  # => 1
 Rails form builders submit nested collections as numbered hashes. This is handled automatically:
 
 ```ruby
-form = InvoiceForm.new(line_items: {
+form = Order::InvoiceForm.new(line_items: {
   "0" => { description: "Widget", quantity: "2", price: "9.99" },
   "1" => { description: "Gadget", quantity: "1", price: "24.99" }
 })
@@ -118,7 +118,7 @@ form.line_items.size  # => 2
 Items with `_destroy` set to a truthy value are filtered out during coercion:
 
 ```ruby
-form = InvoiceForm.new(line_items: [
+form = Order::InvoiceForm.new(line_items: [
   { description: "Keep this", quantity: 1, price: "10.00" },
   { description: "Remove this", quantity: 1, price: "5.00", _destroy: "1" }
 ])
@@ -132,7 +132,7 @@ Truthy values include `"1"`, `"true"`, and `true` – the same values Rails cons
 Invalid nested forms bubble their errors up to the parent with prefixed attribute names:
 
 ```ruby
-form = OrderForm.new(shipping_address: { street: "", city: "", zip: "" })
+form = Order::Form.new(shipping_address: { street: "", city: "", zip: "" })
 form.valid?  # => false
 
 form.errors[:"shipping_address.street"]  # => ["can't be blank"]
@@ -142,7 +142,7 @@ form.errors[:"shipping_address.city"]    # => ["can't be blank"]
 For nested_many, errors include the index:
 
 ```ruby
-form = InvoiceForm.new(line_items: [
+form = Order::InvoiceForm.new(line_items: [
   { description: "Good", quantity: 1, price: "10.00" },
   { description: "", quantity: nil, price: nil }
 ])
@@ -160,7 +160,7 @@ form.errors[:"line_items[1].quantity"]     # => ["can't be blank"]
 nested_one :address, class_name: "HomeAddress" do
   attribute :street, :string
 end
-# Creates MyForm::HomeAddress instead of MyForm::Address
+# Creates Order::Form::HomeAddress instead of Order::Form::Address
 ```
 
 ## Serialization

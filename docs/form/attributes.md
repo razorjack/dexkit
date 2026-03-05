@@ -5,7 +5,7 @@
 Attributes are declared with `attribute`, using ActiveModel's type system:
 
 ```ruby
-class ProfileForm < Dex::Form
+class Employee::Form < Dex::Form
   attribute :name, :string
   attribute :age, :integer
   attribute :bio, :string
@@ -41,7 +41,7 @@ attribute :tags, :string   # defaults to nil
 `normalizes` transforms values on every assignment – during initialization, `assign_attributes`, or direct setter calls:
 
 ```ruby
-class SignupForm < Dex::Form
+class Employee::Form < Dex::Form
   attribute :email, :string
   attribute :phone, :string
 
@@ -49,7 +49,7 @@ class SignupForm < Dex::Form
   normalizes :phone, with: -> { _1&.gsub(/\D/, "").presence }
 end
 
-form = SignupForm.new(email: "  ALICE@EXAMPLE.COM  ", phone: "(555) 123-4567")
+form = Employee::Form.new(email: "  ALICE@EXAMPLE.COM  ", phone: "(555) 123-4567")
 form.email  # => "alice@example.com"
 form.phone  # => "5551234567"
 
@@ -72,7 +72,7 @@ If your normalizer returns `nil`, the attribute becomes `nil`. This is useful wi
 ```ruby
 normalizes :bio, with: -> { _1&.strip.presence }
 
-form = SignupForm.new(bio: "   ")
+form = Employee::Form.new(bio: "   ")
 form.bio  # => nil
 ```
 
@@ -83,7 +83,7 @@ form.bio  # => nil
 ## Reading and writing
 
 ```ruby
-form = ProfileForm.new(name: "Alice", age: 30)
+form = Employee::Form.new(name: "Alice", age: 30)
 
 form.name               # => "Alice"
 form.age                # => 30
@@ -98,7 +98,7 @@ form.attribute_names    # => ["name", "age", "bio", "active", "born_on"]
 Forms accept both symbol and string keys – handy when working with ActionController params:
 
 ```ruby
-form = ProfileForm.new("name" => "Alice", "age" => "30")
+form = Employee::Form.new("name" => "Alice", "age" => "30")
 form.name  # => "Alice"
 form.age   # => 30
 ```

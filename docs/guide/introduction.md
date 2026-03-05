@@ -11,93 +11,144 @@ Four building blocks, each independent – use one or all:
 
 ## A quick taste
 
+An e-commerce order flow – from operation to event to form to query.
+
 ### Operations
 
-Typed, transactional service objects with structured error handling:
-
 ```ruby
-class CreateUser < Dex::Operation
-  prop :email, String
-  prop :name, String
-  prop? :role, _Union("admin", "member"), default: "member"
+class Order::Place < Dex::Operation
+  prop :customer, _Ref(Customer)
+  prop :product, _Ref(Product)
+  prop :quantity, _Integer(1..)
+  prop? :note, String
 
-  error :email_taken
+  success _Ref(Order)
+  error :out_of_stock
 
   def perform
-    error!(:email_taken) if User.exists?(email: email)
+    error!(:out_of_stock) unless product.in_stock?
 
-    user = User.create!(name: name, email: email, role: role)
+    order = Order.create!(customer: customer, product: product, quantity: quantity, note: note)
 
-    after_commit { WelcomeMailer.with(user: user).deliver_later }
+    after_commit { Order::Placed.publish(order_id: order.id, total: order.total) }
 
-    user
+    order
   end
 end
-
-user = CreateUser.call(email: "alice@example.com", name: "Alice")
 ```
+
+That's one class. Here's what you got:
+
+- **`_Ref(Customer)`** accepts a Customer instance or an ID – the record is auto-fetched
+- **`_Integer(1..)`** guarantees a positive integer before `perform` runs
+- **`prop?`** marks optional inputs (nil by default)
+- **`success` / `error`** declare the contract – typos in error codes raise `ArgumentError`
+- **`error!`** halts execution, rolls back the transaction, returns a structured error
+- **`after_commit`** fires only after the transaction succeeds – safe for emails, webhooks, events
+
+Call it:
+
+```ruby
+order = Order::Place.call(customer: 42, product: 7, quantity: 2)
+```
+
+`_Ref` props accept IDs – `customer: 42` finds `Customer.find(42)` automatically.
+
+Handle outcomes with pattern matching:
+
+```ruby
+case Order::Place.new(customer: 42, product: 7, quantity: 2).safe.call
+in Ok => result
+  redirect_to order_path(result.id)
+in Err(code: :out_of_stock)
+  flash[:error] = "Product is out of stock"
+  render :new
+end
+```
+
+And there's more – [async execution](/operation/async) via ActiveJob, [advisory locks](/operation/advisory-lock), [DB recording](/operation/recording), [`rescue_from`](/operation/errors#rescue_from) for third-party exceptions, [callbacks](/operation/callbacks), and a [customizable pipeline](/operation/pipeline).
 
 ### Events
 
 Publish domain events, handle them sync or async:
 
 ```ruby
-class OrderPlaced < Dex::Event
+class Order::Placed < Dex::Event
   prop :order_id, Integer
   prop :total, BigDecimal
 end
 
 class NotifyWarehouse < Dex::Event::Handler
-  on OrderPlaced
+  on Order::Placed
+  retries 3
 
-  def perform(event)
+  def perform
     WarehouseApi.reserve(event.order_id)
   end
 end
 
-OrderPlaced.publish(order_id: 42, total: 99.99)
+Order::Placed.publish(order_id: 1, total: 99.99)
 ```
+
+Handlers run via ActiveJob by default. Retries use exponential backoff. Events carry [causality tracing](/event/tracing) – link them in chains with shared trace IDs.
 
 ### Forms
 
 User-facing input handling with nested forms and Rails integration:
 
 ```ruby
-class RegistrationForm < Dex::Form
-  attribute :email, :string
-  attribute :name, :string
+class Order::Form < Dex::Form
+  attribute :note, :string
 
-  normalizes :email, with: -> { _1&.strip&.downcase.presence }
-  validates :email, :name, presence: true
-
-  nested_one :address do
-    attribute :street, :string
-    attribute :city, :string
-    validates :street, :city, presence: true
+  nested_many :line_items do
+    attribute :product_id, :integer
+    attribute :quantity, :integer, default: 1
+    validates :product_id, :quantity, presence: true
   end
 end
 
-form = RegistrationForm.new(params.require(:registration))
+form = Order::Form.new(params.require(:order))
 ```
+
+Type casting, validation, `_destroy` support, and `form_with` / `fields_for` compatibility – no `accepts_nested_attributes_for` needed.
 
 ### Queries
 
 Declarative filtering and sorting for ActiveRecord (and Mongoid) scopes:
 
 ```ruby
-class UserSearch < Dex::Query
-  scope { User.all }
+class Order::Query < Dex::Query
+  scope { Order.all }
 
-  prop? :name, String
-  prop? :role, _Array(String)
+  prop? :status, String
+  prop? :total_min, Integer
 
-  filter :name, :contains
-  filter :role, :in
+  filter :status
+  filter :total_min, :gte, column: :total
 
-  sort :name, :created_at, default: "-created_at"
+  sort :created_at, :total, default: "-created_at"
 end
 
-users = UserSearch.call(name: "ali", role: %w[admin viewer], sort: "name")
+orders = Order::Query.call(status: "pending", sort: "-total")
+```
+
+### Testing
+
+First-class test helpers keep tests short:
+
+```ruby
+class PlaceOrderTest < Minitest::Test
+  testing Order::Place
+
+  def test_places_order
+    assert_operation(customer: customer.id, product: product.id, quantity: 2)
+  end
+
+  def test_rejects_out_of_stock
+    assert_operation_error(:out_of_stock, customer: customer.id,
+                           product: out_of_stock_product.id, quantity: 1)
+  end
+end
 ```
 
 ## Why

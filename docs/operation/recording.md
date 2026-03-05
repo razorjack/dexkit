@@ -41,38 +41,38 @@ All columns except `name` are optional – dexkit only writes to columns that ex
 By default, both params and the response are recorded:
 
 ```ruby
-class CreateUser < Dex::Operation
+class Employee::Onboard < Dex::Operation
   prop :email, String
   prop :name, String
 
   def perform
-    User.create!(email: email, name: name)
+    Employee.create!(email: email, name: name)
   end
 end
 
-CreateUser.call(email: "alice@example.com", name: "Alice")
+Employee::Onboard.call(email: "alice@example.com", name: "Alice")
 # OperationRecord:
-#   name: "CreateUser"
+#   name: "Employee::Onboard"
 #   params: { "email" => "alice@example.com", "name" => "Alice" }
 #   response: { "id" => 1, "email" => "alice@example.com", ... }
 #   status: "done"
 #   performed_at: 2024-01-15 10:30:00
 ```
 
-Ref types (`_Ref(User)`) serialize as IDs in both params and response, keeping records clean and compact.
+Ref types (`_Ref(Customer)`) serialize as IDs in both params and response, keeping records clean and compact.
 
 ## Controlling what's recorded
 
 ```ruby
-class SensitiveOperation < Dex::Operation
+class Employee::ProcessPayroll < Dex::Operation
   record false                # disable recording entirely
 end
 
-class LargeResponse < Dex::Operation
+class Order::ExportBatch < Dex::Operation
   record response: false      # record params only
 end
 
-class AuditTrail < Dex::Operation
+class Employee::Audit < Dex::Operation
   record params: false        # record response only
 end
 ```
@@ -82,15 +82,15 @@ end
 When `success Type` is declared, dexkit serializes the response intelligently:
 
 ```ruby
-class FindUser < Dex::Operation
-  success _Ref(User)
+class Employee::Find < Dex::Operation
+  success _Ref(Employee)
 
   def perform
-    User.find(user_id)
+    Employee.find(employee_id)
   end
 end
 
-# response is stored as just the user ID, not the full serialized object
+# response is stored as just the employee ID, not the full serialized object
 ```
 
 For other return types, the response is stored as-is (Hash), or wrapped in `{ value: ... }` for scalar values.

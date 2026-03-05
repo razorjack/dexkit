@@ -11,10 +11,10 @@ Filters connect props to query conditions. Each filter references a prop by name
 | `:contains` | `LIKE %value%` | `filter :name, :contains` |
 | `:starts_with` | `LIKE value%` | `filter :name, :starts_with` |
 | `:ends_with` | `LIKE %value` | `filter :name, :ends_with` |
-| `:gt` | `> value` | `filter :age, :gt` |
-| `:gte` | `>= value` | `filter :age_min, :gte, column: :age` |
-| `:lt` | `< value` | `filter :age, :lt` |
-| `:lte` | `<= value` | `filter :age_max, :lte, column: :age` |
+| `:gt` | `> value` | `filter :salary, :gt` |
+| `:gte` | `>= value` | `filter :salary_min, :gte, column: :salary` |
+| `:lt` | `< value` | `filter :salary, :lt` |
+| `:lte` | `<= value` | `filter :salary_max, :lte, column: :salary` |
 | `:in` | `IN (values)` | `filter :roles, :in, column: :role` |
 | `:not_in` | `NOT IN (values)` | `filter :excluded, :not_in, column: :role` |
 
@@ -27,14 +27,14 @@ The adapter is auto-detected from the scope: ActiveRecord uses Arel `matches` (L
 When the prop name doesn't match the database column, use `column:`:
 
 ```ruby
-class OrderSearch < Dex::Query
+class Order::Query < Dex::Query
   scope { Order.all }
 
-  prop? :age_min, Integer
-  prop? :age_max, Integer
+  prop? :total_min, Integer
+  prop? :total_max, Integer
 
-  filter :age_min, :gte, column: :age
-  filter :age_max, :lte, column: :age
+  filter :total_min, :gte, column: :total
+  filter :total_max, :lte, column: :total
 end
 ```
 

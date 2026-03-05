@@ -5,12 +5,12 @@ Operations are service objects that encapsulate a single business action. They b
 ## Basic anatomy
 
 ```ruby
-class CreateUser < Dex::Operation
+class Employee::Onboard < Dex::Operation
   prop :name, String
   prop :email, String
 
   def perform
-    User.create!(name: name, email: email)
+    Employee.create!(name: name, email: email)
   end
 end
 ```
@@ -21,10 +21,10 @@ Every operation has a `perform` method that contains the business logic. Propert
 
 ```ruby
 # Class-level shorthand
-user = CreateUser.call(name: "Alice", email: "alice@example.com")
+employee = Employee::Onboard.call(name: "Alice", email: "alice@example.com")
 
 # Two-step form (needed for .safe and .async)
-user = CreateUser.new(name: "Alice", email: "alice@example.com").call
+employee = Employee::Onboard.new(name: "Alice", email: "alice@example.com").call
 ```
 
 Both forms do the same thing: instantiate with properties, then execute the pipeline. The two-step form is required when chaining modifiers like `.safe.call` or `.async.call`.
@@ -44,7 +44,7 @@ Each step wraps the next one. Transactions wrap your database calls. Callbacks h
 Whatever `perform` returns is the operation's return value:
 
 ```ruby
-class FullName < Dex::Operation
+class Employee::BadgeLabel < Dex::Operation
   prop :first, String
   prop :last, String
 
@@ -53,7 +53,7 @@ class FullName < Dex::Operation
   end
 end
 
-FullName.call(first: "John", last: "Doe")  # => "John Doe"
+Employee::BadgeLabel.call(first: "John", last: "Doe")  # => "John Doe"
 ```
 
 You can also halt early with `success!` or `error!` – see [Error Handling](/operation/errors) for the full story.
@@ -71,7 +71,7 @@ class ReadOperation < BaseOperation
   prop :id, Integer
 
   def perform
-    Record.find(id)
+    Employee.find(id)
   end
 end
 ```

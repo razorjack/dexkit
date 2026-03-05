@@ -7,19 +7,19 @@ Contracts let you declare and introspect an operation's interface – what it ac
 Use `success` to declare the expected return type. The return value of `perform` is validated at runtime:
 
 ```ruby
-class FindUser < Dex::Operation
-  prop :user_id, Integer
+class Employee::Find < Dex::Operation
+  prop :employee_id, Integer
 
-  success _Ref(User)
+  success _Ref(Employee)
 
   def perform
-    user = User.find_by(id: user_id)
-    error!(:not_found) unless user
-    user
+    employee = Employee.find_by(id: employee_id)
+    error!(:not_found) unless employee
+    employee
   end
 end
 
-FindUser.call(user_id: 1)  # => User instance (validated)
+Employee::Find.call(employee_id: 1)  # => Employee instance (validated)
 ```
 
 Returning a mismatched type raises `ArgumentError` immediately. Returning `nil` is always allowed (even with a success type declared).
@@ -29,14 +29,14 @@ Returning a mismatched type raises `ArgumentError` immediately. Returning `nil` 
 Use `error` to declare which error codes the operation may raise:
 
 ```ruby
-class CreateUser < Dex::Operation
+class Employee::Onboard < Dex::Operation
   prop :email, String
 
   error :email_taken, :invalid_email
 
   def perform
-    error!(:email_taken) if User.exists?(email: email)
-    User.create!(email: email)
+    error!(:email_taken) if Employee.exists?(email: email)
+    Employee.create!(email: email)
   end
 end
 ```
@@ -48,7 +48,7 @@ When error codes are declared, calling `error!` with an undeclared code raises `
 Every operation exposes a `.contract` class method that returns a frozen `Contract` data object:
 
 ```ruby
-CreateUser.contract
+Employee::Onboard.contract
 # => #<data Dex::Operation::Contract
 #      params={email: String},
 #      success=nil,
@@ -68,13 +68,13 @@ The contract has three fields:
 `Contract` is a `Data.define`, so it supports pattern matching and `to_h`:
 
 ```ruby
-CreateUser.contract => { params:, success:, errors: }
+Employee::Onboard.contract => { params:, success:, errors: }
 
 params   # => { email: String }
 success  # => nil
 errors   # => [:email_taken, :invalid_email]
 
-CreateUser.contract.to_h
+Employee::Onboard.contract.to_h
 # => { params: { email: String }, success: nil, errors: [:email_taken, :invalid_email] }
 ```
 
@@ -87,7 +87,7 @@ class BaseOperation < Dex::Operation
   error :unauthorized
 end
 
-class CreateUser < BaseOperation
+class Employee::Onboard < BaseOperation
   error :email_taken
 
   def perform
@@ -96,7 +96,7 @@ class CreateUser < BaseOperation
   end
 end
 
-CreateUser.contract.errors  # => [:unauthorized, :email_taken]
+Employee::Onboard.contract.errors  # => [:unauthorized, :email_taken]
 ```
 
 Success types also inherit – a child class can override the parent's success type.

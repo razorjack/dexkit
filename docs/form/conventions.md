@@ -7,20 +7,20 @@
 Define a class method that maps record attributes to form attributes and binds the record:
 
 ```ruby
-class ProfileForm < Dex::Form
-  model User
+class Employee::Form < Dex::Form
+  model Employee
 
   attribute :name, :string
   attribute :email, :string
 
-  def self.for(user)
-    new(name: user.name, email: user.email).with_record(user)
+  def self.for(employee)
+    new(name: employee.name, email: employee.email).with_record(employee)
   end
 end
 ```
 
 ```ruby
-@form = ProfileForm.for(current_user)
+@form = Employee::Form.for(@employee)
 ```
 
 `with_record` sets `persisted?` to true and gives the uniqueness validator a record to exclude.
@@ -30,7 +30,7 @@ end
 This is where form objects really shine. When a single form spans multiple models, `.for` maps each model's data into the flat form structure:
 
 ```ruby
-class OnboardingForm < Dex::Form
+class Employee::OnboardingForm < Dex::Form
   attribute :first_name, :string
   attribute :last_name, :string
   attribute :email, :string
@@ -40,7 +40,7 @@ class OnboardingForm < Dex::Form
 
   normalizes :email, with: -> { _1&.strip&.downcase.presence }
 
-  validates :email, presence: true, uniqueness: { model: User }
+  validates :email, presence: true, uniqueness: { model: Employee }
   validates :first_name, :last_name, :department, :position, presence: true
 
   nested_one :address do
@@ -51,21 +51,19 @@ class OnboardingForm < Dex::Form
     validates :street, :city, :country, presence: true
   end
 
-  nested_many :documents do
-    attribute :document_type, :string
-    attribute :document_number, :string
-    validates :document_type, :document_number, presence: true
+  nested_many :emergency_contacts do
+    attribute :name, :string
+    attribute :phone, :string
+    validates :name, :phone, presence: true
   end
 
-  def self.for(user)
-    employee = user.employee
-
+  def self.for(employee)
     new(
-      first_name: user.first_name,
-      last_name: user.last_name,
-      email: user.email,
-      department: employee.department,
-      position: employee.position,
+      first_name: employee.first_name,
+      last_name: employee.last_name,
+      email: employee.email,
+      department: employee.department.name,
+      position: employee.position.title,
       start_date: employee.start_date,
       address: {
         street: employee.address.street,
@@ -73,10 +71,10 @@ class OnboardingForm < Dex::Form
         postal_code: employee.address.postal_code,
         country: employee.address.country
       },
-      documents: employee.documents.map { |d|
-        { document_type: d.document_type, document_number: d.document_number }
+      emergency_contacts: employee.emergency_contacts.map { |c|
+        { name: c.name, phone: c.phone }
       }
-    ).with_record(user)
+    ).with_record(employee)
   end
 end
 ```
@@ -86,7 +84,7 @@ end
 The `save` method validates the form and delegates persistence to whatever makes sense for your app. The cleanest pattern uses a `Dex::Operation`:
 
 ```ruby
-class OnboardingForm < Dex::Form
+class Employee::OnboardingForm < Dex::Form
   # ... attributes, validations, nested forms ...
 
   def save
@@ -101,21 +99,21 @@ class OnboardingForm < Dex::Form
   private
 
   def operation
-    Onboarding::Upsert.new(
-      user: record, first_name:, last_name:, email:,
+    Employee::Onboard.new(
+      employee: record, first_name:, last_name:, email:,
       department:, position:, start_date:,
       address: address.to_h,
-      documents: documents.map(&:to_h)
+      emergency_contacts: emergency_contacts.map(&:to_h)
     )
   end
 end
 ```
 
-The Operation handles all the multi-model persistence – creating or updating User, Employee, and Address inside a transaction:
+The Operation handles all the multi-model persistence – creating or updating Employee, Department, and Position inside a transaction:
 
 ```ruby
-class Onboarding::Upsert < Dex::Operation
-  prop :user, _Nilable(User)
+class Employee::Onboard < Dex::Operation
+  prop :employee, _Nilable(Employee)
   prop :first_name, String
   prop :last_name, String
   prop :email, String
@@ -123,18 +121,18 @@ class Onboarding::Upsert < Dex::Operation
   prop :position, String
   prop :start_date, Date
   prop :address, Hash
-  prop :documents, _Array(Hash)
+  prop :emergency_contacts, _Array(Hash)
 
   def perform
-    user = self.user || User.new
-    user.update!(first_name:, last_name:, email:)
+    emp = self.employee || Employee.new
+    emp.update!(first_name:, last_name:, email:)
 
-    employee = user.employee || user.build_employee
-    employee.update!(department:, position:, start_date:, **address)
+    dept = Department.find_or_create_by!(name: department)
+    emp.update!(department: dept, position: Position.find_by!(title: position), start_date:)
 
-    sync_documents(employee)
+    sync_emergency_contacts(emp)
 
-    user
+    emp
   end
 end
 ```
@@ -147,7 +145,7 @@ For single-model forms, you can skip the Operation:
 def save
   return false unless valid?
 
-  target = record || User.new
+  target = record || Employee.new
   target.update(name:, email:)
 end
 ```
@@ -157,13 +155,13 @@ end
 No `permit` needed – the form's attribute declarations are the whitelist. Just `require` the top-level key:
 
 ```ruby
-class OnboardingController < ApplicationController
+class EmployeesController < ApplicationController
   def new
-    @form = OnboardingForm.new
+    @form = Employee::OnboardingForm.new
   end
 
   def create
-    @form = OnboardingForm.new(params.require(:onboarding))
+    @form = Employee::OnboardingForm.new(params.require(:employee))
 
     if @form.save
       redirect_to dashboard_path
@@ -173,11 +171,11 @@ class OnboardingController < ApplicationController
   end
 
   def edit
-    @form = OnboardingForm.for(current_user)
+    @form = Employee::OnboardingForm.for(@employee)
   end
 
   def update
-    @form = OnboardingForm.new(params.require(:onboarding)).with_record(current_user)
+    @form = Employee::OnboardingForm.new(params.require(:employee)).with_record(@employee)
 
     if @form.save
       redirect_to dashboard_path
@@ -193,21 +191,21 @@ end
 Forms are standard ActiveModel objects. Test them with plain Minitest – no special helpers needed:
 
 ```ruby
-class OnboardingFormTest < Minitest::Test
+class EmployeeOnboardingFormTest < Minitest::Test
   def test_validates_required_fields
-    form = OnboardingForm.new
+    form = Employee::OnboardingForm.new
     assert form.invalid?
     assert form.errors[:email].any?
     assert form.errors[:first_name].any?
   end
 
   def test_normalizes_email
-    form = OnboardingForm.new(email: "  ALICE@EXAMPLE.COM  ")
+    form = Employee::OnboardingForm.new(email: "  ALICE@EXAMPLE.COM  ")
     assert_equal "alice@example.com", form.email
   end
 
   def test_nested_validation
-    form = OnboardingForm.new(
+    form = Employee::OnboardingForm.new(
       first_name: "Alice", last_name: "Smith",
       email: "alice@example.com",
       department: "Engineering", position: "Dev",
@@ -219,7 +217,7 @@ class OnboardingFormTest < Minitest::Test
   end
 
   def test_serialization
-    form = OnboardingForm.new(
+    form = Employee::OnboardingForm.new(
       first_name: "Alice", email: "alice@example.com",
       address: { street: "123 Main", city: "NYC" }
     )

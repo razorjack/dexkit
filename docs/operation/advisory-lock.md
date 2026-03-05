@@ -7,14 +7,14 @@ Requires the [`with_advisory_lock`](https://github.com/ClosureTree/with_advisory
 ## Basic usage
 
 ```ruby
-class ProcessPayment < Dex::Operation
+class Order::Charge < Dex::Operation
   prop :charge_id, String
 
-  advisory_lock { "payment:#{charge_id}" }
+  advisory_lock { "charge:#{charge_id}" }
 
   def perform
     # Only one instance per charge_id runs at a time
-    Charge.process!(charge_id)
+    Stripe::Charge.create!(charge_id)
   end
 end
 ```
@@ -40,7 +40,7 @@ advisory_lock
 By default, `with_advisory_lock` waits indefinitely. Set a timeout in seconds:
 
 ```ruby
-class ImportData < Dex::Operation
+class Product::Import < Dex::Operation
   advisory_lock "import", timeout: 10
 
   def perform
@@ -53,7 +53,7 @@ end
 On timeout, a `Dex::Error` with code `:lock_timeout` is raised. This integrates naturally with `.safe`:
 
 ```ruby
-result = ImportData.new.safe.call
+result = Product::Import.new.safe.call
 case result
 in Dex::Err(code: :lock_timeout)
   puts "Import already in progress"

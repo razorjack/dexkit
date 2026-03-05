@@ -7,10 +7,10 @@ Every event gets a `trace_id`. When events are linked via tracing, they share th
 ### Using trace blocks
 
 ```ruby
-order_placed = OrderPlaced.new(order_id: 1, total: 99.99)
+order_placed = Order::Placed.new(order_id: 1, total: 99.99)
 
 order_placed.trace do
-  InventoryReserved.publish(order_id: 1)
+  Shipment::Reserved.publish(order_id: 1)
   # caused_by_id = order_placed.id
   # trace_id = order_placed.trace_id
 end
@@ -19,16 +19,16 @@ end
 ### Using caused_by
 
 ```ruby
-InventoryReserved.publish(order_id: 1, caused_by: order_placed)
+Shipment::Reserved.publish(order_id: 1, caused_by: order_placed)
 ```
 
 ### Nested tracing
 
 ```ruby
 order_placed.trace do
-  reserved = InventoryReserved.new(order_id: 1)
+  reserved = Shipment::Reserved.new(order_id: 1)
   reserved.trace do
-    ShippingRequested.publish(order_id: 1)
+    Shipment::Requested.publish(order_id: 1)
     # caused_by_id = reserved.id
     # trace_id = order_placed.trace_id (inherited from root)
   end
@@ -54,17 +54,17 @@ Prevent events from being published. Block-scoped and nestable.
 ```ruby
 # Suppress all events
 Dex::Event.suppress do
-  OrderPlaced.publish(order_id: 1, total: 99.99)  # silently skipped
+  Order::Placed.publish(order_id: 1, total: 99.99)  # silently skipped
 end
 
 # Suppress specific classes
-Dex::Event.suppress(OrderPlaced) do
-  OrderPlaced.publish(order_id: 1, total: 99.99)  # skipped
-  UserCreated.publish(user_id: 1)                   # published normally
+Dex::Event.suppress(Order::Placed) do
+  Order::Placed.publish(order_id: 1, total: 99.99)  # skipped
+  Employee::Onboarded.publish(employee_id: 1)        # published normally
 end
 
 # Suppress multiple classes
-Dex::Event.suppress(OrderPlaced, UserCreated) do
+Dex::Event.suppress(Order::Placed, Employee::Onboarded) do
   # both suppressed
 end
 ```
@@ -72,10 +72,10 @@ end
 Child event classes are suppressed when their parent class is:
 
 ```ruby
-class PriorityOrderPlaced < OrderPlaced; end
+class Order::PriorityPlaced < Order::Placed; end
 
-Dex::Event.suppress(OrderPlaced) do
-  PriorityOrderPlaced.publish(...)  # also suppressed
+Dex::Event.suppress(Order::Placed) do
+  Order::PriorityPlaced.publish(...)  # also suppressed
 end
 ```
 

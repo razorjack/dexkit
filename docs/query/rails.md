@@ -5,10 +5,10 @@ Queries integrate with Rails forms and controllers through ActiveModel compatibi
 ## Controller pattern
 
 ```ruby
-class UsersController < ApplicationController
+class EmployeesController < ApplicationController
   def index
-    @query = UserSearch.from_params(params, scope: policy_scope(User))
-    @users = pagy(@query.resolve)
+    @query = Employee::Query.from_params(params, scope: policy_scope(Employee))
+    @employees = pagy(@query.resolve)
   end
 end
 ```
@@ -18,14 +18,14 @@ end
 `from_params` handles the messy work of extracting search parameters from a controller request:
 
 ```ruby
-UserSearch.from_params(params)
-UserSearch.from_params(params, scope: current_team.users)
-UserSearch.from_params(params, scope: current_team.users, project: current_project)
+Employee::Query.from_params(params)
+Employee::Query.from_params(params, scope: current_department.employees)
+Employee::Query.from_params(params, scope: current_department.employees, department: current_department)
 ```
 
 Here's what it does, in order:
 
-1. **Extracts** the nested hash from `params[param_key]` (e.g., `params[:user_search]`). Falls back to flat params if the key is missing.
+1. **Extracts** the nested hash from `params[param_key]` (e.g., `params[:employee_query]`). Falls back to flat params if the key is missing.
 2. **Pulls out** the `sort` value and validates it against declared sorts. Invalid sorts are silently dropped (falls back to default).
 3. **Strips** blank strings to `nil` for optional props.
 4. **Compacts** array blanks – `["admin", ""]` becomes `["admin"]`.
@@ -39,7 +39,7 @@ Here's what it does, in order:
 Queries work with `form_with` for search forms:
 
 ```erb
-<%= form_with model: @query, url: users_path, method: :get do |f| %>
+<%= form_with model: @query, url: employees_path, method: :get do |f| %>
   <%= f.text_field :name, placeholder: "Search by name" %>
   <%= f.select :status, %w[active inactive], include_blank: "Any status" %>
   <%= f.hidden_field :sort, value: @query.sort %>
@@ -49,12 +49,12 @@ Queries work with `form_with` for search forms:
 
 ## param_key
 
-By default, the param key derives from the class name (`UserSearch` → `user_search`). Override it when you want shorter URLs:
+By default, the param key derives from the class name (`Employee::Query` → `employee_query`). Override it when you want shorter URLs:
 
 ```ruby
-class UserSearch < Dex::Query
+class Employee::Query < Dex::Query
   param_key :q
-  # params[:q][:name] instead of params[:user_search][:name]
+  # params[:q][:name] instead of params[:employee_query][:name]
 end
 ```
 
@@ -63,12 +63,12 @@ end
 Returns a hash of non-nil prop values plus the current sort – useful for generating links that preserve search state:
 
 ```ruby
-query = UserSearch.new(name: "ali", sort: "-name")
+query = Employee::Query.new(name: "ali", sort: "-name")
 query.to_params  # => { name: "ali", sort: "-name" }
 ```
 
 ```erb
-<%= link_to "Sort by name", users_path(@query.to_params.merge(sort: "name")) %>
+<%= link_to "Sort by name", employees_path(@query.to_params.merge(sort: "name")) %>
 ```
 
 ## model_name

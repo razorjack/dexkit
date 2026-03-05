@@ -5,17 +5,17 @@ Properties are the inputs to your operation. They're declared with `prop` (requi
 ## Required properties
 
 ```ruby
-class SendEmail < Dex::Operation
+class Order::SendConfirmation < Dex::Operation
   prop :to, String
   prop :subject, String
   prop :body, String
 
   def perform
-    Mailer.send(to: to, subject: subject, body: body)
+    ConfirmationMailer.send(to: to, subject: subject, body: body)
   end
 end
 
-SendEmail.call(to: "alice@example.com", subject: "Hi", body: "Hello!")
+Order::SendConfirmation.call(to: "alice@example.com", subject: "Hi", body: "Hello!")
 ```
 
 Missing or wrongly-typed properties raise `Literal::TypeError` immediately – you never enter `perform` with bad inputs.
@@ -25,17 +25,17 @@ Missing or wrongly-typed properties raise `Literal::TypeError` immediately – y
 Use `prop?` for optional inputs. They default to `nil` unless you provide a `:default`:
 
 ```ruby
-class CreatePost < Dex::Operation
+class Product::Create < Dex::Operation
   prop :title, String
-  prop? :body, String                     # defaults to nil
-  prop? :status, String, default: "draft"   # defaults to "draft"
+  prop? :description, String                     # defaults to nil
+  prop? :status, String, default: "draft"         # defaults to "draft"
 
   def perform
-    Post.create!(title: title, body: body, status: status)
+    Product.create!(title: title, description: description, status: status)
   end
 end
 
-CreatePost.call(title: "Hello")  # body: nil, status: "draft"
+Product::Create.call(title: "Widget")  # description: nil, status: "draft"
 ```
 
 ## Type system
@@ -49,10 +49,10 @@ Types are powered by the [literal](https://github.com/joeldrapper/literal) gem. 
 | `_Array(T)` | Array of T | `prop :tags, _Array(String)` |
 | `_Integer(range)` | Integer in range | `prop :age, _Integer(0..150)` |
 | `_Union(...)` | One of several values | `prop :currency, _Union("USD", "EUR")` |
-| `_Ref(Model)` | Model reference (see below) | `prop :user, _Ref(User)` |
+| `_Ref(Model)` | Model reference (see below) | `prop :customer, _Ref(Customer)` |
 
 ```ruby
-class TransferMoney < Dex::Operation
+class Order::Refund < Dex::Operation
   prop :amount, _Integer(1..)
   prop :currency, _Union("USD", "EUR", "GBP")
   prop :note, _Nilable(String)
@@ -71,18 +71,18 @@ end
 `_Ref(Model)` is a special type for ActiveRecord/Mongoid models. It accepts either a model instance or an ID, and automatically finds the record:
 
 ```ruby
-class ArchiveProject < Dex::Operation
-  prop :project, _Ref(Project)
-  prop :user, _Ref(User)
+class Order::Cancel < Dex::Operation
+  prop :order, _Ref(Order)
+  prop :customer, _Ref(Customer)
 
   def perform
-    project.update!(archived: true, archived_by: user)
+    order.update!(cancelled: true, cancelled_by: customer)
   end
 end
 
 # Both work – pass an instance or an ID
-ArchiveProject.call(project: Project.find(1), user: current_user)
-ArchiveProject.call(project: 1, user: 42)
+Order::Cancel.call(order: Order.find(1), customer: current_customer)
+Order::Cancel.call(order: 1, customer: 42)
 ```
 
 Inside `perform`, the property is always a model instance – the lookup happens during initialization.
@@ -90,16 +90,16 @@ Inside `perform`, the property is always a model instance – the lookup happens
 ### Optional refs
 
 ```ruby
-class UpdateProfile < Dex::Operation
-  prop :user, _Ref(User)
-  prop? :avatar, _Ref(Avatar)   # can be nil
+class Employee::Update < Dex::Operation
+  prop :employee, _Ref(Employee)
+  prop? :department, _Ref(Department)   # can be nil
 
   def perform
-    user.update!(avatar: avatar) if avatar
+    employee.update!(department: department) if department
   end
 end
 
-UpdateProfile.call(user: 1, avatar: nil)  # works fine
+Employee::Update.call(employee: 1, department: nil)  # works fine
 ```
 
 ### Locking refs
@@ -107,16 +107,16 @@ UpdateProfile.call(user: 1, avatar: nil)  # works fine
 Pass `lock: true` to acquire a row lock (`SELECT ... FOR UPDATE`) when fetching:
 
 ```ruby
-class DebitAccount < Dex::Operation
-  prop :account, _Ref(Account, lock: true)
+class Order::Debit < Dex::Operation
+  prop :order, _Ref(Order, lock: true)
 
   def perform
-    account.update!(balance: account.balance - 100)
+    order.update!(balance: order.balance - 100)
   end
 end
 
-# Executes: Account.lock.find(42)
-DebitAccount.call(account: 42)
+# Executes: Order.lock.find(42)
+Order::Debit.call(order: 42)
 ```
 
 This is especially useful inside transactions to prevent race conditions.
@@ -126,8 +126,8 @@ This is especially useful inside transactions to prevent race conditions.
 Properties serialize cleanly for async jobs and recording. Ref types serialize as IDs, everything else uses `.as_json`:
 
 ```ruby
-class Example < Dex::Operation
-  prop :user, _Ref(User)
+class Order::Charge < Dex::Operation
+  prop :customer, _Ref(Customer)
   prop :amount, Integer
 
   def perform
@@ -135,8 +135,8 @@ class Example < Dex::Operation
   end
 end
 
-op = Example.new(user: 42, amount: 100)
-# Internal serialization: {"user" => 42, "amount" => 100}
+op = Order::Charge.new(customer: 42, amount: 100)
+# Internal serialization: {"customer" => 42, "amount" => 100}
 ```
 
 Types like `Date`, `Time`, `BigDecimal`, and `Symbol` automatically survive the JSON round-trip when used with async – no manual conversion needed.
@@ -146,7 +146,7 @@ Types like `Date`, `Time`, `BigDecimal`, and `Symbol` automatically survive the 
 By default, all properties have public readers. You can change this:
 
 ```ruby
-class Secret < Dex::Operation
+class Shipment::Track < Dex::Operation
   prop :api_key, String, reader: :private
 
   def perform
@@ -155,7 +155,7 @@ class Secret < Dex::Operation
   end
 end
 
-op = Secret.new(api_key: "sk-123")
+op = Shipment::Track.new(api_key: "sk-123")
 op.api_key  # => NoMethodError (private)
 ```
 

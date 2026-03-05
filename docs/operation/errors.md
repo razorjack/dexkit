@@ -7,12 +7,12 @@ Operations provide structured error handling through `error!`, `success!`, `asse
 Halts execution and raises `Dex::Error` to the caller. If a transaction is active, it's rolled back.
 
 ```ruby
-class CreateUser < Dex::Operation
+class Employee::Onboard < Dex::Operation
   prop :email, String
 
   def perform
-    error!(:email_taken, "This email is already in use") if User.exists?(email: email)
-    User.create!(email: email)
+    error!(:email_taken, "This email is already in use") if Employee.exists?(email: email)
+    Employee.create!(email: email)
   end
 end
 ```
@@ -35,7 +35,7 @@ The caller receives a `Dex::Error` with `.code`, `.message`, and `.details`:
 
 ```ruby
 begin
-  CreateUser.call(email: "taken@example.com")
+  Employee::Onboard.call(email: "taken@example.com")
 rescue Dex::Error => e
   e.code     # => :email_taken
   e.message  # => "This email is already in use"
@@ -48,20 +48,20 @@ end
 Halts execution with a successful result. The transaction is committed. Code after `success!` is never reached.
 
 ```ruby
-class ProcessPayment < Dex::Operation
+class Order::Charge < Dex::Operation
   prop :amount, Integer
 
   def perform
     return error!(:invalid_amount) if amount <= 0
 
-    charge = Gateway.charge(amount)
+    charge = Stripe::Charge.create(amount: amount)
     success!(charge_id: charge.id, status: "paid")
 
     # never reached
   end
 end
 
-result = ProcessPayment.call(amount: 100)
+result = Order::Charge.call(amount: 100)
 # => { charge_id: "ch_123", status: "paid" }
 ```
 
@@ -78,13 +78,13 @@ success!                              # returns nil
 A guard that returns the value if truthy, or calls `error!` if falsy. Perfect for "find or fail" patterns:
 
 ```ruby
-class ShowUser < Dex::Operation
-  prop :user_id, Integer
+class Employee::Find < Dex::Operation
+  prop :employee_id, Integer
 
   def perform
     # Block form – evaluate and guard in one step
-    user = assert!(:not_found) { User.find_by(id: user_id) }
-    user.as_json
+    employee = assert!(:not_found) { Employee.find_by(id: employee_id) }
+    employee.as_json
   end
 end
 ```
@@ -93,11 +93,11 @@ Two forms are supported:
 
 ```ruby
 # Block form (preferred) – evaluates the block, errors if nil/false
-user = assert!(:not_found) { User.find_by(id: user_id) }
+employee = assert!(:not_found) { Employee.find_by(id: employee_id) }
 
 # Value form – guards an already-evaluated value
-user = User.find_by(id: user_id)
-assert!(user, :not_found)
+employee = Employee.find_by(id: employee_id)
+assert!(employee, :not_found)
 ```
 
 Both call `error!(code)` when the value is falsy, which rolls back the transaction and raises `Dex::Error`.
@@ -107,7 +107,7 @@ Both call `error!(code)` when the value is falsy, which rolls back the transacti
 You can declare which error codes an operation is allowed to raise. This catches typos and documents intent:
 
 ```ruby
-class CreateUser < Dex::Operation
+class Employee::Onboard < Dex::Operation
   error :email_taken, :invalid_email
 
   def perform
@@ -125,7 +125,7 @@ See also [Contracts](/operation/contracts) for introspecting declared errors.
 Maps third-party exceptions to structured `Dex::Error` codes. No more boilerplate `begin/rescue/error!` blocks:
 
 ```ruby
-class ChargeCard < Dex::Operation
+class Order::Charge < Dex::Operation
   rescue_from Stripe::CardError, as: :card_declined
   rescue_from Stripe::RateLimitError, as: :rate_limited
   rescue_from Stripe::APIError, as: :provider_error, message: "Stripe is unavailable"
@@ -158,7 +158,7 @@ rescue_from Net::OpenTimeout, Net::ReadTimeout, as: :timeout
 - Handlers inherit from parent classes; later declarations take priority
 
 ```ruby
-result = ChargeCard.new(amount: 100).safe.call
+result = Order::Charge.new(amount: 100).safe.call
 case result
 in Dex::Err(code: :card_declined)
   notify_user(result.message)
@@ -173,7 +173,7 @@ All operation errors are `Dex::Error` instances. They support pattern matching:
 
 ```ruby
 begin
-  CreateUser.call(email: "taken@example.com")
+  Employee::Onboard.call(email: "taken@example.com")
 rescue Dex::Error => e
   case e
   in { code: :email_taken }

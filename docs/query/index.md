@@ -5,8 +5,8 @@ Query objects that turn filtering and sorting into a clean, declarative API. Def
 ## Quick start
 
 ```ruby
-class UserSearch < Dex::Query
-  scope { User.all }
+class Employee::Query < Dex::Query
+  scope { Employee.all }
 
   prop? :name, String
   prop? :role, _Array(String)
@@ -21,8 +21,8 @@ end
 ```
 
 ```ruby
-users = UserSearch.call(name: "ali", role: %w[admin], sort: "name")
-users.each { |u| puts u.name }
+employees = Employee::Query.call(name: "ali", role: %w[admin], sort: "name")
+employees.each { |e| puts e.name }
 ```
 
 `call` returns an ActiveRecord relation (or Mongoid criteria) – lazy, chainable, ready for `.limit`, `.offset`, or your pagination gem of choice.
@@ -32,10 +32,10 @@ users.each { |u| puts u.name }
 Every query needs a base scope. The block is evaluated in instance context, so props are accessible:
 
 ```ruby
-class TaskSearch < Dex::Query
-  scope { project.tasks.where(archived: false) }
+class LeaveRequest::Query < Dex::Query
+  scope { department.leave_requests.where(archived: false) }
 
-  prop :project, _Ref(Project)
+  prop :department, _Ref(Department)
   prop? :status, String
   filter :status
 end
@@ -46,10 +46,10 @@ end
 Same `prop` / `prop?` / `_Ref` DSL as Operation and Event – powered by Literal:
 
 ```ruby
-prop :team, _Ref(Team)         # required model reference
-prop? :name, String              # optional string
-prop? :roles, _Array(String)     # optional array
-prop? :age_min, Integer             # optional integer
+prop :department, _Ref(Department)   # required model reference
+prop? :name, String                  # optional string
+prop? :roles, _Array(String)         # optional array
+prop? :salary_min, Integer           # optional integer
 ```
 
 Properties become instance methods with public readers by default.
@@ -60,15 +60,15 @@ Reserved names that can't be used as props: `scope`, `sort`, `resolve`, `call`, 
 
 ```ruby
 # Class-level – returns a relation
-UserSearch.call(name: "ali", sort: "-created_at")
+Employee::Query.call(name: "ali", sort: "-created_at")
 
 # Shortcuts
-UserSearch.count(role: %w[admin])
-UserSearch.exists?(name: "Alice")
-UserSearch.any?(status: "active")
+Employee::Query.count(role: %w[admin])
+Employee::Query.exists?(name: "Alice")
+Employee::Query.any?(status: "active")
 
 # Two-step – useful when you need the query instance
-query = UserSearch.new(name: "ali", sort: "-name")
+query = Employee::Query.new(name: "ali", sort: "-name")
 query.name   # => "ali"
 query.sort   # => "-name"
 result = query.resolve
@@ -79,7 +79,7 @@ result = query.resolve
 Narrow the base scope at call time without modifying the query class:
 
 ```ruby
-UserSearch.call(scope: current_team.users, name: "ali")
+Employee::Query.call(scope: current_department.employees, name: "ali")
 ```
 
 The injected scope is merged with the base scope via `.merge`. Both must query the same model – a mismatch raises `ArgumentError`.
@@ -89,8 +89,8 @@ The injected scope is merged with the base scope via `.merge`. Both must query t
 Subclasses inherit props, filters, sorts, and the default sort. They can add new ones or replace the scope:
 
 ```ruby
-class AdminSearch < UserSearch
-  scope { User.where(admin: true) }
+class Employee::AdminQuery < Employee::Query
+  scope { Employee.where(role: "admin") }
 
   prop? :department, String
   filter :department

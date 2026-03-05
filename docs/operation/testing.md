@@ -20,10 +20,10 @@ Including `Dex::TestHelpers` automatically installs the test wrapper (which reco
 Set a default operation class for all helpers in a test class:
 
 ```ruby
-class CreateUserTest < Minitest::Test
-  testing CreateUser
+class OnboardEmployeeTest < Minitest::Test
+  testing Employee::Onboard
 
-  def test_creates_user
+  def test_onboards_employee
     result = call_operation(name: "Alice", email: "alice@example.com")
     assert_ok result
   end
@@ -44,7 +44,7 @@ result = call_operation(name: "Alice")
 value = call_operation!(name: "Alice")
 
 # Explicit class (overrides `testing` subject)
-result = call_operation(CreateUser, name: "Alice")
+result = call_operation(Employee::Onboard, name: "Alice")
 ```
 
 ## Result assertions
@@ -77,14 +77,14 @@ Call the operation and assert the result in a single line:
 
 ```ruby
 # Assert success, optionally check return value
-assert_operation(name: "Alice", returns: user)
+assert_operation(name: "Alice", returns: employee)
 
 # Assert failure with error code
 assert_operation_error(:invalid, name: "")
 
 # With explicit class
-assert_operation(CreateUser, name: "Alice")
-assert_operation_error(CreateUser, :invalid, name: "")
+assert_operation(Employee::Onboard, name: "Alice")
+assert_operation_error(Employee::Onboard, :invalid, name: "")
 
 # With message/details checks
 assert_operation_error(:invalid, message: /required/, name: "")
@@ -105,7 +105,7 @@ assert_accepts_param(:name)
 assert_params(name: String, email: String)
 
 # Success type
-assert_success_type(_Ref(User))
+assert_success_type(_Ref(Employee))
 
 # Exhaustive error codes
 assert_error_codes(:not_found, :invalid)
@@ -113,7 +113,7 @@ assert_error_codes(:not_found, :invalid)
 # Full contract in one call
 assert_contract(
   params: [:name, :email],
-  success: _Ref(User),
+  success: _Ref(Employee),
   errors: [:not_found, :invalid]
 )
 
@@ -136,18 +136,18 @@ assert_valid_params(name: "Alice", email: "a@b.com")
 Replace an operation entirely within a block:
 
 ```ruby
-stub_operation(SendEmail, returns: true) do
+stub_operation(Order::SendConfirmation, returns: true) do
   result = call_operation!(name: "Alice")
-  # SendEmail.call inside CreateUser returns true without executing perform
+  # Order::SendConfirmation.call inside Employee::Onboard returns true without executing perform
 end
 
-stub_operation(PaymentGateway, error: :timeout) do
+stub_operation(Order::Charge, error: :timeout) do
   result = call_operation(amount: 100)
   assert_err result, :timeout
 end
 
 # Error stub with full details
-stub_operation(SendEmail, error: { code: :failed, message: "SMTP down" }) do
+stub_operation(Order::SendConfirmation, error: { code: :failed, message: "SMTP down" }) do
   result = call_operation(name: "Alice")
   assert_err result, :failed, message: "SMTP down"
 end
@@ -160,7 +160,7 @@ Stubs are scoped to the block and automatically cleared afterward.
 Observe real execution without modifying behavior:
 
 ```ruby
-spy_on_operation(SendEmail) do |spy|
+spy_on_operation(Order::SendConfirmation) do |spy|
   call_operation!(name: "Alice")
 
   assert spy.called?
@@ -176,10 +176,10 @@ end
 
 ```ruby
 # Assert that the operation rolls back (expects Dex::Error to be raised)
-assert_rolls_back(User) { CreateUser.new(bad: true).call }
+assert_rolls_back(Employee) { Employee::Onboard.new(bad: true).call }
 
 # Assert that the operation commits
-assert_commits(User) { CreateUser.new(name: "Alice").call }
+assert_commits(Employee) { Employee::Onboard.new(name: "Alice").call }
 ```
 
 ## Async assertions
@@ -187,14 +187,14 @@ assert_commits(User) { CreateUser.new(name: "Alice").call }
 Requires `ActiveJob::TestHelper` to be included in your test class:
 
 ```ruby
-class SendEmailTest < Minitest::Test
+class SendConfirmationTest < Minitest::Test
   include ActiveJob::TestHelper
 
-  testing SendEmail
+  testing Order::SendConfirmation
 
   def test_enqueues_job
-    assert_enqueues_operation(user_id: 123)
-    assert_enqueues_operation(user_id: 123, queue: "mailers")
+    assert_enqueues_operation(order_id: 123)
+    assert_enqueues_operation(order_id: 123, queue: "mailers")
   end
 
   def test_does_not_enqueue
@@ -230,8 +230,8 @@ All operation calls are recorded to `Dex::TestLog` during tests. The log is clea
 Dex::TestLog.calls                     # => [Entry, ...]
 Dex::TestLog.size                      # => Integer
 Dex::TestLog.empty?                    # => true/false
-Dex::TestLog.find(CreateUser)          # => entries for CreateUser
-Dex::TestLog.find(CreateUser, name: "Alice")  # filter by params
+Dex::TestLog.find(Employee::Onboard)          # => entries for Employee::Onboard
+Dex::TestLog.find(Employee::Onboard, name: "Alice")  # filter by params
 Dex::TestLog.summary                   # human-readable summary
 ```
 

@@ -53,7 +53,7 @@
 
 ### Code Examples
 
-- Examples should be realistic – use domain concepts like users, orders, payments rather than `Foo`/`Bar`
+- Examples should be realistic – use the established example domains (see below), not `Foo`/`Bar`
 - Show the calling code, not just the class definition
 - Keep examples short. If an example needs more than ~15 lines, it's probably demonstrating too many things at once
 - Don't add comments explaining what's obvious from the code. Only comment when the behavior is surprising or non-obvious
@@ -64,3 +64,46 @@
 - Don't document internal implementation details (method names starting with `_`, internal modules)
 - Don't add "Note:" or "Important:" callouts for things that are just normal behavior
 - Don't use VitePress info/tip/warning boxes unless it's genuinely a warning (something that could break or surprise)
+
+## Naming Conventions
+
+All code examples follow a `Model::Action` naming pattern where the model is the top-level namespace:
+
+- **Operations** use the imperative mood (a command): `Order::Place`, `Leave::Approve`
+- **Events** use the past participle (a fact): `Order::Placed`, `Leave::Approved`
+- **Forms** use a `Form` suffix: `Order::Form`, `Leave::RequestForm`
+- **Queries** use a `Query` suffix: `Order::Query`, `Employee::Query`
+
+This works naturally with Zeitwerk in Rails apps. If `Order` is an ActiveRecord model defined in `app/models/order.rb`, nesting `Order::Place` in `app/operations/order/place.rb` is perfectly fine – Zeitwerk loads `Order` first, sees it's a class, and defines `Place` under it.
+
+The grammatical distinction between operations and events is intentional – you can tell at a glance whether something is a command (`Order::Place`) or a notification (`Order::Placed`).
+
+## Example Domains
+
+Documentation uses exactly **two domains** for all code examples. Do not invent new domains, models, or business concepts outside these two areas. Consistency across pages creates a cohesive story and avoids forcing the reader to re-learn context on every page.
+
+### E-commerce
+
+Models: `Order`, `LineItem`, `Product`, `Customer`, `Shipment`
+
+| Type | Examples |
+|---|---|
+| Operations | `Order::Place`, `Order::Fulfill`, `Order::Cancel`, `Order::Refund`, `Shipment::Ship` |
+| Events | `Order::Placed`, `Order::Fulfilled`, `Order::Cancelled`, `Order::Refunded`, `Shipment::Shipped` |
+| Forms | `Order::Form`, `Product::Form` |
+| Queries | `Order::Query`, `Product::Query` |
+
+### HR
+
+Models: `Employee`, `Department`, `LeaveRequest`, `Position`
+
+| Type | Examples |
+|---|---|
+| Operations | `Leave::Request`, `Leave::Approve`, `Leave::Reject`, `Employee::Transfer`, `Employee::Onboard` |
+| Events | `Leave::Requested`, `Leave::Approved`, `Leave::Rejected`, `Employee::Transferred`, `Employee::Onboarded` |
+| Forms | `Employee::Form`, `Leave::RequestForm` |
+| Queries | `Employee::Query`, `LeaveRequest::Query` |
+
+### Flexibility
+
+These lists are a strong recommendation, not a hard constraint. When documenting a pattern that doesn't fit naturally into any of the above entities, you may introduce a new entity – as long as it belongs to one of the two domains. For example, an `Invoice::Issue` operation or a `Payroll::Query` are fine because they live within e-commerce and HR respectively. What you must avoid is reaching for unrelated domains (blog posts, todo items, chat messages, etc.).

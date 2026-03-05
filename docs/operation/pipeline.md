@@ -1,6 +1,6 @@
-# Pipeline & Steps
+# Middleware
 
-Every operation runs through a pipeline of wrapper steps. Understanding the pipeline is useful for debugging, and the `use` API lets you extend it with custom behavior.
+Every operation runs through a pipeline of middleware steps. Understanding the pipeline is useful for debugging, and the `use` API lets you extend it with custom behavior.
 
 ## Default pipeline
 
@@ -15,7 +15,7 @@ Each step wraps everything inside it. For example, `transaction` wraps `record`,
 ## Inspecting the pipeline
 
 ```ruby
-CreateUser.pipeline.steps
+Employee::Onboard.pipeline.steps
 # => [
 #   #<data name=:result, method=:_result_wrap>,
 #   #<data name=:lock, method=:_lock_wrap>,
@@ -26,9 +26,39 @@ CreateUser.pipeline.steps
 # ]
 ```
 
-## Adding custom steps
+## Writing middleware
 
-Use `use` to register a module as a pipeline step:
+A middleware module provides a `_name_wrap` instance method that calls `yield` to proceed. This is the same pattern as Rack middleware or Rails around callbacks.
+
+### Instrumentation
+
+A minimal middleware that emits `ActiveSupport::Notifications` events, letting you hook into every operation from the outside – for logging, metrics, or APM:
+
+```ruby
+module InstrumentationWrapper
+  def _instrumentation_wrap
+    ActiveSupport::Notifications.instrument("dex.operation", operation: self.class.name) do
+      yield
+    end
+  end
+end
+
+class ApplicationOperation < Dex::Operation
+  use InstrumentationWrapper, at: :outer
+end
+```
+
+Every operation inheriting from `ApplicationOperation` now emits instrumentation events. Subscribe to them anywhere:
+
+```ruby
+ActiveSupport::Notifications.subscribe("dex.operation") do |name, start, finish, id, payload|
+  Rails.logger.info "#{payload[:operation]} finished in #{(finish - start).round(3)}s"
+end
+```
+
+### Rate limiting
+
+A more advanced middleware with a class-level DSL for configuration:
 
 ```ruby
 module RateLimitWrapper
@@ -63,11 +93,11 @@ class ApiOperation < Dex::Operation
 end
 ```
 
-The convention: your module provides a `_name_wrap` instance method that calls `yield` to proceed to the next step. Dexkit derives the step name from the module name (stripping `Wrapper` suffix, converting to snake_case).
+The convention: Dexkit derives the step name from the module name (stripping `Wrapper` suffix, converting to snake_case).
 
-## Positioning steps
+## Positioning middleware
 
-By default, new steps are added at the inner end of the pipeline (just before `perform`). You can control placement:
+By default, new middleware is added at the inner end of the pipeline (just before `perform`). You can control placement:
 
 ```ruby
 # At the outermost position (before everything)
@@ -94,7 +124,7 @@ use MyModule, as: :rate_limit, wrap: :_my_custom_wrap_method
 - `as:` – the step name (defaults to derived from module name)
 - `wrap:` – the wrap method name (defaults to `_#{step_name}_wrap`)
 
-## Removing steps
+## Removing middleware
 
 Pipeline steps can be removed by name:
 
@@ -104,7 +134,7 @@ class NoRecordOperation < Dex::Operation
 end
 ```
 
-## How steps work
+## How middleware works
 
 Each step is a method that receives a block (the rest of the pipeline). It must call `yield` to continue execution. If it doesn't yield, the inner steps – including `perform` – are never called.
 
@@ -115,5 +145,3 @@ def _my_step_wrap
   # after logic
 end
 ```
-
-This is the same pattern as Rack middleware, Rails around callbacks, or any other onion-style architecture.

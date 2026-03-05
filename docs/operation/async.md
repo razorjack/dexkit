@@ -5,7 +5,7 @@ Run operations in the background via ActiveJob. Properties are serialized to JSO
 ## Basic usage
 
 ```ruby
-SendWelcomeEmail.new(user_id: 123).async.call
+Order::SendConfirmation.new(order_id: 123).async.call
 ```
 
 That's it – the operation is enqueued as an ActiveJob and runs in the background. ActiveJob must be available (it ships with Rails).
@@ -14,13 +14,13 @@ That's it – the operation is enqueued as an ActiveJob and runs in the backgrou
 
 ```ruby
 # Run on a specific queue
-SendWelcomeEmail.new(user_id: 123).async(queue: "mailers").call
+Order::SendConfirmation.new(order_id: 123).async(queue: "mailers").call
 
 # Run after a delay
-SendWelcomeEmail.new(user_id: 123).async(in: 5.minutes).call
+Order::SendConfirmation.new(order_id: 123).async(in: 5.minutes).call
 
 # Run at a specific time
-SendWelcomeEmail.new(user_id: 123).async(at: 1.hour.from_now).call
+Order::SendConfirmation.new(order_id: 123).async(at: 1.hour.from_now).call
 ```
 
 ## Class-level defaults
@@ -28,21 +28,21 @@ SendWelcomeEmail.new(user_id: 123).async(at: 1.hour.from_now).call
 Set default async options for all instances:
 
 ```ruby
-class SendWelcomeEmail < Dex::Operation
+class Order::SendConfirmation < Dex::Operation
   async queue: "mailers"
 
-  prop :user_id, Integer
+  prop :order_id, Integer
 
   def perform
-    UserMailer.welcome(user_id).deliver_now
+    ConfirmationMailer.order(order_id).deliver_now
   end
 end
 
 # Uses the "mailers" queue by default
-SendWelcomeEmail.new(user_id: 123).async.call
+Order::SendConfirmation.new(order_id: 123).async.call
 
 # Runtime options override class defaults
-SendWelcomeEmail.new(user_id: 123).async(queue: "urgent").call
+Order::SendConfirmation.new(order_id: 123).async(queue: "urgent").call
 ```
 
 ## Serialization
@@ -80,7 +80,7 @@ pending > running > done
 
 ```ruby
 # Async + recording: the record is created immediately, job enqueued
-SendReport.new(user_id: 123).async.call
+Order::SendReport.new(order_id: 123).async.call
 # OperationRecord: status: "pending"
 # → job runs → status: "running"
 # → success  → status: "done"

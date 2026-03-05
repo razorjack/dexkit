@@ -7,7 +7,7 @@ Typed, immutable event value objects with publish/subscribe, async handler dispa
 ### 1. Define an event
 
 ```ruby
-class OrderPlaced < Dex::Event
+class Order::Placed < Dex::Event
   prop :order_id, Integer
   prop :total, BigDecimal
   prop? :coupon_code, String
@@ -18,7 +18,7 @@ end
 
 ```ruby
 class NotifyWarehouse < Dex::Event::Handler
-  on OrderPlaced
+  on Order::Placed
 
   def perform
     WarehouseApi.notify(event.order_id)
@@ -29,7 +29,7 @@ end
 ### 3. Publish
 
 ```ruby
-OrderPlaced.publish(order_id: 1, total: 99.99)
+Order::Placed.publish(order_id: 1, total: 99.99)
 ```
 
 ## What you get
