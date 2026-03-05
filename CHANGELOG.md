@@ -1,5 +1,37 @@
 ## [Unreleased]
 
+## [0.4.1] - 2026-03-04
+
+### Added
+
+- **`after_commit` in operations** — `after_commit { ... }` defers a block until the surrounding database transaction commits
+  - ActiveRecord adapter uses `ActiveRecord.after_all_transactions_commit` (requires Rails 7.2+)
+  - Mongoid adapter manually tracks callbacks and fires them after the outermost `Mongoid.transaction` commits
+  - If called outside a transaction, the block executes immediately
+
+## [0.4.0] - 2026-03-04
+
+### Added
+
+- **Query objects** — `Dex::Query` base class for encapsulating database queries with filtering, sorting, and parameter binding
+  - Typed properties via `prop`/`prop?` DSL (same as Operation and Event)
+  - `scope { Model.all }` DSL for declaring the base scope
+  - **Filter DSL** — `filter :name, :strategy` with built-in strategies: `eq`, `not_eq`, `contains`, `starts_with`, `ends_with`, `gt`, `gte`, `lt`, `lte`, `in`, `not_in`
+  - Custom filter blocks: `filter(:name) { |scope, value| ... }`
+  - Optional filters (nilable props) are automatically skipped when `nil`
+  - **Sort DSL** — `sort :col1, :col2` for column sorts with automatic `asc`/`desc` via `"-col"` prefix convention
+  - Custom sort blocks: `sort(:name) { |scope| ... }`
+  - Default sort: `sort :name, default: "-created_at"`
+  - **Backend adapters** for both ActiveRecord and Mongoid (auto-detected from scope)
+  - `scope:` injection for pre-scoping (e.g., `current_user.posts`)
+  - `from_params` for binding from controller params with automatic type coercion and sort validation
+  - `to_params` for round-tripping query state back to URL params
+  - `param_key` DSL for customizing the params namespace
+  - ActiveModel::Naming / ActiveModel::Conversion for Rails form compatibility
+  - Convenience class methods: `.call`, `.count`, `.exists?`, `.any?`
+  - Inheritance support — filters, sorts, and scope are inherited by subclasses
+- `Dex::Match` is now included in `Dex::Form` — `Ok`/`Err` are available without prefix inside forms
+
 ## [0.3.0] - 2026-03-03
 
 ### Added
