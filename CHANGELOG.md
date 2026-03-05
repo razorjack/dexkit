@@ -5,9 +5,9 @@
 - **Verified Mongoid support** — operations (transactions, recording, async) and queries now have dedicated Mongoid test coverage running against a MongoDB replica set
 - **CI workflow for Mongoid** — GitHub Actions matrix includes a MongoDB replica-set job that runs Mongoid-specific tests
 
-### Changed
+### Breaking
 
-- **`after_commit` now always defers** — non-transactional operations queue callbacks in memory and flush them after the operation pipeline succeeds, matching the behavior of transactional operations. Previously, `after_commit` fired immediately inline when no transaction was active. Callbacks are discarded on `error!` or exception. Nested operations flush once at the outermost successful boundary. Ambient database transactions (e.g., `ActiveRecord::Base.transaction { op.call }`) are still respected via the adapter.
+- **`after_commit` now always defers** — non-transactional operations queue callbacks in memory and flush them after the operation pipeline succeeds, matching the behavior of transactional operations. Previously, `after_commit` fired immediately inline when no transaction was active — code that relied on immediate execution (e.g., reading side effects of the callback later in `perform`) must account for the new deferred timing. Callbacks are discarded on `error!` or exception. Nested operations flush once at the outermost successful boundary. Ambient database transactions (e.g., `ActiveRecord::Base.transaction { op.call }`) are still respected via the adapter.
 
 ### Fixed
 
