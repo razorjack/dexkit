@@ -1,8 +1,18 @@
 ## [Unreleased]
 
+### Added
+
+- **Verified Mongoid support** — operations (transactions, recording, async) and queries now have dedicated Mongoid test coverage running against a MongoDB replica set
+- **CI workflow for Mongoid** — GitHub Actions matrix includes a MongoDB replica-set job that runs Mongoid-specific tests
+
 ### Changed
 
 - **`after_commit` now always defers** — non-transactional operations queue callbacks in memory and flush them after the operation pipeline succeeds, matching the behavior of transactional operations. Previously, `after_commit` fired immediately inline when no transaction was active. Callbacks are discarded on `error!` or exception. Nested operations flush once at the outermost successful boundary. Ambient database transactions (e.g., `ActiveRecord::Base.transaction { op.call }`) are still respected via the adapter.
+
+### Fixed
+
+- **Mongoid async recording** — `record_id` is now serialized with `.to_s` so BSON::ObjectId values pass through ActiveJob correctly
+- **Mongoid transaction adapter** — simplified nesting logic; the outermost `Mongoid.transaction` block now reliably owns callback flushing, fixing edge cases where nested rollbacks could leak callbacks
 
 ## [0.4.1] - 2026-03-04
 
