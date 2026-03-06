@@ -4,7 +4,7 @@ description: "Why dexkit emphasizes explicit Ruby APIs, consistent conventions, 
 
 # DX Meets AI
 
-dexkit was built for developers who care about beautiful Ruby. But there's a second audience that benefits just as much: coding agents. The same properties that make code pleasant to read – explicit declarations, consistent structure, typed interfaces – are exactly what make it easy for an AI to work with.
+dexkit was built for developers who write poetic Ruby. But there's a second audience that benefits just as much: coding agents. The same properties that make code pleasant to read – explicit declarations, consistent structure, typed interfaces – are exactly what make it easy for an AI to work with.
 
 ## The research problem
 

@@ -299,6 +299,10 @@ export default defineConfig({
         ]
       }
     ],
+    footer: {
+      message: 'Released under the MIT License.',
+      copyright: 'Made by <a href="https://razorjack.net">Jacek Galanciak</a>'
+    },
     socialLinks: [{ icon: 'github', link: 'https://github.com/razorjack/dexkit' }]
   }
 })
