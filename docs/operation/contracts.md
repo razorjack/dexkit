@@ -1,3 +1,7 @@
+---
+description: Declare and introspect Dex::Operation input, success, and error contracts for runtime validation and testing.
+---
+
 # Contracts
 
 Contracts let you declare and introspect an operation's interface – what it accepts, what it returns, and which errors it can raise.

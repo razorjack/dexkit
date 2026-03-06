@@ -1,3 +1,7 @@
+---
+description: Define Dex::Form attributes with ActiveModel types, defaults, coercion, and input normalization.
+---
+
 # Attributes & Normalization
 
 ## Declaring attributes

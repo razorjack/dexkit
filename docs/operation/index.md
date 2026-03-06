@@ -1,3 +1,7 @@
+---
+description: Build Rails service objects with Dex::Operation – typed props, structured errors, transactions, callbacks, async execution, and composable middleware.
+---
+
 # Dex::Operation
 
 Operations are service objects that encapsulate a single business action. They bring typed properties, error handling, transactions, callbacks, and more – all in a clean, composable API.

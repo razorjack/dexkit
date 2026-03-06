@@ -1,3 +1,7 @@
+---
+description: "Install dexkit in a Rails app, configure transaction and recording adapters, and set up the optional operation record model."
+---
+
 # Installation
 
 Add dexkit to your Gemfile:
@@ -10,7 +14,7 @@ Then run `bundle install`. That's all you need to start using `Dex::Operation`.
 
 ## Configuration
 
-Dexkit works out of the box with zero configuration. Transactions use ActiveRecord by default, and recording is off until you set it up. If you need to change defaults, create an initializer:
+dexkit works out of the box with zero configuration. Transactions use ActiveRecord by default, and recording is off until you set it up. If you need to change defaults, create an initializer:
 
 ```ruby
 # config/initializers/dex.rb
@@ -25,7 +29,7 @@ end
 
 ### Transaction adapter
 
-Operations are wrapped in database transactions by default. Dexkit supports two adapters:
+Operations are wrapped in database transactions by default. dexkit supports two adapters:
 
 | Adapter | Value | Uses |
 |---|---|---|

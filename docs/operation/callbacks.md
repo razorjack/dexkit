@@ -1,3 +1,7 @@
+---
+description: Hook into Dex::Operation with before, after, around, and after_commit callbacks inside the execution pipeline.
+---
+
 # Callbacks
 
 Hook into the operation lifecycle with `before`, `after`, and `around`. Callbacks run inside the transaction boundary, so errors in callbacks trigger a rollback.

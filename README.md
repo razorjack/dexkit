@@ -1,4 +1,4 @@
-# Dexkit
+# dexkit
 
 Rails patterns toolbelt. Equip to gain +4 DEX.
 
@@ -263,7 +263,7 @@ Full documentation at **[dex.razorjack.net](https://dex.razorjack.net)**.
 
 ## AI Coding Assistant Setup
 
-Dexkit ships LLM-optimized guides. Copy them into your project so AI agents automatically know the API:
+dexkit ships LLM-optimized guides. Copy them into your project so AI agents automatically know the API:
 
 ```bash
 cp $(bundle show dexkit)/guides/llm/OPERATION.md app/operations/CLAUDE.md

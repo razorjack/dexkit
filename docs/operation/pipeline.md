@@ -1,3 +1,7 @@
+---
+description: Inspect and customize the Dex::Operation middleware pipeline – wrapper ordering, custom execution steps, and the use DSL.
+---
+
 # Middleware
 
 Every operation runs through a pipeline of middleware steps. Understanding the pipeline is useful for debugging, and the `use` API lets you extend it with custom behavior.
@@ -93,7 +97,7 @@ class ApiOperation < Dex::Operation
 end
 ```
 
-The convention: Dexkit derives the step name from the module name (stripping `Wrapper` suffix, converting to snake_case).
+The convention: dexkit derives the step name from the module name (stripping `Wrapper` suffix, converting to snake_case).
 
 ## Positioning middleware
 

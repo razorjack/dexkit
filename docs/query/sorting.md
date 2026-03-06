@@ -1,3 +1,7 @@
+---
+description: Configure Dex::Query sorts with column ordering, custom strategies, defaults, and descending syntax.
+---
+
 # Sorting
 
 Sorts declare which columns (or custom orderings) are available. At call time, the caller picks one and optionally reverses direction with a `-` prefix.

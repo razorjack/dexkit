@@ -1,3 +1,7 @@
+---
+description: Recommended Dex::Form conventions – .for loaders, with_record binding, save methods, and operation-backed persistence.
+---
+
 # Conventions
 
 `Dex::Form` handles data holding, normalization, and validation. Persistence and record mapping are your responsibility – the form doesn't know (or care) how your data gets saved. These are the recommended patterns.

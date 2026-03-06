@@ -1,3 +1,7 @@
+---
+description: Write Dex::Event::Handler classes with subscriptions, retries, callbacks, transactions, and handler configuration.
+---
+
 # Handling Events
 
 ## Defining a handler

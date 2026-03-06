@@ -1,3 +1,7 @@
+---
+description: Handle errors in Dex::Operation with error!, success!, assert!, and rescue_from – including transaction rollback and safe result wrapping.
+---
+
 # Error Handling
 
 Operations provide structured error handling through `error!`, `success!`, `assert!`, and `rescue_from`. All of these integrate with transactions (errors roll back), [Ok / Err](/operation/safe-mode) (errors become `Err`), and recording.

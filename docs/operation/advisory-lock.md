@@ -1,3 +1,7 @@
+---
+description: Serialize concurrent operations with advisory_lock in Dex::Operation using database-backed mutual exclusion.
+---
+
 # Advisory Locking
 
 Wrap operations in database advisory locks for mutual exclusion. Only one instance with the same lock key can run at a time – others wait or time out.

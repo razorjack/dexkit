@@ -1,3 +1,7 @@
+---
+description: Test Dex::Query objects with plain Minitest and database-backed assertions on filtered and sorted relations.
+---
+
 # Testing
 
 Queries return standard ActiveRecord relations, so testing is plain Minitest – no special helpers needed.

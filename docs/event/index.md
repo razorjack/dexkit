@@ -1,3 +1,7 @@
+---
+description: Define typed immutable events with Dex::Event and connect them to handlers, async dispatch, tracing, suppression, and persistence.
+---
+
 # Dex::Event
 
 Typed, immutable event value objects with publish/subscribe, async handler dispatch, causality tracing, suppression, and optional persistence.

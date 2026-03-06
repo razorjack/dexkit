@@ -1,3 +1,7 @@
+---
+description: Run Dex::Operation classes through ActiveJob – async execution, queue selection, scheduling, and recording integration.
+---
+
 # Async
 
 Run operations in the background via ActiveJob. Properties are serialized to JSON, enqueued, and deserialized when the job executes.
@@ -47,7 +51,7 @@ Order::SendConfirmation.new(order_id: 123).async(queue: "urgent").call
 
 ## Serialization
 
-All properties must be JSON-serializable for async execution. Dexkit validates this at enqueue time – non-serializable properties raise `ArgumentError` immediately, not when the job runs.
+All properties must be JSON-serializable for async execution. dexkit validates this at enqueue time – non-serializable properties raise `ArgumentError` immediately, not when the job runs.
 
 Types that survive the JSON round-trip automatically:
 

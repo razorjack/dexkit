@@ -1,3 +1,7 @@
+---
+description: Use Dex::Form with Rails controllers, form_with, fields_for, strong params, and record-backed edit flows.
+---
+
 # Rails Integration
 
 `Dex::Form` is built on ActiveModel, so it works with Rails form builders and controllers exactly as you'd expect.

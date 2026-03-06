@@ -1,3 +1,7 @@
+---
+description: Build Dex::Query objects for Rails and Mongoid with declarative filters, sorting, scope composition, and params coercion.
+---
+
 # Dex::Query
 
 Query objects that turn filtering and sorting into a clean, declarative API. Define your scope, declare filters with built-in strategies, add sort columns – and get back a composable relation ready for pagination.

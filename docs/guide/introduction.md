@@ -1,6 +1,10 @@
+---
+description: "Get started with dexkit's core building blocks for Rails – operations, events, forms, and queries – with examples and integration patterns."
+---
+
 # Introduction
 
-Dexkit is a Ruby library that gives you base classes for common Rails patterns. Equip to gain +4 DEX.
+dexkit is a Ruby library that gives you base classes for common Rails patterns. Equip to gain +4 DEX.
 
 Four building blocks, each independent – use one or all:
 
@@ -153,11 +157,11 @@ end
 
 ## Why
 
-Rails apps accumulate the same patterns over and over – service objects, event systems, form objects – but everyone rolls their own. You end up with inconsistent interfaces, manual error handling, no type checking, and testing that's more boilerplate than assertion. Dexkit gives you a solid foundation so you can focus on business logic.
+Rails apps accumulate the same patterns over and over – service objects, event systems, form objects – but everyone rolls their own. You end up with inconsistent interfaces, manual error handling, no type checking, and testing that's more boilerplate than assertion. dexkit gives you a solid foundation so you can focus on business logic.
 
 ## Supported ORMs
 
-Dexkit works with both **ActiveRecord** and **Mongoid**. Transactions, recording, and model references adapt to your ORM automatically.
+dexkit works with both **ActiveRecord** and **Mongoid**. Transactions, recording, and model references adapt to your ORM automatically.
 
 ## Next steps
 

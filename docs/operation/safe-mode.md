@@ -1,3 +1,7 @@
+---
+description: Use Dex::Operation.safe.call to get Ok and Err results for Ruby pattern matching instead of raised exceptions.
+---
+
 # Ok / Err
 
 Call `.safe.call` on any operation to get an `Ok` or `Err` result instead of a raised exception. The real payoff is pattern matching – you can destructure the outcome in a `case/in` block and handle each case cleanly.

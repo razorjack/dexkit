@@ -5,12 +5,20 @@
 - VitePress config lives in `docs/.vitepress/config.ts`.
 - Documentation pages live under `docs/` as Markdown files.
 - Sidebar and top nav are defined in `themeConfig` inside `docs/.vitepress/config.ts`.
+- SEO metadata and sitemap generation also live in `docs/.vitepress/config.ts`.
 
 ## Adding a New Page
 
 1. Create a new `.md` file in the appropriate section directory under `docs/`.
 2. Add the page to the relevant sidebar group in `docs/.vitepress/config.ts`.
 3. If needed, add or update a top-nav entry in `themeConfig.nav`.
+4. Make sure the page is not excluded by `srcExclude`. Built docs pages are included in the sitemap automatically.
+5. Add a `description` field in the page's YAML frontmatter. This is used for the `<meta name="description">` tag, Open Graph/Twitter cards, and JSON-LD structured data. Keep it under 160 characters, specific to the page content, and include relevant class names (e.g., `Dex::Operation`). Example:
+   ```yaml
+   ---
+   description: Build Rails service objects with Dex::Operation – typed props, structured errors, transactions, and async execution.
+   ---
+   ```
 
 ## Adding a New Top-Level Pattern Section
 
@@ -18,6 +26,7 @@
 2. Add at least one entry page (typically `index.md`).
 3. Register the section in `themeConfig.nav`.
 4. Add a new grouped section in `themeConfig.sidebar` with `collapsed` behavior set intentionally.
+5. Update `SECTION_TITLES` and `SECTION_ENTRY_PATHS` in `docs/.vitepress/config.ts` so canonical metadata, structured data, and sitemap priority/changefreq work correctly for the new section.
 
 ## Run and Build
 
@@ -28,7 +37,7 @@
 ## Content Conventions
 
 - Every page should use a single `# H1` as the page title.
-- VitePress frontmatter is optional, but recommended for page descriptions and metadata.
+- Every page **must** have YAML frontmatter with a `description` field for SEO. VitePress uses this for the meta description tag, social cards, and structured data.
 - Docs are primarily written by LLM coding agents.
 
 ## Documentation Style Guide

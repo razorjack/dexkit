@@ -1,3 +1,7 @@
+---
+description: Publish Dex::Event instances synchronously or asynchronously, pass metadata, and control dispatch behavior.
+---
+
 # Publishing Events
 
 ## Class-level publish

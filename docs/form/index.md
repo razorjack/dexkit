@@ -1,3 +1,7 @@
+---
+description: Build Rails form objects with Dex::Form – typed attributes, normalization, validations, nested forms, and form builder compatibility.
+---
+
 # Dex::Form
 
 Form objects that handle the messy reality of user input – typed attributes, normalization, validation, and nested forms that work with Rails form builders out of the box.

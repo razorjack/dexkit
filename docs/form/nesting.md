@@ -1,3 +1,7 @@
+---
+description: Model nested_one and nested_many form data in Dex::Form with coercion, validation, _destroy support, and serialized output.
+---
+
 # Nested Forms
 
 Forms often contain groups of related fields – an address block, a list of line items, a set of emergency contacts. `nested_one` and `nested_many` let you define these as nested form objects with their own attributes, validations, and error reporting.

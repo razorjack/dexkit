@@ -1,3 +1,7 @@
+---
+description: Persist Dex::Operation runs for auditing and debugging with ActiveRecord or Mongoid recording models and serialized params and results.
+---
+
 # Recording
 
 Record operation executions to a database table for auditing, debugging, or analytics. Supports ActiveRecord and Mongoid.

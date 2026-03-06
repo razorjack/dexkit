@@ -1,6 +1,10 @@
+---
+description: Test Dex::Operation with dexkit's Minitest helpers – execution, assertions, contract checks, stubs, spies, and rollback behavior.
+---
+
 # Testing
 
-Dexkit ships test helpers for Minitest with execution helpers, assertions, stubbing, spying, and a global activity log. Everything is designed to keep tests short and readable.
+dexkit ships test helpers for Minitest with execution helpers, assertions, stubbing, spying, and a global activity log. Everything is designed to keep tests short and readable.
 
 ## Setup
 

@@ -1,4 +1,4 @@
-Dexkit. Module name: `Dex`
+dexkit. Module name: `Dex`
 
 Ruby library providing base classes for service/operation, event, and form object patterns in Rails apps.
 

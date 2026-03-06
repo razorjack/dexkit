@@ -1,3 +1,7 @@
+---
+description: Test event publication and handler behavior with Dex::Event::TestHelpers and captured event assertions.
+---
+
 # Testing Events
 
 ## Setup

@@ -1,3 +1,7 @@
+---
+description: Integrate Dex::Query with Rails controllers and forms using from_params, model_name, and query persistence helpers.
+---
+
 # Rails Integration
 
 Queries integrate with Rails forms and controllers through ActiveModel compatibility – `model_name`, `to_params`, and the `from_params` boundary method.

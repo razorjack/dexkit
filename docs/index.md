@@ -1,4 +1,5 @@
 ---
+description: "dexkit documentation – Rails operations, events, forms, and queries with typed APIs, structured errors, async jobs, and testing helpers."
 layout: home
 
 hero:

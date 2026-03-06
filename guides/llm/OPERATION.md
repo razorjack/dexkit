@@ -347,7 +347,7 @@ record params: false      # response only
 
 Recording happens inside the transaction — rolled back on `error!`/`assert!`. Missing columns silently skipped.
 
-When both async and recording are enabled, Dexkit automatically stores only the record ID in the job payload instead of full params. The record tracks `status` (pending → running → done/failed) and `error` (code or exception class name).
+When both async and recording are enabled, dexkit automatically stores only the record ID in the job payload instead of full params. The record tracks `status` (pending → running → done/failed) and `error` (code or exception class name).
 
 ---
 

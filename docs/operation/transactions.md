@@ -1,3 +1,7 @@
+---
+description: Dex::Operation transaction defaults, disabling or forcing transactions, after_commit behavior, and adapter configuration for ActiveRecord and Mongoid.
+---
+
 # Transactions
 
 Operations run inside database transactions by default. If anything raises – including `error!` – the transaction is rolled back. If `perform` succeeds or calls `success!`, the transaction is committed.

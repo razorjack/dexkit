@@ -1,3 +1,7 @@
+---
+description: Trace event causality with trace_id and caused_by, and suppress event publication selectively with Dex::Event tools.
+---
+
 # Tracing & Suppression
 
 ## Causality tracing

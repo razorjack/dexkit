@@ -1,3 +1,7 @@
+---
+description: Use Dex::Query filters with built-in strategies and custom blocks for ActiveRecord and Mongoid search behavior.
+---
+
 # Filtering
 
 Filters connect props to query conditions. Each filter references a prop by name and applies a strategy (or a custom block) to narrow the scope.

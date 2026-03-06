@@ -1,3 +1,7 @@
+---
+description: Validate Dex::Form inputs with ActiveModel validators, custom rules, contexts, and database-backed uniqueness checks.
+---
+
 # Validation
 
 `Dex::Form` includes the full `ActiveModel::Validations` DSL – the same one you use in Rails models.
