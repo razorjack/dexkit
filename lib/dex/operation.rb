@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 # Wrapper modules (loaded before class body so `include`/`use` can find them)
-require_relative "operation/settings"
 require_relative "operation/result_wrapper"
 require_relative "operation/record_wrapper"
 require_relative "operation/transaction_wrapper"
@@ -10,9 +9,6 @@ require_relative "operation/async_wrapper"
 require_relative "operation/safe_wrapper"
 require_relative "operation/rescue_wrapper"
 require_relative "operation/callback_wrapper"
-
-# Pipeline (referenced inside class body)
-require_relative "operation/pipeline"
 
 module Dex
   class Operation
@@ -46,6 +42,7 @@ module Dex
 
     RESERVED_PROP_NAMES = %i[call perform async safe initialize].to_set.freeze
 
+    include Executable
     include PropsSetup
     include TypeCoercion
 
@@ -60,22 +57,6 @@ module Dex
         )
       end
 
-      def inherited(subclass)
-        subclass.instance_variable_set(:@_pipeline, pipeline.dup)
-        super
-      end
-
-      def pipeline
-        @_pipeline ||= Pipeline.new
-      end
-
-      def use(mod, as: nil, wrap: nil, before: nil, after: nil, at: nil)
-        step_name = as || _derive_step_name(mod)
-        wrap_method = wrap || :"_#{step_name}_wrap"
-        pipeline.add(step_name, method: wrap_method, before: before, after: after, at: at)
-        include mod
-      end
-
       private
 
       def _contract_params
@@ -85,23 +66,9 @@ module Dex
           hash[prop.name] = prop.type
         end
       end
-
-      def _derive_step_name(mod)
-        base = mod.name&.split("::")&.last
-        raise ArgumentError, "anonymous modules require explicit as: parameter" unless base
-
-        base.sub(/Wrapper\z/, "")
-          .gsub(/([a-z])([A-Z])/, '\1_\2')
-          .downcase
-          .to_sym
-      end
     end
 
     def perform(*, **)
-    end
-
-    def call
-      self.class.pipeline.execute(self) { perform }
     end
 
     def self.method_added(method_name)
@@ -117,7 +84,6 @@ module Dex
       new(**kwargs).call
     end
 
-    include Settings
     include AsyncWrapper
     include SafeWrapper
 

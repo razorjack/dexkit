@@ -61,6 +61,77 @@ end
 
 When retries are exhausted, the exception propagates to the job framework.
 
+## Callbacks
+
+Handlers support the same `before`, `after`, and `around` callbacks as operations:
+
+```ruby
+class ProcessOrderPayment < Dex::Event::Handler
+  on Order::Paid
+
+  before :log_start
+  after :log_end
+
+  def perform
+    PaymentGateway.charge(event.order_id, event.amount)
+  end
+
+  private
+
+  def log_start = Rails.logger.info("Processing payment for order #{event.order_id}")
+  def log_end = Rails.logger.info("Payment processed for order #{event.order_id}")
+end
+```
+
+`around` callbacks receive a continuation:
+
+```ruby
+around ->(cont) {
+  Instrumentation.measure("payment") { cont.call }
+}
+```
+
+Callbacks are inherited – child handlers run parent callbacks first, then their own.
+
+## Transactions
+
+Handlers can opt into database transactions with the `transaction` DSL. Transactions are **disabled by default** on handlers (unlike operations where they're on by default).
+
+```ruby
+class FulfillOrder < Dex::Event::Handler
+  on Order::Placed
+  transaction
+
+  def perform
+    order = Order.find(event.order_id)
+    order.update!(status: "fulfilled")
+    Shipment.create!(order: order)
+
+    after_commit { Shipment::Ship.new(order_id: order.id).async.call }
+  end
+end
+```
+
+`after_commit` defers the block until the transaction commits. If the handler raises an exception, the transaction rolls back and deferred blocks are discarded.
+
+Without `transaction`, `after_commit` blocks still defer until the handler pipeline completes, then fire in order.
+
+## Custom pipeline
+
+Handlers have the same `use` DSL as operations for adding custom wrapper modules:
+
+```ruby
+class Monitored < Dex::Event::Handler
+  use MetricsWrapper, as: :metrics
+
+  def perform
+    # wrapped by MetricsWrapper#_metrics_wrap
+  end
+end
+```
+
+The default handler pipeline is `[:transaction, :callback]`.
+
 ## Loading handlers
 
 Handlers must be loaded for `on` to register subscriptions. In Rails with Zeitwerk:

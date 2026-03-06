@@ -121,7 +121,8 @@ module Dex
       return if callbacks.empty?
 
       flush = -> { callbacks.each(&:call) }
-      adapter = _transaction_adapter
+      enabled = self.class.settings_for(:transaction).fetch(:enabled, true)
+      adapter = enabled && _transaction_adapter
       if adapter
         adapter.after_commit(&flush)
       else

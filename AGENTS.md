@@ -21,10 +21,12 @@ lib/
     type_coercion.rb     # Dex::TypeCoercion (shared serialization/coercion for Operation + Event)
     props_setup.rb       # Dex::PropsSetup (shared prop/prop?/_Ref DSL for Operation + Event)
     error.rb             # Dex::Error
+    settings.rb          # Dex::Settings (set, settings_for, validate_options!)
+    pipeline.rb          # Dex::Pipeline (shared execution pipeline)
+    executable.rb        # Dex::Executable (shared skeleton: Settings, Pipeline, use DSL)
     match.rb             # Dex::Ok, Dex::Err aliases + Dex::Match
     operation.rb         # Operation class orchestrator (requires all parts)
     operation/
-      settings.rb        # Dex::Settings
       result_wrapper.rb  # Dex::ResultWrapper
       record_wrapper.rb  # Dex::RecordWrapper
       transaction_wrapper.rb # Dex::TransactionWrapper
@@ -33,7 +35,6 @@ lib/
       safe_wrapper.rb    # Dex::SafeWrapper
       rescue_wrapper.rb  # Dex::RescueWrapper
       callback_wrapper.rb # Dex::CallbackWrapper
-      pipeline.rb        # Operation::Pipeline + Step
       outcome.rb         # Operation::Ok, Err, SafeProxy
       async_proxy.rb     # Operation::AsyncProxy
       record_backend.rb  # Operation::RecordBackend + adapters
@@ -45,7 +46,7 @@ lib/
       trace.rb           # Dex::Event::Trace (stack-based causality tracing)
       suppression.rb     # Dex::Event::Suppression (block-scoped suppression)
       bus.rb             # Dex::Event::Bus (global pub/sub, sync/async dispatch, persistence)
-      handler.rb         # Dex::Event::Handler (on, retries DSL, perform contract)
+      handler.rb         # Dex::Event::Handler (on, retries, callbacks, transaction, pipeline)
       processor.rb       # Dex::Event::Processor (ActiveJob, lazy-loaded via const_missing)
     test_log.rb          # Dex::TestLog (global activity log for tests)
     test_helpers.rb      # Dex::TestHelpers + Dex::TestWrapper
@@ -98,7 +99,9 @@ test/
 
 ## Development Conventions
 
-Operation logic is split into per-module files under `lib/dex/operation/`. The orchestrator `lib/dex/operation.rb` requires all parts. Each behavior is a separate module registered as a named pipeline step via `use`. New wrapper modules follow the pattern: `self.included` + `ClassMethods` for DSL + `_name_wrap` instance method that calls `yield` to proceed. New wrappers go in `lib/dex/operation/` as their own file. See existing wrappers for reference.
+`Dex::Executable` (`lib/dex/executable.rb`) is the shared execution skeleton providing Settings, Pipeline, `use` DSL, `inherited` hook, and `call`. Both `Dex::Operation` and `Dex::Event::Handler` include it. `Dex::Pipeline` (`lib/dex/pipeline.rb`) is the shared pipeline class.
+
+Operation logic is split into per-module files under `lib/dex/operation/`. The orchestrator `lib/dex/operation.rb` requires all parts. Each behavior is a separate module registered as a named pipeline step via `use`. New wrapper modules follow the pattern: `self.included` + `ClassMethods` for DSL + `_name_wrap` instance method that calls `yield` to proceed. New wrappers go in `lib/dex/operation/` as their own file. See existing wrappers for reference. Wrappers shared between Operation and Handler (currently `CallbackWrapper` and `TransactionWrapper`) stay in `lib/dex/operation/` but are included in both via `use`.
 
 **Naming internal methods**: The `_modulename_` prefix is required only for methods that end up in `Dex::Operation`'s method table — i.e., wrapper modules mixed into Operation via `include`/`use`. This prevents collisions with user-defined methods in Operation subclasses (e.g., in `RecordWrapper` → `_record_enabled?`, `_record_save!`). Standalone classes that are never mixed into or inherited from Operation (e.g., `AsyncProxy`, `Pipeline`, `Jobs`, `Processor`) use plain method names since there is no collision risk.
 

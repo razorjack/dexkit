@@ -127,6 +127,10 @@ order_placed.trace do
 end
 ```
 
+**Callbacks** — `before`, `after`, `around` hooks on handlers, same DSL as operations.
+
+**Transactions** — opt-in `transaction` and `after_commit` for handlers that write to the database.
+
 **Suppression**, optional **persistence**, **context capture**, and **retries** with exponential backoff.
 
 ### Testing

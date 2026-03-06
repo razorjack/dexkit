@@ -58,7 +58,17 @@ class TestEventHandler < Minitest::Test
     handler = build_handler
     instance = handler.new
 
-    assert_raises(NotImplementedError) { instance.perform }
+    assert_raises(NotImplementedError) { instance.send(:perform) }
+  end
+
+  def test_perform_is_private
+    handler = build_handler do
+      def perform
+      end
+    end
+
+    refute handler.public_method_defined?(:perform)
+    assert handler.private_method_defined?(:perform)
   end
 
   def test_event_accessor

@@ -533,14 +533,29 @@ class TestOperationTransaction < Minitest::Test
     assert_equal 0, TestModel.count
   end
 
-  def test_after_commit_respects_ambient_transaction_on_non_transactional_op
+  def test_after_commit_fires_directly_on_non_transactional_op
     log = []
 
     op = build_operation do
       transaction false
 
       define_method(:perform) do
-        TestModel.create!(name: "Test")
+        after_commit { log << :committed }
+      end
+    end
+
+    op.new.call
+
+    assert_equal [:committed], log
+  end
+
+  def test_after_commit_ignores_ambient_transaction_on_non_transactional_op
+    log = []
+
+    op = build_operation do
+      transaction false
+
+      define_method(:perform) do
         after_commit { log << :committed }
       end
     end
@@ -550,7 +565,6 @@ class TestOperationTransaction < Minitest::Test
       raise ActiveRecord::Rollback
     end
 
-    assert_empty log
-    assert_equal 0, TestModel.count
+    assert_equal [:committed], log
   end
 end

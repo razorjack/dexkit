@@ -20,7 +20,7 @@ class TestOperationPipeline < Minitest::Test
   end
 
   def test_pipeline_add_with_before
-    pipeline = Dex::Operation::Pipeline.new
+    pipeline = Dex::Pipeline.new
     pipeline.add(:a)
     pipeline.add(:b)
     pipeline.add(:c, before: :b)
@@ -28,7 +28,7 @@ class TestOperationPipeline < Minitest::Test
   end
 
   def test_pipeline_add_with_after
-    pipeline = Dex::Operation::Pipeline.new
+    pipeline = Dex::Pipeline.new
     pipeline.add(:a)
     pipeline.add(:b)
     pipeline.add(:c, after: :a)
@@ -36,21 +36,21 @@ class TestOperationPipeline < Minitest::Test
   end
 
   def test_pipeline_add_at_outer
-    pipeline = Dex::Operation::Pipeline.new
+    pipeline = Dex::Pipeline.new
     pipeline.add(:a)
     pipeline.add(:b, at: :outer)
     assert_equal %i[b a], pipeline.steps.map(&:name)
   end
 
   def test_pipeline_add_at_inner
-    pipeline = Dex::Operation::Pipeline.new
+    pipeline = Dex::Pipeline.new
     pipeline.add(:a)
     pipeline.add(:b, at: :inner)
     assert_equal %i[a b], pipeline.steps.map(&:name)
   end
 
   def test_pipeline_remove
-    pipeline = Dex::Operation::Pipeline.new
+    pipeline = Dex::Pipeline.new
     pipeline.add(:a)
     pipeline.add(:b)
     pipeline.add(:c)
@@ -59,34 +59,34 @@ class TestOperationPipeline < Minitest::Test
   end
 
   def test_pipeline_error_unknown_step_in_before
-    pipeline = Dex::Operation::Pipeline.new
+    pipeline = Dex::Pipeline.new
     pipeline.add(:a)
     err = assert_raises(ArgumentError) { pipeline.add(:b, before: :z) }
     assert_match(/pipeline step :z not found/, err.message)
   end
 
   def test_pipeline_error_unknown_step_in_after
-    pipeline = Dex::Operation::Pipeline.new
+    pipeline = Dex::Pipeline.new
     pipeline.add(:a)
     err = assert_raises(ArgumentError) { pipeline.add(:b, after: :z) }
     assert_match(/pipeline step :z not found/, err.message)
   end
 
   def test_pipeline_error_multiple_positioning_args
-    pipeline = Dex::Operation::Pipeline.new
+    pipeline = Dex::Pipeline.new
     pipeline.add(:a)
     err = assert_raises(ArgumentError) { pipeline.add(:b, before: :a, after: :a) }
     assert_match(/specify only one/, err.message)
   end
 
   def test_pipeline_error_invalid_at_value
-    pipeline = Dex::Operation::Pipeline.new
+    pipeline = Dex::Pipeline.new
     err = assert_raises(ArgumentError) { pipeline.add(:a, at: :middle) }
     assert_match(/at: must be :outer or :inner/, err.message)
   end
 
   def test_pipeline_dup_returns_independent_copy
-    original = Dex::Operation::Pipeline.new
+    original = Dex::Pipeline.new
     original.add(:a)
     copy = original.dup
     copy.add(:b)
@@ -234,7 +234,7 @@ class TestOperationPipeline < Minitest::Test
 
   def test_pipeline_executes_in_correct_order
     log = []
-    pipeline = Dex::Operation::Pipeline.new
+    pipeline = Dex::Pipeline.new
 
     wrapper_mod = Module.new do
       define_method(:_outer_wrap) do |&block|

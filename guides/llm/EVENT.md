@@ -111,6 +111,70 @@ end
 
 When retries exhausted, exception propagates normally.
 
+### Callbacks
+
+Same `before`/`after`/`around` DSL as operations:
+
+```ruby
+class ProcessPayment < Dex::Event::Handler
+  on PaymentReceived
+
+  before :log_start
+  after :log_end
+
+  around ->(cont) {
+    Instrumentation.measure("payment") { cont.call }
+  }
+
+  def perform
+    PaymentGateway.charge(event.amount)
+  end
+
+  private
+
+  def log_start = Rails.logger.info("Processing payment...")
+  def log_end = Rails.logger.info("Payment processed")
+end
+```
+
+Callbacks are inherited. Child handlers run parent callbacks first.
+
+### Transactions
+
+Handlers can opt into database transactions and deferred `after_commit`:
+
+```ruby
+class FulfillOrder < Dex::Event::Handler
+  on OrderPlaced
+  transaction
+
+  def perform
+    order = Order.find(event.order_id)
+    order.update!(status: "fulfilled")
+
+    after_commit { Shipment::Ship.new(order_id: order.id).async.call }
+  end
+end
+```
+
+Transactions are **disabled by default** on handlers (unlike operations). Opt in with `transaction`. The `after_commit` block defers until the transaction commits; on exception, deferred blocks are discarded.
+
+### Custom Pipeline
+
+Handlers support the same `use` DSL as operations for adding custom wrappers:
+
+```ruby
+class Monitored < Dex::Event::Handler
+  use MetricsWrapper, as: :metrics
+
+  def perform
+    # ...
+  end
+end
+```
+
+Default handler pipeline: `[:transaction, :callback]`.
+
 ---
 
 ## Tracing (Causality)

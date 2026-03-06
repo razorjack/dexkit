@@ -3,6 +3,8 @@
 module Dex
   class Event
     class Handler
+      include Dex::Executable
+
       attr_reader :event
 
       def self.on(*event_classes)
@@ -36,7 +38,7 @@ module Dex
       def self._event_handle(event)
         instance = new
         instance.instance_variable_set(:@event, event)
-        instance.perform
+        instance.send(:call)
       end
 
       def self._event_handle_from_payload(event_class_name, payload, metadata_hash)
@@ -67,6 +69,23 @@ module Dex
           instance.freeze
           instance
         end
+      end
+
+      use TransactionWrapper
+      use CallbackWrapper
+
+      transaction false
+      private :call
+
+      # Guard must be defined after `include Executable` (which defines #call).
+      def self.method_added(method_name)
+        super
+
+        if method_name == :call
+          raise ArgumentError, "#{name || "Handler"} must not define #call — define #perform instead"
+        end
+
+        private :perform if method_name == :perform
       end
 
       def perform

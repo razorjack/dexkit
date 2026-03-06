@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+### Added
+
+- **Handler callbacks** — `Dex::Event::Handler` now supports `before`, `after`, and `around` callbacks, same DSL as operations
+- **Handler transactions** — `Dex::Event::Handler` supports `transaction` and `after_commit` DSL. Transactions are disabled by default on handlers (opt in with `transaction`)
+- **Handler pipeline** — `Dex::Event::Handler` supports `use` for adding custom wrapper modules, same as operations
+- **`Dex::Executable`** — shared execution skeleton (Settings, Pipeline, `use` DSL) extracted from Operation and used by both Operation and Handler
+
+### Breaking
+
+- **`transaction false` fully opts out** — operations with `transaction false` no longer route `after_commit` through the database adapter. Previously, `after_commit` on a non-transactional operation would still detect and defer to ambient database transactions (e.g., `ActiveRecord::Base.transaction { op.call }`); now it fires callbacks directly after the pipeline completes. To restore ambient transaction awareness, remove `transaction false` or use `transaction` (enabled)
+
 ## 0.5.0 - 2026-03-05
 
 ### Added
