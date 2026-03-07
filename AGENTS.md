@@ -8,6 +8,9 @@ Ruby library providing base classes for service/operation, event, and form objec
 2. Short over verbose, but unambiguous.
 3. Batteries included by default, opt-out possible.
 4. Tests read like examples — succinct, no bloat.
+5. Fail fast, fail loud — invalid inputs, undeclared codes, type mismatches raise immediately with prescriptive error messages. No silent failures.
+6. Declare intent, enforce mechanically — contracts are declared at the class level and enforced at runtime. Rules live in code, not in documentation.
+7. Own the mechanics, not the domain — execution structure is opinionated, what goes inside isn't.
 
 ## File Structure
 
