@@ -69,6 +69,36 @@ end
 Order::Fulfill.new(order_id: 123).async(queue: "fulfillment").call
 ```
 
+**Idempotency** with `once` — run an operation at most once for a given key. Results are replayed on duplicates:
+
+```ruby
+class Payment::Charge < Dex::Operation
+  prop :order_id, Integer
+  prop :amount, Integer
+
+  once :order_id                          # key from prop
+  # once :order_id, :merchant_id          # composite key
+  # once                                  # all props as key
+  # once { "custom-#{order_id}" }         # block-based key
+  # once :order_id, expires_in: 24.hours  # expiring key
+
+  def perform
+    Gateway.charge!(order_id, amount)
+  end
+end
+
+# Call-site key (overrides class-level declaration)
+Payment::Charge.new(order_id: 1, amount: 500).once("ext-key-123").call
+
+# Bypass once guard for a single call
+Payment::Charge.new(order_id: 1, amount: 500).once(nil).call
+
+# Clear a stored key to allow re-execution
+Payment::Charge.clear_once!(order_id: 1)
+```
+
+Business errors are replayed; exceptions release the key so the operation can be retried. Requires the record backend (recording is enabled by default when `record_class` is configured).
+
 **Transactions** on by default, **advisory locking**, **recording** to database, **callbacks**, and a customizable **pipeline** – all composable, all optional.
 
 ### Testing

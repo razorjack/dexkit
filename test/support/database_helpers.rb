@@ -24,12 +24,27 @@ module DatabaseHelpers
           t.datetime :once_key_expires_at
           t.datetime :performed_at
           t.timestamps
+
+          t.index :once_key, unique: true
         end
 
         # Minimal operation record (for testing optional fields)
         create_table :minimal_operation_records, force: true do |t|
           t.string :name, null: false
           t.timestamps
+        end
+
+        # Operation record with once_key but no once_key_expires_at
+        create_table :once_no_expiry_records, force: true do |t|
+          t.string :name, null: false
+          t.string :status, null: false
+          t.json :params
+          t.json :result
+          t.string :once_key
+          t.datetime :performed_at
+          t.timestamps
+
+          t.index :once_key, unique: true
         end
 
         # Test model for transaction tests
@@ -43,6 +58,7 @@ module DatabaseHelpers
     # Define ActiveRecord models (only if not already defined)
     Object.const_set(:OperationRecord, Class.new(ActiveRecord::Base)) unless defined?(OperationRecord)
     Object.const_set(:MinimalOperationRecord, Class.new(ActiveRecord::Base)) unless defined?(MinimalOperationRecord)
+    Object.const_set(:OnceNoExpiryRecord, Class.new(ActiveRecord::Base)) unless defined?(OnceNoExpiryRecord)
     Object.const_set(:TestModel, Class.new(ActiveRecord::Base)) unless defined?(TestModel)
   end
 end

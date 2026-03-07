@@ -11,10 +11,10 @@ Every operation runs through a pipeline of middleware steps. Understanding the p
 The default pipeline, from outermost to innermost:
 
 ```
-result > lock > transaction > record > rescue > callbacks > perform
+result > once > lock > record > transaction > rescue > callbacks > perform
 ```
 
-Each step wraps everything inside it. For example, `transaction` wraps `record`, `rescue`, `callbacks`, and `perform` – so all of those run inside a database transaction.
+Each step wraps everything inside it. For example, `record` wraps `transaction`, `rescue`, `callbacks`, and `perform` – so all outcomes (success, error, exception) are captured regardless of transaction rollbacks.
 
 ## Inspecting the pipeline
 
@@ -22,9 +22,10 @@ Each step wraps everything inside it. For example, `transaction` wraps `record`,
 Employee::Onboard.pipeline.steps
 # => [
 #   #<data name=:result, method=:_result_wrap>,
+#   #<data name=:once, method=:_once_wrap>,
 #   #<data name=:lock, method=:_lock_wrap>,
-#   #<data name=:transaction, method=:_transaction_wrap>,
 #   #<data name=:record, method=:_record_wrap>,
+#   #<data name=:transaction, method=:_transaction_wrap>,
 #   #<data name=:rescue, method=:_rescue_wrap>,
 #   #<data name=:callback, method=:_callback_wrap>
 # ]

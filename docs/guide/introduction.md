@@ -70,7 +70,7 @@ in Err(code: :out_of_stock)
 end
 ```
 
-And there's more – [async execution](/operation/async) via ActiveJob, [advisory locks](/operation/advisory-lock), [DB recording](/operation/recording), [`rescue_from`](/operation/errors#rescue_from) for third-party exceptions, [callbacks](/operation/callbacks), and a [customizable pipeline](/operation/pipeline).
+And there's more – [async execution](/operation/async) via ActiveJob, [idempotency](/operation/once) with `once`, [advisory locks](/operation/advisory-lock), [DB recording](/operation/recording), [`rescue_from`](/operation/errors#rescue_from) for third-party exceptions, [callbacks](/operation/callbacks), and a [customizable pipeline](/operation/pipeline).
 
 ### Events
 

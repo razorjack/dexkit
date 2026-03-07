@@ -69,5 +69,5 @@ end
 Advisory locking runs outside the transaction boundary. The lock is acquired first, then the transaction begins. This is the correct ordering – you don't want to hold a transaction open while waiting for a lock.
 
 ```
-lock > transaction > record > rescue > callbacks > perform
+result > once > lock > record > transaction > rescue > callbacks > perform
 ```

@@ -38,7 +38,7 @@ Both forms do the same thing: instantiate with properties, then execute the pipe
 Behind the scenes, `call` doesn't just run `perform` – it runs it through a pipeline of wrapper steps. The default pipeline, from outermost to innermost:
 
 ```
-result > lock > transaction > record > rescue > callbacks > perform
+result > once > lock > record > transaction > rescue > callbacks > perform
 ```
 
 Each step wraps the next one. Transactions wrap your database calls. Callbacks hook into the lifecycle. Errors are caught and converted. You get all of this out of the box, and every step can be configured or disabled.

@@ -21,7 +21,9 @@ module Dex
 
       def enqueue_direct_job
         job = apply_options(Operation::DirectJob)
-        job.perform_later(class_name: operation_class_name, params: serialized_params)
+        payload = { class_name: operation_class_name, params: serialized_params }
+        apply_once_payload!(payload)
+        job.perform_later(**payload)
       end
 
       def enqueue_record_job
@@ -32,7 +34,9 @@ module Dex
         )
         begin
           job = apply_options(Operation::RecordJob)
-          job.perform_later(class_name: operation_class_name, record_id: record.id.to_s)
+          payload = { class_name: operation_class_name, record_id: record.id.to_s }
+          apply_once_payload!(payload)
+          job.perform_later(**payload)
         rescue => e
           begin
             record.destroy
@@ -66,6 +70,18 @@ module Dex
         return if defined?(ActiveJob::Base)
 
         raise LoadError, "ActiveJob is required for async operations. Add 'activejob' to your Gemfile."
+      end
+
+      def apply_once_payload!(payload)
+        return unless @operation.instance_variable_defined?(:@_once_key_explicit) &&
+          @operation.instance_variable_get(:@_once_key_explicit)
+
+        once_key = @operation.instance_variable_get(:@_once_key)
+        if once_key
+          payload[:once_key] = once_key
+        else
+          payload[:once_bypass] = true
+        end
       end
 
       def merged_options

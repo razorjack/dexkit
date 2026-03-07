@@ -230,7 +230,7 @@ class TestOperationRecording < Minitest::Test
 
       op.new(name: "Test").call
 
-      assert_equal({ "value" => 42 }, OperationRecord.last.result)
+      assert_equal({ "_dex_value" => 42 }, OperationRecord.last.result)
     end
   end
 
@@ -327,7 +327,7 @@ class TestOperationRecording < Minitest::Test
 
       assert_equal "early result", result
       assert_equal 1, OperationRecord.count
-      assert_equal({ "value" => "early result" }, OperationRecord.last.result)
+      assert_equal({ "_dex_value" => "early result" }, OperationRecord.last.result)
     end
   end
 

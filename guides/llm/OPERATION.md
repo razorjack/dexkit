@@ -11,7 +11,7 @@ All examples below build on this operation unless noted otherwise:
 ```ruby
 class CreateUser < Dex::Operation
   prop :email, String
-  prop :name,  String
+  prop :name, String
   prop? :role, _Union("admin", "member"), default: "member"
 
   success _Ref(User)
@@ -36,9 +36,10 @@ end
 CreateUser.call(email: "a@b.com", name: "Alice")            # shorthand for new(...).call
 CreateUser.new(email: "a@b.com", name: "Alice").safe.call    # Ok/Err wrapper
 CreateUser.new(email: "a@b.com", name: "Alice").async.call   # background job
+CreateUser.new(email: "a@b.com", name: "Alice").once("key").call  # call-site idempotency
 ```
 
-Use `new(...)` form when chaining modifiers (`.safe`, `.async`).
+Use `new(...)` form when chaining modifiers (`.safe`, `.async`, `.once`).
 
 ---
 
@@ -63,33 +64,33 @@ Types use `===` for validation. All constructors available in the operation clas
 | `_Ref(Model)` | Model reference | `_Ref(User)`, `_Ref(Account, lock: true)` |
 
 ```ruby
-prop :name,     String                       # any String
-prop :count,    Integer                      # any Integer
-prop :amount,   Float                        # any Float
-prop :amount,   BigDecimal                   # any BigDecimal
-prop :data,     Hash                         # any Hash
-prop :items,    Array                        # any Array
-prop :active,   _Boolean                     # true or false
-prop :role,     Symbol                       # any Symbol
-prop :count,    _Integer(1..)                # Integer >= 1
-prop :count,    _Integer(0..100)             # Integer 0–100
-prop :name,     _String(length: 1..255)      # String with length constraint
-prop :score,    _Float(0.0..1.0)             # Float in range
-prop :tags,     _Array(String)               # Array of Strings
-prop :ids,      _Array(Integer)              # Array of Integers
-prop :matrix,   _Array(_Array(Integer))      # nested typed arrays
+prop :name, String                       # any String
+prop :count, Integer                      # any Integer
+prop :amount, Float                        # any Float
+prop :amount, BigDecimal                   # any BigDecimal
+prop :data, Hash                         # any Hash
+prop :items, Array                        # any Array
+prop :active, _Boolean                     # true or false
+prop :role, Symbol                       # any Symbol
+prop :count, _Integer(1..)                # Integer >= 1
+prop :count, _Integer(0..100)             # Integer 0–100
+prop :name, _String(length: 1..255)      # String with length constraint
+prop :score, _Float(0.0..1.0)             # Float in range
+prop :tags, _Array(String)               # Array of Strings
+prop :ids, _Array(Integer)              # Array of Integers
+prop :matrix, _Array(_Array(Integer))      # nested typed arrays
 prop :currency, _Union("USD", "EUR", "GBP")  # enum of values
-prop :id,       _Union(String, Integer)      # union of types
-prop :label,    _Nilable(String)             # String or nil
-prop :meta,     _Hash(Symbol, String)        # Hash with typed keys+values
-prop :pair,     _Tuple(String, Integer)      # fixed-size typed array
-prop :name,     _Frozen(String)              # must be frozen
-prop :handler,  _Callable                    # anything responding to .call
-prop :handler,  _Interface(:call, :arity)    # responds to listed methods
-prop :user,     _Ref(User)                   # Dex-specific: model by instance or ID
-prop :account,  _Ref(Account, lock: true)    # Dex-specific: with row lock
-prop :title,    String, default: "Untitled"  # default value
-prop? :note,    String                       # optional (nilable, default: nil)
+prop :id, _Union(String, Integer)      # union of types
+prop :label, _Nilable(String)             # String or nil
+prop :meta, _Hash(Symbol, String)        # Hash with typed keys+values
+prop :pair, _Tuple(String, Integer)      # fixed-size typed array
+prop :name, _Frozen(String)              # must be frozen
+prop :handler, _Callable                    # anything responding to .call
+prop :handler, _Interface(:call, :arity)    # responds to listed methods
+prop :user, _Ref(User)                   # Dex-specific: model by instance or ID
+prop :account, _Ref(Account, lock: true)    # Dex-specific: with row lock
+prop :title, String, default: "Untitled"  # default value
+prop? :note, String                       # optional (nilable, default: nil)
 ```
 
 ### _Ref(Model)
@@ -154,8 +155,8 @@ begin
   CreateUser.call(email: "bad", name: "A")
 rescue Dex::Error => e
   case e
-  in {code: :not_found} then handle_not_found
-  in {code: :validation_failed, details: {field:}} then handle_field(field)
+  in { code: :not_found } then handle_not_found
+  in { code: :validation_failed, details: { field: } } then handle_field(field)
   end
 end
 ```
@@ -187,7 +188,7 @@ result.value!  # re-raises Dex::Error
 
 ```ruby
 case CreateUser.new(email: "a@b.com", name: "Alice").safe.call
-in Dex::Ok(name:)               then puts "Created #{name}"
+in Dex::Ok(name:) then puts "Created #{name}"
 in Dex::Err(code: :email_taken) then puts "Already exists"
 end
 ```
@@ -202,10 +203,10 @@ Map exceptions to structured `Dex::Error` codes — eliminates begin/rescue boil
 
 ```ruby
 class ChargeCard < Dex::Operation
-  rescue_from Stripe::CardError,                  as: :card_declined
-  rescue_from Stripe::RateLimitError,             as: :rate_limited
+  rescue_from Stripe::CardError, as: :card_declined
+  rescue_from Stripe::RateLimitError, as: :rate_limited
   rescue_from Net::OpenTimeout, Net::ReadTimeout, as: :timeout
-  rescue_from Stripe::APIError,                   as: :provider_error, message: "Stripe is down"
+  rescue_from Stripe::APIError, as: :provider_error, message: "Stripe is down"
 
   def perform
     Stripe::Charge.create(amount: amount, source: token)
@@ -226,7 +227,7 @@ end
 class ProcessOrder < Dex::Operation
   before :validate_stock            # symbol → instance method
   before -> { log("starting") }     # lambda (instance_exec'd)
-  after  :send_confirmation         # runs after successful perform
+  after :send_confirmation         # runs after successful perform
   around :with_timing               # wraps everything, must yield
 
   def validate_stock
@@ -334,8 +335,8 @@ create_table :operation_records do |t|
   t.string :error_code          # Dex::Error code or exception class
   t.string :error_message       # human-readable message
   t.jsonb :error_details       # structured details hash
-  t.string :once_key            # idempotency key (reserved)
-  t.datetime :once_key_expires_at # key expiry (reserved)
+  t.string :once_key            # idempotency key (used by `once`)
+  t.datetime :once_key_expires_at # key expiry (used by `once`)
   t.datetime :performed_at        # execution completion timestamp
   t.timestamps
 end
@@ -358,6 +359,68 @@ All outcomes are recorded — success (`completed`), business errors (`error`), 
 Status values: `pending` (async enqueued), `running` (async executing), `completed` (success), `error` (business error via `error!`), `failed` (unhandled exception).
 
 When both async and recording are enabled, dexkit automatically stores only the record ID in the job payload instead of full params.
+
+---
+
+## Idempotency (once)
+
+Prevent duplicate execution with `once`. Requires recording to be configured (uses the record backend to store and look up idempotency keys).
+
+**Class-level declaration:**
+
+```ruby
+class ChargeOrder < Dex::Operation
+  prop :order_id, Integer
+  once :order_id                              # key: "ChargeOrder/order_id=123"
+
+  def perform
+    Stripe::Charge.create(amount: order.total)
+  end
+end
+```
+
+Key forms:
+
+```ruby
+once :order_id                                # single prop → "ClassName/order_id=1"
+once :merchant_id, :plan_id                   # composite  → "ClassName/merchant_id=1/plan_id=2" (sorted)
+once                                          # bare — all props as key
+once { "payment-#{order_id}" }                # block — custom key (no auto scoping)
+once :user_id, expires_in: 24.hours           # key expires after duration
+```
+
+**Call-site key** — override or add idempotency at the call site:
+
+```ruby
+MyOp.new(payload: "data").once("webhook-123").call   # explicit key
+MyOp.new(order_id: 1).once(nil).call                 # bypass once guard entirely
+```
+
+Works without a class-level `once` declaration — useful for one-off idempotency from controllers or jobs.
+
+**Replay behavior:**
+
+- Success results and business errors (`error!`) are replayed from the stored record. The operation does not re-execute.
+- Unhandled exceptions release the key — the next call retries normally.
+- Works with `.safe.call` (replays as `Ok`/`Err`) and `.async.call`.
+
+**Clearing keys:**
+
+```ruby
+ChargeOrder.clear_once!(order_id: 1)      # by prop values (builds scoped key)
+ChargeOrder.clear_once!("webhook-123")    # by raw string key
+```
+
+Clearing is idempotent — clearing a non-existent key is a no-op. After clearing, the next call executes normally.
+
+**Pipeline position:** result → **once** → lock → record → transaction → rescue → callback. The once check runs before locking and recording, so duplicate calls short-circuit early.
+
+**Requirements:**
+
+- Record backend must be configured (`Dex.configure { |c| c.record_class = OperationRecord }`)
+- The record table must have `once_key` and `once_key_expires_at` columns (see Recording schema above)
+- `once` cannot be declared with `record false` — raises `ArgumentError`
+- Only one `once` declaration per operation
 
 ---
 
@@ -400,7 +463,7 @@ class CreateUserTest < Minitest::Test
 
   def test_example
     result = call_operation(email: "a@b.com", name: "Alice")   # => Ok or Err (safe)
-    value  = call_operation!(email: "a@b.com", name: "Alice")  # => raw value or raises
+    value = call_operation!(email: "a@b.com", name: "Alice")  # => raw value or raises
   end
 end
 ```
@@ -536,7 +599,9 @@ Global log of all operation calls:
 Dex::TestLog.calls                               # all entries
 Dex::TestLog.find(CreateUser)                    # filter by class
 Dex::TestLog.find(CreateUser, email: "a@b.com")  # filter by class + params
-Dex::TestLog.size; Dex::TestLog.empty?; Dex::TestLog.clear!
+Dex::TestLog.size
+Dex::TestLog.empty?
+Dex::TestLog.clear!
 Dex::TestLog.summary                             # human-readable for failure messages
 ```
 

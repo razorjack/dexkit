@@ -31,6 +31,7 @@ lib/
     operation.rb         # Operation class orchestrator (requires all parts)
     operation/
       result_wrapper.rb  # Dex::ResultWrapper
+      once_wrapper.rb    # Dex::OnceWrapper
       record_wrapper.rb  # Dex::RecordWrapper
       transaction_wrapper.rb # Dex::TransactionWrapper
       lock_wrapper.rb    # Dex::LockWrapper

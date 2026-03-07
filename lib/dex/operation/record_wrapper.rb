@@ -89,6 +89,8 @@ module Dex
         }
       end
 
+      attrs[:once_key] = nil if defined?(@_once_key) || self.class.settings_for(:once).fetch(:defined, false)
+
       if _record_has_pending_record?
         Dex.record_backend.update_record(@_dex_record_id, attrs)
       else
@@ -141,7 +143,7 @@ module Dex
         case result
         when nil then nil
         when Hash then result
-        else { value: result }
+        else { _dex_value: result } # namespaced key so replay can distinguish wrapped primitives from user hashes
         end
       end
     end

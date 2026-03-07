@@ -262,6 +262,7 @@ export default defineConfig({
           { text: 'Ok / Err', link: '/operation/safe-mode' },
           { text: 'Callbacks', link: '/operation/callbacks' },
           { text: 'Transactions', link: '/operation/transactions' },
+          { text: 'Idempotency', link: '/operation/once' },
           { text: 'Advisory Locking', link: '/operation/advisory-lock' },
           { text: 'Async', link: '/operation/async' },
           { text: 'Recording', link: '/operation/recording' },

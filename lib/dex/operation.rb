@@ -2,6 +2,7 @@
 
 # Wrapper modules (loaded before class body so `include`/`use` can find them)
 require_relative "operation/result_wrapper"
+require_relative "operation/once_wrapper"
 require_relative "operation/record_wrapper"
 require_relative "operation/transaction_wrapper"
 require_relative "operation/lock_wrapper"
@@ -40,7 +41,7 @@ module Dex
       end
     end
 
-    RESERVED_PROP_NAMES = %i[call perform async safe initialize].to_set.freeze
+    RESERVED_PROP_NAMES = %i[call perform async safe once initialize].to_set.freeze
 
     include Executable
     include PropsSetup
@@ -88,6 +89,7 @@ module Dex
     include SafeWrapper
 
     use ResultWrapper
+    use OnceWrapper
     use LockWrapper
     use RecordWrapper
     use TransactionWrapper

@@ -9,20 +9,25 @@ module Dex
       case name
       when :DirectJob
         const_set(:DirectJob, Class.new(ActiveJob::Base) do
-          def perform(class_name:, params:)
+          def perform(class_name:, params:, once_key: nil, once_bypass: false)
             klass = class_name.constantize
-            klass.new(**klass.send(:_coerce_serialized_hash, params)).call
+            op = klass.new(**klass.send(:_coerce_serialized_hash, params))
+            op.once(once_key) if once_key
+            op.once(nil) if once_bypass
+            op.call
           end
         end)
       when :RecordJob
         const_set(:RecordJob, Class.new(ActiveJob::Base) do
-          def perform(class_name:, record_id:)
+          def perform(class_name:, record_id:, once_key: nil, once_bypass: false)
             klass = class_name.constantize
             record = Dex.record_backend.find_record(record_id)
             params = klass.send(:_coerce_serialized_hash, record.params || {})
 
             op = klass.new(**params)
             op.instance_variable_set(:@_dex_record_id, record_id)
+            op.once(once_key) if once_key
+            op.once(nil) if once_bypass
 
             update_status(record_id, status: "running")
             pipeline_started = true
