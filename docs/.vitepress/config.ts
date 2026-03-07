@@ -227,6 +227,12 @@ export default defineConfig({
     const robots = ['User-agent: *', 'Allow: /', '', `Sitemap: ${new URL('sitemap.xml', SITE_URL).toString()}`, ''].join('\n')
     await writeFile(join(siteConfig.outDir, 'robots.txt'), robots)
   },
+  markdown: {
+    theme: {
+      light: 'catppuccin-latte',
+      dark: 'catppuccin-mocha'
+    }
+  },
   themeConfig: {
     lastUpdated: { text: 'Last updated' },
     nav: [
