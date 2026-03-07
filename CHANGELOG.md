@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.6.0] - 2026-03-07
+
 ### Added
 
 - **Handler callbacks** — `Dex::Event::Handler` now supports `before`, `after`, and `around` callbacks, same DSL as operations
