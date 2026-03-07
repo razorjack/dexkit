@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
 
   spec.summary = "dexkit: Rails Patterns Toolbelt. Equip to gain +4 DEX"
   spec.description = "A toolbelt of patterns for your Rails applications: Operation, Event, Form"
-  spec.homepage = "https://github.com/razorjack/dexkit"
+  spec.homepage = "https://dex.razorjack.net/"
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2.0"
 
@@ -19,6 +19,7 @@ Gem::Specification.new do |spec|
   spec.metadata["homepage_uri"] = spec.homepage
   spec.metadata["source_code_uri"] = "https://github.com/razorjack/dexkit"
   spec.metadata["changelog_uri"] = "https://github.com/razorjack/dexkit/blob/master/CHANGELOG.md"
+  spec.metadata["documentation_uri"] = "https://dex.razorjack.net/"
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
