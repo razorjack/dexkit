@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "set"
-
 # Modules loaded before class body (no reference to Dex::Event needed)
 require_relative "event/execution_state"
 require_relative "event/metadata"
