@@ -91,6 +91,10 @@ test/
     test_*.rb            # Per-type test files
 ```
 
+## Ruby Version
+
+**Minimum: Ruby 3.2.** No support for 3.1 or earlier. This lets us use `Fiber.[]` storage and other 3.2+ features without fallbacks.
+
 ## Core Dependencies
 
 **Runtime:** `activemodel`, `literal`, `zeitwerk`
