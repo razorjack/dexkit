@@ -42,6 +42,28 @@ Shipment::Reserved.publish(order_id: 1, caused_by: order_event)
 
 The child event's `caused_by_id` is set to the parent's `id`, and they share the same `trace_id`. See [Tracing](./tracing) for details.
 
+## Context
+
+Events support the same `context` DSL as operations. Context-mapped props are resolved at **publish time** and stored as regular props on the event – handlers don't need ambient context because the event carries everything:
+
+```ruby
+class Order::Placed < Dex::Event
+  prop :order_id, Integer
+  prop :customer, _Ref(Customer)
+  context customer: :current_customer
+end
+
+# Inside a Dex.with_context block, customer is auto-filled:
+Dex.with_context(current_customer: customer) do
+  Order::Placed.publish(order_id: 1)
+end
+
+# Or pass explicitly – no context needed:
+Order::Placed.publish(order_id: 1, customer: customer)
+```
+
+See [Ambient Context](/operation/context#events) for the full story.
+
 ## What happens on publish
 
 1. Check [suppression](./tracing#suppression) — skip if suppressed

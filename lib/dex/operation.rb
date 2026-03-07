@@ -47,6 +47,7 @@ module Dex
     include Executable
     include PropsSetup
     include TypeCoercion
+    include ContextSetup
 
     Contract = Data.define(:params, :success, :errors, :guards)
 

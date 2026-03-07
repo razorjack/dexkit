@@ -15,6 +15,7 @@ module Dex
 
     include PropsSetup
     include TypeCoercion
+    include ContextSetup
 
     def self._warn(message)
       Dex.warn("Event: #{message}")

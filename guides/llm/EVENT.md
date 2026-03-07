@@ -235,21 +235,43 @@ Persistence failures are silently rescued — they never halt event publishing.
 
 ---
 
-## Context (Optional)
+## Ambient Context
 
-Capture ambient context (current user, tenant, etc.) at publish time:
+Events use the same `context` DSL as operations. Context-mapped props are captured at **publish time** and stored as regular props on the event — handlers don't need ambient context, they read from the event.
 
 ```ruby
-Dex.configure do |c|
-  c.event_context = -> { { user_id: Current.user&.id, tenant: Current.tenant } }
-  c.restore_event_context = ->(ctx) {
-    Current.user = User.find(ctx["user_id"]) if ctx["user_id"]
-    Current.tenant = ctx["tenant"]
-  }
+class Order::Placed < Dex::Event
+  prop :order_id, Integer
+  prop :customer, _Ref(Customer)
+  context customer: :current_customer   # resolved at publish time
+end
+
+# In a controller with Dex.with_context(current_customer: customer):
+Order::Placed.publish(order_id: 1)   # customer auto-filled from context
+
+# Or pass explicitly:
+Order::Placed.publish(order_id: 1, customer: customer)
+```
+
+Handlers receive the event with everything already set — no `context` needed on handlers:
+
+```ruby
+class AuditTrail < Dex::Event::Handler
+  on Order::Placed
+
+  def perform
+    AuditLog.create!(customer: event.customer, action: "placed", order_id: event.order_id)
+  end
 end
 ```
 
-Context is stored in event metadata and restored before async handler execution.
+**Resolution order:** explicit kwarg → ambient context → prop default → TypeError.
+
+**Introspection:** `MyEvent.context_mappings` returns the mapping hash.
+
+### Legacy Context (Metadata)
+
+The older `event_context` / `restore_event_context` configuration captures arbitrary metadata at publish time and restores it before async handler execution. Both mechanisms coexist.
 
 ---
 

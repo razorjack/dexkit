@@ -44,6 +44,7 @@ Order::Placed.publish(order_id: 1, total: 99.99)
 - **Async by default** — handlers dispatched via ActiveJob
 - **Causality tracing** — link events in chains with shared `trace_id`
 - **Suppression** — block-scoped silencing for tests and migrations
+- **Ambient context** — auto-fill props from `Dex.with_context`, captured at publish time
 - **Optional persistence** — store events to DB when configured
 - **Test helpers** — event capturing, assertions, trace verification
 

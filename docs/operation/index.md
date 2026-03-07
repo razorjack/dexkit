@@ -85,6 +85,7 @@ Settings, callbacks, error declarations, and pipeline steps all inherit from par
 ## What's next
 
 - [Properties & Types](/operation/properties) – defining inputs with type validation
+- [Ambient Context](/operation/context) – auto-fill props from `current_user`, `locale`, etc.
 - [Error Handling](/operation/errors) – `error!`, `assert!`, `success!`, `rescue_from`
 - [Callbacks](/operation/callbacks) – `before`, `after`, `around`
 - [Transactions](/operation/transactions) – automatic database transactions

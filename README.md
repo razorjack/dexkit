@@ -110,6 +110,28 @@ end
 Order::Place.callable?(customer: customer, product: product, quantity: 1)
 ```
 
+**Ambient context** – declare which props come from ambient state. Set once in a controller, auto-fill everywhere:
+
+```ruby
+class Order::Place < Dex::Operation
+  prop :product, _Ref(Product)
+  prop :customer, _Ref(Customer)
+  context customer: :current_customer   # filled from Dex.context[:current_customer]
+
+  def perform
+    Order.create!(product: product, customer: customer)
+  end
+end
+
+# Controller
+Dex.with_context(current_customer: current_customer) do
+  Order::Place.call(product: product)   # customer auto-filled
+end
+
+# Tests – just pass it explicitly
+Order::Place.call(product: product, customer: customer)
+```
+
 **Transactions** on by default, **advisory locking**, **recording** to database, **callbacks**, and a customizable **pipeline** – all composable, all optional.
 
 ### Testing

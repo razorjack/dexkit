@@ -123,6 +123,55 @@ Both inherit from parent class. Without `error` declaration, any code is accepte
 
 ---
 
+## Ambient Context
+
+Map props to ambient context keys so they auto-fill from `Dex.with_context` when not passed explicitly. Explicit kwargs always win.
+
+```ruby
+class Order::Place < Dex::Operation
+  prop :product, _Ref(Product)
+  prop :customer, _Ref(Customer)
+  prop :locale, Symbol
+
+  context customer: :current_customer   # prop :customer ← Dex.context[:current_customer]
+  context :locale                       # shorthand: prop :locale ← Dex.context[:locale]
+end
+```
+
+**Setting context** (controller, middleware):
+
+```ruby
+Dex.with_context(current_customer: customer, locale: I18n.locale) do
+  Order::Place.call(product: product)   # customer + locale auto-filled
+end
+```
+
+**Resolution order:** explicit kwarg → ambient context → prop default → TypeError (if required).
+
+**In tests** — just pass everything explicitly. No `Dex.with_context` needed:
+
+```ruby
+Order::Place.call(product: product, customer: customer, locale: :en)
+```
+
+**Nesting** supported — inner blocks merge with outer, restore on exit. Nested operations inherit the same ambient context.
+
+**Works with guards** — context-mapped props are available in guard blocks and `callable?`:
+
+```ruby
+Dex.with_context(current_customer: customer) do
+  Order::Place.callable?(product: product)
+end
+```
+
+**Works with optional props** (`prop?`) — if ambient context has the key, it fills in. If not, the prop is nil.
+
+**Introspection:** `MyOp.context_mappings` returns `{ customer: :current_customer, locale: :locale }`.
+
+**DSL validation:** `context user: :current_user` raises `ArgumentError` if no `prop :user` has been declared. Context declarations must come after the props they reference.
+
+---
+
 ## Guards
 
 Inline precondition checks. The guard name is the error code, the block detects the **threat** (truthy = threat detected = operation fails):

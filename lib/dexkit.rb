@@ -14,6 +14,7 @@ require_relative "dex/concern"
 require_relative "dex/ref_type"
 require_relative "dex/type_coercion"
 require_relative "dex/props_setup"
+require_relative "dex/context_setup"
 require_relative "dex/error"
 require_relative "dex/settings"
 require_relative "dex/pipeline"
@@ -70,6 +71,21 @@ module Dex
 
     def transaction_adapter=(adapter)
       configuration.transaction_adapter = adapter
+    end
+
+    CONTEXT_KEY = :_dex_context
+    EMPTY_CONTEXT = {}.freeze
+
+    def context
+      Fiber[CONTEXT_KEY] || EMPTY_CONTEXT
+    end
+
+    def with_context(**values)
+      previous = Fiber[CONTEXT_KEY]
+      Fiber[CONTEXT_KEY] = (previous || {}).merge(values)
+      yield
+    ensure
+      Fiber[CONTEXT_KEY] = previous
     end
   end
 end

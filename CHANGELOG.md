@@ -10,6 +10,7 @@
 
 ### Added
 
+- **Ambient context** — `Dex.with_context(current_user: user) { ... }` sets fiber-local ambient state. The `context` DSL on operations and events maps props to ambient keys, auto-filling them when not passed explicitly. Explicit kwargs always win. Works with guards (`callable?`), events (captured at publish time), and nested operations. Introspection via `context_mappings`
 - **`guard` DSL for precondition checks** — named, inline preconditions that detect threats (conditions under which the operation should not proceed). Guards auto-declare error codes, support dependencies (`requires:`), collect all independent failures, and skip dependent guards when a dependency fails. `callable?` and `callable` class methods check guards without running `perform` – useful for UI show/hide, disabled buttons with reasons, and API pre-validation. Contract introspection via `contract.guards`. Test helpers: `assert_callable`, `refute_callable`
 - **`once` DSL for operation idempotency** — ensures an operation executes at most once for a given key, replaying stored results on subsequent calls. Supports prop-based keys (`once :order_id`), composite keys, block-based custom keys, call-site keys (`.once("key")`), optional expiry (`expires_in:`), and `clear_once!` for key management. Business errors are replayed; exceptions release the key for retry. Works with `.safe.call` and `.async.call`
 - **`error_code`, `error_message`, `error_details` columns** — structured error recording replaces the single `error` string column

@@ -23,6 +23,7 @@ lib/
     ref_type.rb          # Dex::RefType (Literal::Type for model references)
     type_coercion.rb     # Dex::TypeCoercion (shared serialization/coercion for Operation + Event)
     props_setup.rb       # Dex::PropsSetup (shared prop/prop?/_Ref DSL for Operation + Event)
+    context_setup.rb     # Dex::ContextSetup (shared context DSL for Operation + Event)
     error.rb             # Dex::Error
     settings.rb          # Dex::Settings (set, settings_for, validate_options!)
     pipeline.rb          # Dex::Pipeline (shared execution pipeline)
