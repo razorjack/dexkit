@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title>dexkit faceted D mark</title>
+  <desc>Angular capital D built from four emerald planes joined by structural bridges.</desc>
+  <defs>
+    <path
+      id="dex-d"
+      fill-rule="evenodd"
+      d="M44 24H120L174 40L210 84L224 128L210 172L174 216L120 232H44V24ZM92 74H118L144 84L168 108L176 128L168 148L144 172L118 182H92V74Z"
+    />
+    <clipPath id="clip-d">
+      <use href="#dex-d"/>
+    </clipPath>
+  </defs>
+
+  <g clip-path="url(#clip-d)">
+    <!-- four planes -->
+    <polygon points="52,32 117,32 133,76 113,119 52,119" fill="#34d399"/>
+    <polygon points="131,32 172,46 206,92 214,125 155,125 141,76" fill="#10b981"/>
+    <polygon points="155,131 214,131 206,164 172,210 131,224 141,180" fill="#059669"/>
+    <polygon points="52,137 113,137 133,180 117,224 52,224" fill="#0d9488"/>
+
+    <!-- bridges connecting adjacent planes -->
+    <rect x="72" y="119" width="16" height="18" fill="#065f46"/>
+    <rect x="180" y="125" width="16" height="6" fill="#065f46"/>
+    <rect x="133" y="72" width="8" height="8" fill="#065f46"/>
+    <rect x="133" y="176" width="8" height="8" fill="#065f46"/>
+  </g>
+</svg>

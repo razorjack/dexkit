@@ -153,6 +153,7 @@ export default defineConfig({
   srcExclude: ['**/AGENTS.md', '**/CLAUDE.md'],
   lastUpdated: true,
   head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/logo.svg' }],
     ['meta', { name: 'application-name', content: SITE_NAME }],
     ['meta', { name: 'theme-color', content: '#111827' }],
     ['meta', { property: 'og:site_name', content: SITE_NAME }],
@@ -312,6 +313,7 @@ export default defineConfig({
       message: 'Released under the MIT License.',
       copyright: 'Made by <a href="https://razorjack.net">Jacek Galanciak</a>'
     },
+    logo: '/logo.svg',
     socialLinks: [{ icon: 'github', link: 'https://github.com/razorjack/dexkit' }]
   }
 })
