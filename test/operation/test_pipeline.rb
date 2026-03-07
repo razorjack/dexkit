@@ -11,7 +11,7 @@ class TestOperationPipeline < Minitest::Test
 
   def test_default_pipeline_step_order
     names = Dex::Operation.pipeline.steps.map(&:name)
-    assert_equal %i[result lock transaction record rescue callback], names
+    assert_equal %i[result lock record transaction rescue callback], names
   end
 
   def test_pipeline_steps_returns_frozen_list

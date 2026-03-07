@@ -113,8 +113,8 @@ class TestOperationAsyncRecord < Minitest::Test
       )
 
       record.reload
-      assert_equal "done", record.status
-      assert_equal({ "greeting" => "Hello World" }, record.response)
+      assert_equal "completed", record.status
+      assert_equal({ "greeting" => "Hello World" }, record.result)
       refute_nil record.performed_at
     end
   end
@@ -173,8 +173,8 @@ class TestOperationAsyncRecord < Minitest::Test
       end
 
       record = OperationRecord.last
-      assert_equal "done", record.status
-      assert_equal({ "name" => "FullTrip" }, record.response)
+      assert_equal "completed", record.status
+      assert_equal({ "name" => "FullTrip" }, record.result)
     end
   end
 
@@ -198,7 +198,7 @@ class TestOperationAsyncRecord < Minitest::Test
       )
 
       record.reload
-      assert_equal "done", record.status
+      assert_equal "completed", record.status
     end
   end
 
@@ -220,8 +220,9 @@ class TestOperationAsyncRecord < Minitest::Test
       end
 
       record.reload
-      assert_equal "failed", record.status
-      assert_equal "bad_input", record.error
+      assert_equal "error", record.status
+      assert_equal "bad_input", record.error_code
+      assert_equal "Invalid", record.error_message
     end
   end
 
@@ -244,7 +245,8 @@ class TestOperationAsyncRecord < Minitest::Test
 
       record.reload
       assert_equal "failed", record.status
-      assert_equal "RuntimeError", record.error
+      assert_equal "RuntimeError", record.error_code
+      assert_equal "boom", record.error_message
     end
   end
 
@@ -271,25 +273,25 @@ class TestOperationAsyncRecord < Minitest::Test
     end
   end
 
-  def test_record_response_false_skips_response_on_done
+  def test_record_result_false_skips_result_on_completed
     with_recording do
-      define_operation(:TestRecordResponseFalseAsync) do
-        record response: false
+      define_operation(:TestRecordResultFalseAsync) do
+        record result: false
         prop :name, String
         def perform = { greeting: "Hello" }
       end
 
-      TestRecordResponseFalseAsync.new(name: "Test").async.call
+      TestRecordResultFalseAsync.new(name: "Test").async.call
       record = OperationRecord.last
 
       Dex::Operation::RecordJob.new.perform(
-        class_name: "TestRecordResponseFalseAsync",
+        class_name: "TestRecordResultFalseAsync",
         record_id: record.id
       )
 
       record.reload
-      assert_equal "done", record.status
-      assert_nil record.response
+      assert_equal "completed", record.status
+      assert_nil record.result
     end
   end
 
@@ -308,17 +310,17 @@ class TestOperationAsyncRecord < Minitest::Test
 
   # --- Sync path still sets status ---
 
-  def test_sync_call_sets_done_status
+  def test_sync_call_sets_completed_status
     with_recording do
-      define_operation(:TestSyncDoneStatus) do
+      define_operation(:TestSyncCompletedStatus) do
         prop :name, String
         def perform = nil
       end
 
-      TestSyncDoneStatus.new(name: "Test").call
+      TestSyncCompletedStatus.new(name: "Test").call
 
       record = OperationRecord.last
-      assert_equal "done", record.status
+      assert_equal "completed", record.status
     end
   end
 
@@ -338,6 +340,33 @@ class TestOperationAsyncRecord < Minitest::Test
       assert_enqueued_with(job: Dex::Operation::RecordJob, queue: "low") do
         op_class.new(name: "Test").async(queue: "low").call
       end
+    end
+  end
+
+  def test_pre_call_failure_marks_record_failed
+    with_recording do
+      op_class = define_operation(:TestPreCallFailure) do
+        prop :model, _Ref(TestModel)
+        def perform = model
+      end
+
+      model = TestModel.create!(name: "Temp")
+      op_class.new(model: model).async.call
+      record = OperationRecord.last
+      model.destroy!
+
+      assert_raises(ActiveRecord::RecordNotFound) do
+        Dex::Operation::RecordJob.new.perform(
+          class_name: "TestPreCallFailure",
+          record_id: record.id
+        )
+      end
+
+      record.reload
+      assert_equal "failed", record.status
+      assert_equal "ActiveRecord::RecordNotFound", record.error_code
+      refute_nil record.error_message
+      refute_nil record.performed_at
     end
   end
 end

@@ -164,7 +164,7 @@ class TestTypesRef < Minitest::Test
 
       record = OperationRecord.last
       assert_equal({ "model" => model.id }, record.params)
-      assert_equal model.id, record.response
+      assert_equal model.id, record.result
     end
   end
 

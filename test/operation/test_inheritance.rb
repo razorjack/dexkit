@@ -216,7 +216,8 @@ class TestOperationInheritance < Minitest::Test
       err = assert_raises(Dex::Error) { child.new(name: "test").call }
 
       assert_equal :not_found, err.code
-      assert_equal 0, OperationRecord.count, "error! should prevent recording"
+      assert_equal 1, OperationRecord.count, "error! should record with error status"
+      assert_equal "error", OperationRecord.last.status
     end
   end
 

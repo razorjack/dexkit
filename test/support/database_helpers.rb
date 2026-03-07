@@ -14,10 +14,14 @@ module DatabaseHelpers
         # Full operation record with all fields
         create_table :operation_records, force: true do |t|
           t.string :name, null: false
-          t.json :params, default: {}
-          t.json :response
-          t.string :status
-          t.string :error
+          t.json :params
+          t.json :result
+          t.string :status, null: false
+          t.string :error_code
+          t.string :error_message
+          t.json :error_details
+          t.string :once_key
+          t.datetime :once_key_expires_at
           t.datetime :performed_at
           t.timestamps
         end

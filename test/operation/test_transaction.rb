@@ -141,9 +141,9 @@ class TestOperationTransaction < Minitest::Test
     assert_equal({ status: "success", count: 1 }, result)
   end
 
-  def test_record_save_inside_transaction
+  def test_record_save_outside_transaction
     with_recording do
-      op = define_operation(:TestRecordInTransaction) do
+      op = define_operation(:TestRecordOutsideTransaction) do
         prop :name, String
         def perform
           TestModel.create!(name: "TestModel")
@@ -153,8 +153,9 @@ class TestOperationTransaction < Minitest::Test
 
       assert_raises(RuntimeError) { op.new(name: "Test").call }
 
-      # Both operation record and test model should be rolled back
-      assert_equal 0, OperationRecord.count
+      # Test model rolled back, but operation record persists (recorded outside transaction)
+      assert_equal 1, OperationRecord.count
+      assert_equal "failed", OperationRecord.last.status
       assert_equal 0, TestModel.count
     end
   end

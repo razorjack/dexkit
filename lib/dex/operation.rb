@@ -89,8 +89,8 @@ module Dex
 
     use ResultWrapper
     use LockWrapper
-    use TransactionWrapper
     use RecordWrapper
+    use TransactionWrapper
     use RescueWrapper
     use CallbackWrapper
   end

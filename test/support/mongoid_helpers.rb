@@ -69,9 +69,13 @@ module MongoidHelpers
 
         field :name, type: String
         field :params, type: Hash
-        field :response, type: Object
+        field :result, type: Object
         field :status, type: String
-        field :error, type: String
+        field :error_code, type: String
+        field :error_message, type: String
+        field :error_details, type: Hash
+        field :once_key, type: String
+        field :once_key_expires_at, type: Time
         field :performed_at, type: Time
       end)
     end

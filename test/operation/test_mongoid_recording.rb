@@ -41,17 +41,17 @@ class TestOperationMongoidRecording < Minitest::Test
 
       record = MongoOperationRecord.last
       assert_equal "MongoidSyncRecordingOp", record.name
-      assert_equal "done", record.status
+      assert_equal "completed", record.status
       assert_equal({ "name" => "World" }, normalize_hash(record.params))
-      assert_equal({ "greeting" => "Hello World" }, normalize_hash(record.response))
+      assert_equal({ "greeting" => "Hello World" }, normalize_hash(record.result))
       refute_nil record.performed_at
     end
   end
 
-  def test_recording_respects_params_and_response_options
+  def test_recording_respects_params_and_result_options
     with_mongoid_recording do
       op = define_operation(:MongoidSelectiveRecordingOp) do
-        record params: false, response: false
+        record params: false, result: false
         prop :name, String
 
         def perform
@@ -63,8 +63,8 @@ class TestOperationMongoidRecording < Minitest::Test
 
       record = MongoOperationRecord.last
       assert_nil record.params
-      assert_nil record.response
-      assert_equal "done", record.status
+      assert_nil record.result
+      assert_equal "completed", record.status
     end
   end
 
@@ -85,11 +85,11 @@ class TestOperationMongoidRecording < Minitest::Test
       record = MinimalMongoOperationRecord.last
       assert_equal "MongoidMinimalRecordingOp", record.name
       refute_includes record.attributes.keys, "params"
-      refute_includes record.attributes.keys, "response"
+      refute_includes record.attributes.keys, "result"
     end
   end
 
-  def test_async_record_job_round_trip_updates_status_and_response
+  def test_async_record_job_round_trip_updates_status_and_result
     with_mongoid_recording do
       op = define_operation(:MongoidAsyncRecordingOp) do
         prop :name, String
@@ -109,14 +109,14 @@ class TestOperationMongoidRecording < Minitest::Test
 
       record.reload
       assert_equal "MongoidAsyncRecordingOp", record.name
-      assert_equal "done", record.status
+      assert_equal "completed", record.status
       assert_equal({ "name" => "Async" }, normalize_hash(record.params))
-      assert_equal({ "greeting" => "Hello Async" }, normalize_hash(record.response))
+      assert_equal({ "greeting" => "Hello Async" }, normalize_hash(record.result))
       refute_nil record.performed_at
     end
   end
 
-  def test_async_record_job_marks_failed_when_operation_raises_dex_error
+  def test_async_record_job_marks_error_when_operation_raises_dex_error
     with_mongoid_recording do
       define_operation(:MongoidAsyncFailureOp) do
         prop :name, String
@@ -139,8 +139,9 @@ class TestOperationMongoidRecording < Minitest::Test
       end
 
       record.reload
-      assert_equal "failed", record.status
-      assert_equal "invalid_input", record.error
+      assert_equal "error", record.status
+      assert_equal "invalid_input", record.error_code
+      assert_equal "Nope", record.error_message
     end
   end
 

@@ -1,5 +1,18 @@
 ## [Unreleased]
 
+### Breaking
+
+- **Operation record schema refactored** — the `response` column is renamed to `result`, the `error` column is split into `error_code`, `error_message`, and `error_details`, `params` no longer has `default: {}` (nil means "not captured"), and `status` is now `null: false`. The `record response: false` DSL option is now `record result: false`. Status value `done` is renamed to `completed`, and a new `error` status represents business errors via `error!`
+- **All outcomes now recorded** — previously, only successful operations were recorded in the sync path. Now business errors (`error!`) record with status `error` and populate `error_code`/`error_message`/`error_details`, and unhandled exceptions record with status `failed`
+- **Recording moved outside transaction** — operation records are now persisted outside the database transaction, so error and failure records survive rollbacks. Previously, records were created inside the transaction and would be rolled back alongside the operation's side effects
+- **Pipeline order changed** — `RecordWrapper` now runs before `TransactionWrapper` (was after). The pipeline order is now: result → lock → record → transaction → rescue → callback
+
+### Added
+
+- **`error_code`, `error_message`, `error_details` columns** — structured error recording replaces the single `error` string column
+- **`once_key` and `once_key_expires_at` columns** — reserved for upcoming idempotency feature (inert until `once` ships)
+- **Recommended indexes** — `name`, `status`, and `[:name, :status]` composite index in the migration schema
+
 ## [0.6.0] - 2026-03-07
 
 ### Added

@@ -25,9 +25,12 @@ module Dex
             op.instance_variable_set(:@_dex_record_id, record_id)
 
             update_status(record_id, status: "running")
+            pipeline_started = true
             op.call
           rescue => e
-            handle_failure(record_id, e)
+            # RecordWrapper handles failures during op.call via its own rescue.
+            # This catches pre-pipeline failures (find_record, deserialization, etc.)
+            mark_failed(record_id, e) unless pipeline_started
             raise
           end
 
@@ -39,13 +42,12 @@ module Dex
             Dex.warn("Failed to update record status: #{e.message}")
           end
 
-          def handle_failure(record_id, exception)
-            error_value = if exception.is_a?(Dex::Error)
-              exception.code.to_s
-            else
-              exception.class.name
-            end
-            update_status(record_id, status: "failed", error: error_value)
+          def mark_failed(record_id, exception)
+            update_status(record_id,
+              status: "failed",
+              error_code: exception.class.name,
+              error_message: exception.message,
+              performed_at: Time.respond_to?(:current) ? Time.current : Time.now)
           end
         end)
       when :Job

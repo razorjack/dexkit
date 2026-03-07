@@ -160,7 +160,7 @@ rescue Dex::Error => e
 end
 ```
 
-**Key differences:** `error!`/`assert!` roll back transaction, skip `after` callbacks and recording. `success!` commits, runs `after` callbacks, records normally.
+**Key differences:** `error!`/`assert!` roll back transaction, skip `after` callbacks, but are still recorded (status `error`). `success!` commits, runs `after` callbacks, records normally (status `completed`).
 
 ---
 
@@ -327,27 +327,37 @@ Record execution to database. Requires `Dex.configure { |c| c.record_class = Ope
 
 ```ruby
 create_table :operation_records do |t|
-  t.string   :name           # Required: operation class name
-  t.jsonb    :params         # Optional: serialized props
-  t.jsonb    :response       # Optional: serialized result
-  t.string   :status         # Optional: pending/running/done/failed (for async)
-  t.string   :error          # Optional: error code on failure
-  t.datetime :performed_at   # Optional
+  t.string :name, null: false  # operation class name
+  t.jsonb :params              # serialized props (nil = not captured)
+  t.jsonb :result              # serialized return value
+  t.string :status, null: false # pending/running/completed/error/failed
+  t.string :error_code          # Dex::Error code or exception class
+  t.string :error_message       # human-readable message
+  t.jsonb :error_details       # structured details hash
+  t.string :once_key            # idempotency key (reserved)
+  t.datetime :once_key_expires_at # key expiry (reserved)
+  t.datetime :performed_at        # execution completion timestamp
   t.timestamps
 end
+
+add_index :operation_records, :name
+add_index :operation_records, :status
+add_index :operation_records, [:name, :status]
 ```
 
 Control per-operation:
 
 ```ruby
 record false              # disable entirely
-record response: false    # params only
-record params: false      # response only
+record result: false      # params only
+record params: false      # result only
 ```
 
-Recording happens inside the transaction — rolled back on `error!`/`assert!`. Missing columns silently skipped.
+All outcomes are recorded — success (`completed`), business errors (`error`), and exceptions (`failed`). Recording runs outside the operation's own transaction so error records survive its rollbacks. Records still participate in ambient transactions (e.g., an outer operation's transaction). Missing columns silently skipped.
 
-When both async and recording are enabled, dexkit automatically stores only the record ID in the job payload instead of full params. The record tracks `status` (pending → running → done/failed) and `error` (code or exception class name).
+Status values: `pending` (async enqueued), `running` (async executing), `completed` (success), `error` (business error via `error!`), `failed` (unhandled exception).
+
+When both async and recording are enabled, dexkit automatically stores only the record ID in the job payload instead of full params.
 
 ---
 

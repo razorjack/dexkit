@@ -78,7 +78,8 @@ When [Recording](/operation/recording) is enabled with params, async automatical
 This is selected automatically – no configuration needed. The record tracks status through its lifecycle:
 
 ```
-pending > running > done
+pending > running > completed
+                  > error
                   > failed
 ```
 
@@ -87,10 +88,14 @@ pending > running > done
 Order::SendReport.new(order_id: 123).async.call
 # OperationRecord: status: "pending"
 # → job runs → status: "running"
-# → success  → status: "done"
-# → failure  → status: "failed", error: "error_code"
+# → success  → status: "completed"
+# → error!   → status: "error", error_code: "code", error_message: "..."
+# → exception → status: "failed", error_code: "RuntimeError", error_message: "..."
 ```
 
 ## Error handling
 
-If the job fails, the exception propagates normally through ActiveJob's retry mechanism. When recording is enabled, the record's status is set to `"failed"` and the error field captures either the `Dex::Error` code or the exception class name.
+If the job fails, the exception propagates normally through ActiveJob's retry mechanism. When recording is enabled, the record captures the outcome:
+
+- Business errors (`error!`) set status to `"error"` with `error_code`, `error_message`, and `error_details`
+- Unhandled exceptions set status to `"failed"` with `error_code` (exception class) and `error_message`
