@@ -230,7 +230,7 @@ export default defineConfig({
   markdown: {
     theme: {
       light: 'catppuccin-latte',
-      dark: 'catppuccin-mocha'
+      dark: 'ayu-dark'
     }
   },
   themeConfig: {
