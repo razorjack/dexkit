@@ -119,7 +119,69 @@ error :email_taken, :invalid_email
 
 Both inherit from parent class. Without `error` declaration, any code is accepted.
 
-**Introspection:** `MyOp.contract` returns a frozen `Data` with `params`, `success`, `errors` fields. Supports pattern matching and `to_h`.
+**Introspection:** `MyOp.contract` returns a frozen `Data` with `params`, `success`, `errors`, `guards` fields. Supports pattern matching and `to_h`.
+
+---
+
+## Guards
+
+Inline precondition checks. The guard name is the error code, the block detects the **threat** (truthy = threat detected = operation fails):
+
+```ruby
+class PublishPost < Dex::Operation
+  prop :post, _Ref(Post)
+  prop :user, _Ref(User)
+
+  guard :unauthorized, "Only the author or admins can publish" do
+    !user.admin? && post.author != user
+  end
+
+  guard :already_published, "Post must be in draft state" do
+    post.published?
+  end
+
+  def perform
+    post.update!(published_at: Time.current)
+    post
+  end
+end
+```
+
+- Guards run in declaration order, before `perform`, after `rescue`
+- All independent guards run – failures are collected, not short-circuited
+- Guard names are auto-declared as error codes (no separate `error :unauthorized` needed)
+- Same error code usable with `error!` in `perform`
+
+**Dependencies:** skip dependent guards when a dependency fails:
+
+```ruby
+guard :missing_author, "Author must be present" do
+  author.blank?
+end
+
+guard :unpaid_author, "Author must be a paid subscriber", requires: :missing_author do
+  author.free_plan?
+end
+```
+
+If author is nil: only `:missing_author` is reported. `:unpaid_author` is skipped.
+
+**Introspection** – check guards without running `perform`:
+
+```ruby
+PublishPost.callable?(post: post, user: user)           # => true/false
+PublishPost.callable?(:unauthorized, post: post, user: user) # check specific guard
+result = PublishPost.callable(post: post, user: user)   # => Ok or Err with details
+result.details  # => [{ guard: :unauthorized, message: "..." }, ...]
+```
+
+`callable` bypasses the pipeline – no locks, transactions, recording, or callbacks. Cheap and side-effect-free.
+
+**Contract:** `contract.guards` returns guard metadata. `contract.errors` includes guard codes.
+
+**Inheritance:** parent guards run first, child guards appended.
+
+**DSL validation:** code must be Symbol, block required, `requires:` must reference previously declared guards, duplicates raise `ArgumentError`.
 
 ---
 
@@ -413,7 +475,7 @@ ChargeOrder.clear_once!("webhook-123")    # by raw string key
 
 Clearing is idempotent — clearing a non-existent key is a no-op. After clearing, the next call executes normally.
 
-**Pipeline position:** result → **once** → lock → record → transaction → rescue → callback. The once check runs before locking and recording, so duplicate calls short-circuit early.
+**Pipeline position:** result → **once** → lock → record → transaction → rescue → guard → callback. The once check runs before locking and recording, so duplicate calls short-circuit early.
 
 **Requirements:**
 
@@ -517,6 +579,17 @@ assert_contract(
   errors: [:email_taken, :invalid_email]
 )
 ```
+
+### Guard Assertions
+
+```ruby
+assert_callable(post: post, user: user)                          # all guards pass
+assert_callable(PublishPost, post: post, user: user)             # explicit class
+refute_callable(:unauthorized, post: post, user: user)           # specific guard fails
+refute_callable(PublishPost, :unauthorized, post: post, user: user)
+```
+
+Guard failures on the normal `call` path produce `Dex::Error`, so `assert_operation_error` and `assert_err` also work.
 
 ### Param Validation
 

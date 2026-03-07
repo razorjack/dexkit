@@ -125,6 +125,24 @@ assert_contract(
 assert_contract(params: { name: String, email: String })
 ```
 
+## Guard assertions
+
+Test whether guards pass or fail without running the operation:
+
+```ruby
+# Assert the operation is callable (all guards pass)
+assert_callable(customer: customer, product: product, quantity: 1)
+
+# Assert a specific guard fails
+refute_callable(:out_of_stock, product: out_of_stock_product, customer: customer, quantity: 1)
+
+# With explicit class
+assert_callable(Order::Place, customer: customer, product: product, quantity: 1)
+refute_callable(Order::Place, :credit_exceeded, customer: over_limit, product: product, quantity: 1)
+```
+
+Guard failures on the normal `call` path produce the same `Dex::Error` as `error!`, so `assert_operation_error` and `assert_err` work for testing that a guard blocks execution.
+
 ## Param validation
 
 ```ruby

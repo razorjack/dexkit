@@ -99,6 +99,17 @@ Payment::Charge.clear_once!(order_id: 1)
 
 Business errors are replayed; exceptions release the key so the operation can be retried. Requires the record backend (recording is enabled by default when `record_class` is configured).
 
+**Guards** – inline precondition checks with introspection. Ask "can this operation run?" from views and controllers:
+
+```ruby
+guard :out_of_stock, "Product must be in stock" do
+  !product.in_stock?
+end
+
+# In a view or controller:
+Order::Place.callable?(customer: customer, product: product, quantity: 1)
+```
+
 **Transactions** on by default, **advisory locking**, **recording** to database, **callbacks**, and a customizable **pipeline** – all composable, all optional.
 
 ### Testing

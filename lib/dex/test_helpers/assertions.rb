@@ -214,6 +214,29 @@ module Dex
         "Expected #{model_class.name} count to increase, but it stayed at #{count_before}"
     end
 
+    # --- Guard assertions ---
+
+    def assert_callable(*args, **params)
+      klass = _dex_resolve_subject(args)
+      result = klass.callable(**params)
+      assert result.ok?, "Expected operation to be callable, but guards failed:\n#{_dex_format_err(result)}"
+      result
+    end
+
+    def refute_callable(*args, **params)
+      klass_args, codes = _dex_split_class_and_symbols(args)
+      klass = _dex_resolve_subject(klass_args)
+      code = codes.first
+      result = klass.callable(**params)
+      refute result.ok?, "Expected operation to NOT be callable, but all guards passed"
+      if code
+        failed_codes = result.details.map { |f| f[:guard] }
+        assert_includes failed_codes, code,
+          "Expected guard :#{code} to fail, but it didn't.\n  Failed guards: #{failed_codes.inspect}"
+      end
+      result
+    end
+
     # --- Batch assertions ---
 
     def assert_all_succeed(*args, params_list:)

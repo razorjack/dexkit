@@ -39,6 +39,7 @@ lib/
       safe_wrapper.rb    # Dex::SafeWrapper
       rescue_wrapper.rb  # Dex::RescueWrapper
       callback_wrapper.rb # Dex::CallbackWrapper
+      guard_wrapper.rb # Dex::GuardWrapper
       outcome.rb         # Operation::Ok, Err, SafeProxy
       async_proxy.rb     # Operation::AsyncProxy
       record_backend.rb  # Operation::RecordBackend + adapters

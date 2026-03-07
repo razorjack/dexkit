@@ -56,30 +56,35 @@ Employee::Onboard.contract
 # => #<data Dex::Operation::Contract
 #      params={email: String},
 #      success=nil,
-#      errors=[:email_taken, :invalid_email]>
+#      errors=[:email_taken, :invalid_email],
+#      guards=[]>
 ```
 
-The contract has three fields:
+The contract has four fields:
 
 | Field | Type | Description |
 |---|---|---|
 | `params` | `Hash{Symbol => Type}` | Declared properties and their types |
 | `success` | Type or `nil` | Declared success type |
-| `errors` | `Array<Symbol>` | Declared error codes |
+| `errors` | `Array<Symbol>` | Declared error codes (includes guard codes) |
+| `guards` | `Array<Hash>` | Guard metadata (name, message, requires) |
+
+See [Guards](/operation/guards) for details on declaring and introspecting guards.
 
 ## Pattern matching on contracts
 
 `Contract` is a `Data.define`, so it supports pattern matching and `to_h`:
 
 ```ruby
-Employee::Onboard.contract => { params:, success:, errors: }
+Employee::Onboard.contract => { params:, success:, errors:, guards: }
 
 params   # => { email: String }
 success  # => nil
 errors   # => [:email_taken, :invalid_email]
+guards   # => []
 
 Employee::Onboard.contract.to_h
-# => { params: { email: String }, success: nil, errors: [:email_taken, :invalid_email] }
+# => { params: { email: String }, success: nil, errors: [:email_taken, :invalid_email], guards: [] }
 ```
 
 ## Inheritance

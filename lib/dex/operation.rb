@@ -10,6 +10,7 @@ require_relative "operation/async_wrapper"
 require_relative "operation/safe_wrapper"
 require_relative "operation/rescue_wrapper"
 require_relative "operation/callback_wrapper"
+require_relative "operation/guard_wrapper"
 
 module Dex
   class Operation
@@ -47,14 +48,15 @@ module Dex
     include PropsSetup
     include TypeCoercion
 
-    Contract = Data.define(:params, :success, :errors)
+    Contract = Data.define(:params, :success, :errors, :guards)
 
     class << self
       def contract
         Contract.new(
           params: _contract_params,
           success: _success_type,
-          errors: _declared_errors
+          errors: _declared_errors,
+          guards: _contract_guards
         )
       end
 
@@ -65,6 +67,14 @@ module Dex
 
         literal_properties.each_with_object({}) do |prop, hash|
           hash[prop.name] = prop.type
+        end
+      end
+
+      def _contract_guards
+        return [] unless respond_to?(:_guard_list)
+
+        _guard_list.map do |g|
+          { name: g.name, message: g.message, requires: g.requires }
         end
       end
     end
@@ -89,6 +99,7 @@ module Dex
     include SafeWrapper
 
     use ResultWrapper
+    use GuardWrapper
     use OnceWrapper
     use LockWrapper
     use RecordWrapper

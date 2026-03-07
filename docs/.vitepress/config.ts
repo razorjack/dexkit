@@ -258,6 +258,7 @@ export default defineConfig({
         items: [
           { text: 'Overview', link: '/operation/' },
           { text: 'Properties & Types', link: '/operation/properties' },
+          { text: 'Guards', link: '/operation/guards' },
           { text: 'Error Handling', link: '/operation/errors' },
           { text: 'Ok / Err', link: '/operation/safe-mode' },
           { text: 'Callbacks', link: '/operation/callbacks' },
