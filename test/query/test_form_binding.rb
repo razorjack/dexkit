@@ -8,16 +8,13 @@ class TestQueryFormBinding < Minitest::Test
   end
 
   def test_model_name_derives_from_class_name
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
-    end
+    query_class = define_query(:UserSearch, scope_model: QueryUser)
 
     assert_equal "user_search", query_class.model_name.param_key
   end
 
   def test_param_key_override
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       param_key :q
     end
 
@@ -26,8 +23,7 @@ class TestQueryFormBinding < Minitest::Test
 
   def test_param_key_rejects_blank
     err = assert_raises(ArgumentError) do
-      build_query do
-        scope { QueryUser.all }
+      build_query(scope_model: QueryUser) do
         param_key ""
       end
     end
@@ -35,25 +31,20 @@ class TestQueryFormBinding < Minitest::Test
   end
 
   def test_anonymous_class_falls_back_to_query
-    query_class = build_query do
-      scope { QueryUser.all }
-    end
+    query_class = build_query(scope_model: QueryUser)
 
     assert_equal "query", query_class.model_name.param_key
   end
 
   def test_persisted_returns_false
-    query_class = build_query do
-      scope { QueryUser.all }
-    end
+    query_class = build_query(scope_model: QueryUser)
 
     query = query_class.new
     refute query.persisted?
   end
 
   def test_to_params_returns_non_nil_props_and_sort
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       prop? :status, String
       filter :role
@@ -69,8 +60,7 @@ class TestQueryFormBinding < Minitest::Test
   end
 
   def test_to_params_without_sort
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -82,8 +72,7 @@ class TestQueryFormBinding < Minitest::Test
   end
 
   def test_to_params_includes_default_sort
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort :name, default: "-name"
     end
 
@@ -93,8 +82,7 @@ class TestQueryFormBinding < Minitest::Test
   end
 
   def test_prop_readers_work_on_instance
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       prop? :status, String
       filter :role

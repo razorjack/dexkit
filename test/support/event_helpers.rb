@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 module EventHelpers
+  include TemporaryConstants
+
   def teardown
-    _cleanup_event_constants
+    _cleanup_tracked_constants(:event)
     Dex::Event::Bus.clear!
     Dex::Event::Trace.clear!
     Dex::Event::Suppression.clear!
@@ -10,10 +12,7 @@ module EventHelpers
   end
 
   def define_event(name, &block)
-    event_class = Class.new(Dex::Event, &block)
-    Object.const_set(name, event_class)
-    _tracked_event_constants << name
-    event_class
+    _track_constant(:event, name, Class.new(Dex::Event, &block))
   end
 
   def build_event(&block)
@@ -21,10 +20,7 @@ module EventHelpers
   end
 
   def define_handler(name, &block)
-    handler_class = Class.new(Dex::Event::Handler, &block)
-    Object.const_set(name, handler_class)
-    _tracked_event_constants << name
-    handler_class
+    _track_constant(:event, name, Class.new(Dex::Event::Handler, &block))
   end
 
   def build_handler(&block)
@@ -40,17 +36,4 @@ module EventHelpers
   end
 
   private
-
-  def _tracked_event_constants
-    @_tracked_event_constants ||= []
-  end
-
-  def _cleanup_event_constants
-    return unless defined?(@_tracked_event_constants)
-
-    @_tracked_event_constants.each do |const_name|
-      Object.send(:remove_const, const_name) if Object.const_defined?(const_name)
-    end
-    @_tracked_event_constants.clear
-  end
 end

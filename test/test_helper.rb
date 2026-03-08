@@ -14,6 +14,7 @@ require "active_record"
 ActiveRecord::Base.logger = nil
 
 # Load test support files
+require_relative "support/temporary_constants"
 require_relative "support/operation_helpers"
 require_relative "support/database_helpers"
 require_relative "support/event_helpers"

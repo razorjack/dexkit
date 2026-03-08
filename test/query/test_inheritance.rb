@@ -5,14 +5,11 @@ require "test_helper"
 class TestQueryInheritance < Minitest::Test
   def setup
     setup_query_database
-    QueryUser.create!(name: "Alice", email: "alice@example.com", role: "admin", age: 30, status: "active")
-    QueryUser.create!(name: "Bob", email: "bob@example.com", role: "user", age: 25, status: "active")
-    QueryUser.create!(name: "Charlie", email: "charlie@example.com", role: "user", age: 35, status: "inactive")
+    seed_query_users
   end
 
   def test_subclass_inherits_filters
-    parent = define_query(:BaseUserQuery) do
-      scope { QueryUser.all }
+    parent = define_query(:BaseUserQuery, scope_model: QueryUser) do
       prop? :role, String
       filter :role
       sort :name
@@ -29,8 +26,7 @@ class TestQueryInheritance < Minitest::Test
   end
 
   def test_subclass_inherits_sorts
-    parent = define_query(:BaseUserQuery) do
-      scope { QueryUser.all }
+    parent = define_query(:BaseUserQuery, scope_model: QueryUser) do
       sort :name, :age
     end
 
@@ -44,8 +40,7 @@ class TestQueryInheritance < Minitest::Test
   end
 
   def test_subclass_inherits_props
-    parent = define_query(:BaseUserQuery) do
-      scope { QueryUser.all }
+    parent = define_query(:BaseUserQuery, scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -74,8 +69,7 @@ class TestQueryInheritance < Minitest::Test
   end
 
   def test_subclass_inherits_default_sort
-    parent = define_query(:BaseUserQuery) do
-      scope { QueryUser.all }
+    parent = define_query(:BaseUserQuery, scope_model: QueryUser) do
       sort :name, default: "name"
     end
 
@@ -88,8 +82,7 @@ class TestQueryInheritance < Minitest::Test
   end
 
   def test_parent_unchanged_by_subclass
-    parent = define_query(:BaseUserQuery) do
-      scope { QueryUser.all }
+    parent = define_query(:BaseUserQuery, scope_model: QueryUser) do
       prop? :role, String
       filter :role
       sort :name

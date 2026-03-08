@@ -10,14 +10,14 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_async_returns_proxy
-    op = build_operation.new(name: "Test")
+    op = build_async_operation.new(name: "Test")
     proxy = op.async
 
     assert_instance_of Dex::Operation::AsyncProxy, proxy
   end
 
   def test_async_perform_enqueues_job
-    op = build_operation.new(name: "Test")
+    op = build_async_operation.new(name: "Test")
 
     assert_enqueued_with(job: Dex::Operation::Job) do
       op.async.call
@@ -39,7 +39,7 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_async_with_queue
-    op = build_operation.new(name: "Test")
+    op = build_async_operation.new(name: "Test")
 
     assert_enqueued_with(job: Dex::Operation::Job, queue: "low") do
       op.async(queue: "low").call
@@ -49,7 +49,7 @@ class TestOperationAsync < Minitest::Test
   def test_async_with_delay
     freeze_time = Time.now
     Time.stub :now, freeze_time do
-      op = build_operation.new(name: "Test")
+      op = build_async_operation.new(name: "Test")
 
       assert_enqueued_with(job: Dex::Operation::Job) do
         op.async(in: 300).call # 5 minutes in seconds
@@ -59,7 +59,7 @@ class TestOperationAsync < Minitest::Test
 
   def test_async_with_scheduled_time
     scheduled_time = Time.now + 3600 # 1 hour from now
-    op = build_operation.new(name: "Test")
+    op = build_async_operation.new(name: "Test")
 
     assert_enqueued_with(job: Dex::Operation::Job, at: scheduled_time) do
       op.async(at: scheduled_time).call
@@ -67,7 +67,7 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_class_level_async_sets_defaults
-    op_class = build_operation do
+    op_class = build_async_operation do
       async queue: "background"
     end
 
@@ -77,7 +77,7 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_runtime_options_override_class_defaults
-    op_class = build_operation do
+    op_class = build_async_operation do
       async queue: "low"
     end
 
@@ -87,11 +87,11 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_set_async_equivalent_to_shortcut
-    op1 = build_operation do
+    op1 = build_async_operation do
       async queue: "low"
     end
 
-    op2 = build_operation do
+    op2 = build_async_operation do
       set :async, queue: "low"
     end
 
@@ -100,7 +100,7 @@ class TestOperationAsync < Minitest::Test
 
   def test_async_with_queue_and_scheduled_time
     scheduled_time = Time.now + 3600
-    op = build_operation.new(name: "Test")
+    op = build_async_operation.new(name: "Test")
 
     assert_enqueued_with(job: Dex::Operation::Job, queue: "low", at: scheduled_time) do
       op.async(queue: "low", at: scheduled_time).call
@@ -108,7 +108,7 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_async_with_queue_and_delay
-    op = build_operation.new(name: "Test")
+    op = build_async_operation.new(name: "Test")
 
     assert_enqueued_with(job: Dex::Operation::Job, queue: "low") do
       op.async(queue: "low", in: 300).call
@@ -118,7 +118,7 @@ class TestOperationAsync < Minitest::Test
   def test_class_defaults_compose_with_runtime_options
     scheduled_time = Time.now + 3600
 
-    op_class = build_operation do
+    op_class = build_async_operation do
       async queue: "low"
     end
 
@@ -128,11 +128,11 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_settings_inheritance_for_async
-    parent = build_operation do
+    parent = build_async_operation do
       set :async, queue: "default", priority: 5
     end
 
-    child = build_operation(parent: parent) do
+    child = build_async_operation(parent: parent) do
       set :async, priority: 10
     end
 
@@ -271,13 +271,15 @@ class TestOperationAsync < Minitest::Test
   end
 
   def test_async_full_round_trip
+    performed = []
+
     op_class = define_operation(:TestFullRoundTripOp) do
       prop :due, Date
       prop :label, String
+    end
 
-      def perform
-        { due: due, label: label }
-      end
+    op_class.define_method(:perform) do
+      performed << { due: due, label: label }
     end
 
     op = op_class.new(due: Date.new(2025, 6, 15), label: "test")
@@ -285,6 +287,8 @@ class TestOperationAsync < Minitest::Test
     perform_enqueued_jobs do
       op.async.call
     end
+
+    assert_equal [{ due: Date.new(2025, 6, 15), label: "test" }], performed
   end
 
   def test_direct_call_validates_types
@@ -300,9 +304,8 @@ class TestOperationAsync < Minitest::Test
 
   private
 
-  # Override the global helper with test-specific defaults
-  def build_operation(parent: Dex::Operation, &block)
-    super do
+  def build_async_operation(parent: Dex::Operation, &block)
+    build_operation(parent: parent) do
       prop :name, String
 
       class_eval(&block) if block

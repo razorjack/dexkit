@@ -5,14 +5,15 @@ require "test_helper"
 class TestQuerySorting < Minitest::Test
   def setup
     setup_query_database
-    QueryUser.create!(name: "Charlie", email: "charlie@example.com", role: "user", age: 35, status: "active")
-    QueryUser.create!(name: "Alice", email: "alice@example.com", role: "admin", age: 30, status: "active")
-    QueryUser.create!(name: "Bob", email: "bob@example.com", role: "user", age: 25, status: "inactive")
+    seed_query_users(
+      { name: "Charlie", email: "charlie@example.com", role: "user", age: 35, status: "active" },
+      { name: "Alice", email: "alice@example.com", role: "admin", age: 30, status: "active" },
+      { name: "Bob", email: "bob@example.com", role: "user", age: 25, status: "inactive" }
+    )
   end
 
   def test_ascending_sort
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort :name
     end
 
@@ -21,8 +22,7 @@ class TestQuerySorting < Minitest::Test
   end
 
   def test_descending_sort
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort :name
     end
 
@@ -31,8 +31,7 @@ class TestQuerySorting < Minitest::Test
   end
 
   def test_default_sort
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort :name, default: "name"
     end
 
@@ -41,8 +40,7 @@ class TestQuerySorting < Minitest::Test
   end
 
   def test_default_sort_descending
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort :name, default: "-name"
     end
 
@@ -51,8 +49,7 @@ class TestQuerySorting < Minitest::Test
   end
 
   def test_custom_sort_block
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort(:newest) { |scope| scope.order(created_at: :desc) }
     end
 
@@ -61,8 +58,7 @@ class TestQuerySorting < Minitest::Test
   end
 
   def test_custom_sort_rejects_dash_prefix
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort(:newest) { |scope| scope.order(created_at: :desc) }
     end
 
@@ -73,8 +69,7 @@ class TestQuerySorting < Minitest::Test
   end
 
   def test_unknown_sort_raises
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort :name
     end
 
@@ -85,8 +80,7 @@ class TestQuerySorting < Minitest::Test
   end
 
   def test_no_sort_no_order
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort :name
     end
 
@@ -95,8 +89,7 @@ class TestQuerySorting < Minitest::Test
   end
 
   def test_multiple_column_sorts
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort :name, :age, :created_at
     end
 
@@ -105,8 +98,7 @@ class TestQuerySorting < Minitest::Test
   end
 
   def test_custom_sort_default
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort(:newest, default: "newest") { |scope| scope.order(created_at: :desc) }
     end
 
@@ -115,8 +107,7 @@ class TestQuerySorting < Minitest::Test
   end
 
   def test_sort_reader_returns_current_sort
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort :name, default: "-name"
     end
 

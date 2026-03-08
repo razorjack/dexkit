@@ -5,15 +5,11 @@ require "test_helper"
 class TestQueryCall < Minitest::Test
   def setup
     setup_query_database
-    QueryUser.create!(name: "Alice", email: "alice@example.com", role: "admin", age: 30, status: "active")
-    QueryUser.create!(name: "Bob", email: "bob@example.com", role: "user", age: 25, status: "active")
-    QueryUser.create!(name: "Charlie", email: "charlie@example.com", role: "user", age: 35, status: "inactive")
+    seed_query_users
   end
 
   def test_call_returns_relation
-    query_class = build_query do
-      scope { QueryUser.all }
-    end
+    query_class = build_query(scope_model: QueryUser)
 
     result = query_class.call
     assert_kind_of ActiveRecord::Relation, result
@@ -21,8 +17,7 @@ class TestQueryCall < Minitest::Test
   end
 
   def test_count_shortcut
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -31,8 +26,7 @@ class TestQueryCall < Minitest::Test
   end
 
   def test_exists_shortcut
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -42,8 +36,7 @@ class TestQueryCall < Minitest::Test
   end
 
   def test_any_shortcut
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -53,8 +46,7 @@ class TestQueryCall < Minitest::Test
   end
 
   def test_scope_injection
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -66,9 +58,7 @@ class TestQueryCall < Minitest::Test
   end
 
   def test_scope_injection_validates_model
-    query_class = build_query do
-      scope { QueryUser.all }
-    end
+    query_class = build_query(scope_model: QueryUser)
 
     err = assert_raises(ArgumentError) do
       # Pass a non-relation to trigger validation
@@ -92,8 +82,7 @@ class TestQueryCall < Minitest::Test
   end
 
   def test_resolve_on_instance
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -113,8 +102,7 @@ class TestQueryCall < Minitest::Test
   end
 
   def test_filters_and_sort_combined
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :status, String
       filter :status
       sort :name

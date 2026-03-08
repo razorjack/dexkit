@@ -1,20 +1,30 @@
 # frozen_string_literal: true
 
 module QueryHelpers
+  QUERY_USER_FIXTURES = [
+    { name: "Alice", email: "alice@example.com", role: "admin", age: 30, status: "active" },
+    { name: "Bob", email: "bob@example.com", role: "user", age: 25, status: "active" },
+    { name: "Charlie", email: "charlie@example.com", role: "user", age: 35, status: "inactive" }
+  ].freeze
+
+  include TemporaryConstants
+
   def teardown
-    _cleanup_query_constants
+    _cleanup_tracked_constants(:query)
     super
   end
 
-  def define_query(name, parent: Dex::Query, &block)
-    query_class = Class.new(parent, &block)
-    Object.const_set(name, query_class)
-    _tracked_query_constants << name
-    query_class
+  def define_query(name, parent: Dex::Query, scope_model: nil, &block)
+    _track_constant(:query, name, _build_query_class(parent: parent, scope_model: scope_model, &block))
   end
 
-  def build_query(parent: Dex::Query, &block)
-    Class.new(parent, &block)
+  def build_query(parent: Dex::Query, scope_model: nil, &block)
+    _build_query_class(parent: parent, scope_model: scope_model, &block)
+  end
+
+  def seed_query_users(*records)
+    records = QUERY_USER_FIXTURES if records.empty?
+    records.each { |attrs| QueryUser.create!(attrs) }
   end
 
   def setup_query_database
@@ -41,16 +51,14 @@ module QueryHelpers
 
   private
 
-  def _tracked_query_constants
-    @_tracked_query_constants ||= []
-  end
-
-  def _cleanup_query_constants
-    return unless defined?(@_tracked_query_constants)
-
-    @_tracked_query_constants.each do |const_name|
-      Object.send(:remove_const, const_name) if Object.const_defined?(const_name)
+  def _build_query_class(parent:, scope_model:, &block)
+    query_class = Class.new(parent)
+    if scope_model
+      query_class.class_eval do
+        scope { scope_model.all }
+      end
     end
-    @_tracked_query_constants.clear
+    query_class.class_eval(&block) if block
+    query_class
   end
 end

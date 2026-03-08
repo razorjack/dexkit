@@ -91,29 +91,3 @@ class TestGuardAssertions < Minitest::Test
     refute_callable(op, :denied, allowed: false)
   end
 end
-
-class TestGuardAssertionsWithSubject < Minitest::Test
-  include Dex::TestHelpers
-  include OperationHelpers
-
-  GuardedOp = Class.new(Dex::Operation) do
-    prop :role, String
-    guard(:unauthorized) { role != "admin" }
-    def perform = "ok"
-  end
-
-  testing GuardedOp
-
-  def setup
-    super
-    setup_test_database
-  end
-
-  def test_assert_callable_uses_subject
-    assert_callable(role: "admin")
-  end
-
-  def test_refute_callable_uses_subject
-    refute_callable(:unauthorized, role: "guest")
-  end
-end

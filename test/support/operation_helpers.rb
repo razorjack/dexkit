@@ -1,17 +1,16 @@
 # frozen_string_literal: true
 
 module OperationHelpers
+  include TemporaryConstants
+
   def teardown
-    _cleanup_operation_constants
+    _cleanup_tracked_constants(:operation)
     super
   end
 
   # Defines a named operation class and tracks it for automatic cleanup
   def define_operation(name, parent: Dex::Operation, &block)
-    op_class = Class.new(parent, &block)
-    Object.const_set(name, op_class)
-    _tracked_operation_constants << name
-    op_class
+    _track_constant(:operation, name, Class.new(parent, &block))
   end
 
   # Builds an anonymous operation class (no constant tracking needed)
@@ -49,19 +48,6 @@ module OperationHelpers
   end
 
   private
-
-  def _tracked_operation_constants
-    @_tracked_operation_constants ||= []
-  end
-
-  def _cleanup_operation_constants
-    return unless defined?(@_tracked_operation_constants)
-
-    @_tracked_operation_constants.each do |const_name|
-      Object.send(:remove_const, const_name) if Object.const_defined?(const_name)
-    end
-    @_tracked_operation_constants.clear
-  end
 
   def _define_props(op_class, definition)
     return if definition.nil?

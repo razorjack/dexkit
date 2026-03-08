@@ -6,14 +6,11 @@ require "action_controller"
 class TestQueryFromParams < Minitest::Test
   def setup
     setup_query_database
-    QueryUser.create!(name: "Alice", email: "alice@example.com", role: "admin", age: 30, status: "active")
-    QueryUser.create!(name: "Bob", email: "bob@example.com", role: "user", age: 25, status: "active")
-    QueryUser.create!(name: "Charlie", email: "charlie@example.com", role: "user", age: 35, status: "inactive")
+    seed_query_users
   end
 
   def test_extracts_from_nested_param_key
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -25,8 +22,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_strips_blanks_for_optional_props
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -37,8 +33,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_compacts_array_blanks
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :role, _Array(String)
       filter :role, :in
     end
@@ -49,8 +44,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_coerces_optional_integer_array_elements
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :ages, _Array(Integer)
       filter(:ages) { |scope, value| scope.where(age: value) }
     end
@@ -61,8 +55,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_coerces_integer
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :age, Integer
       filter :age, :gte
     end
@@ -73,8 +66,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_coerces_date
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :since, Date
       filter(:since) { |scope, value| scope.where("created_at >= ?", value) }
     end
@@ -85,8 +77,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_drops_uncoercible_to_nil
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :age, Integer
       filter :age
     end
@@ -97,8 +88,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_keyword_overrides
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -110,8 +100,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_sort_override_wins_over_params
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       sort :name, :age
     end
 
@@ -121,8 +110,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_scope_passed_through
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -135,8 +123,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_sort_extracted_from_params
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       sort :name, :age
     end
 
@@ -146,8 +133,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_invalid_sort_falls_back_to_default
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       sort :name, default: "name"
     end
 
@@ -157,8 +143,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_dash_prefix_on_custom_sort_falls_back_to_default
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       sort :name, default: "name"
       sort(:newest) { |scope| scope.order(created_at: :desc) }
     end
@@ -169,8 +154,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_coerces_integer_with_leading_zero
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :age, Integer
       filter :age, :gte
     end
@@ -181,8 +165,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_plain_hash_params
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -193,8 +176,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_custom_param_key_in_from_params
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       param_key :q
       prop? :role, String
       filter :role
@@ -206,8 +188,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_scalar_nested_param_treated_as_empty
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -218,8 +199,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_ref_props_excluded_from_params
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :project, _Ref(QueryUser)
     end
 
@@ -229,8 +209,7 @@ class TestQueryFromParams < Minitest::Test
   end
 
   def test_blank_input_overrides_prop_default_to_nil
-    query_class = define_query(:UserSearch) do
-      scope { QueryUser.all }
+    query_class = define_query(:UserSearch, scope_model: QueryUser) do
       prop? :role, String, default: "user"
       filter :role
     end

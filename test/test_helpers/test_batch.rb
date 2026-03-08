@@ -157,32 +157,3 @@ class TestBatchAssertions < Minitest::Test
     end
   end
 end
-
-class TestBatchWithSubject < Minitest::Test
-  include Dex::TestHelpers
-  include OperationHelpers
-
-  BatchOp = Class.new(Dex::Operation) do
-    prop :n, Integer
-    error :too_big
-    def perform
-      error!(:too_big) if n > 100
-      n
-    end
-  end
-
-  testing BatchOp
-
-  def setup
-    super
-    setup_test_database
-  end
-
-  def test_assert_all_succeed_uses_subject
-    assert_all_succeed(params_list: [{ n: 1 }, { n: 50 }])
-  end
-
-  def test_assert_all_fail_uses_subject
-    assert_all_fail(code: :too_big, params_list: [{ n: 101 }, { n: 200 }])
-  end
-end

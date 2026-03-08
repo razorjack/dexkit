@@ -8,9 +8,7 @@ class TestQueryDefinition < Minitest::Test
   end
 
   def test_scope_declaration
-    query_class = build_query do
-      scope { QueryUser.all }
-    end
+    query_class = build_query(scope_model: QueryUser)
 
     assert query_class._scope_block
   end
@@ -26,19 +24,7 @@ class TestQueryDefinition < Minitest::Test
   def test_reserved_prop_names_rejected
     %i[scope sort resolve call from_params to_params param_key].each do |name|
       assert_raises(ArgumentError, "Expected :#{name} to be rejected") do
-        build_query do
-          scope { QueryUser.all }
-          prop name, String
-        end
-      end
-    end
-  end
-
-  def test_scope_and_sort_reserved_as_prop_names
-    %i[scope sort].each do |name|
-      assert_raises(ArgumentError, "Expected prop :#{name} to be rejected") do
-        build_query do
-          scope { QueryUser.all }
+        build_query(scope_model: QueryUser) do
           prop name, String
         end
       end
@@ -47,8 +33,7 @@ class TestQueryDefinition < Minitest::Test
 
   def test_filter_requires_declared_prop
     err = assert_raises(ArgumentError) do
-      build_query do
-        scope { QueryUser.all }
+      build_query(scope_model: QueryUser) do
         filter :name
       end
     end
@@ -57,8 +42,7 @@ class TestQueryDefinition < Minitest::Test
 
   def test_filter_rejects_unknown_strategy
     err = assert_raises(ArgumentError) do
-      build_query do
-        scope { QueryUser.all }
+      build_query(scope_model: QueryUser) do
         prop? :name, String
         filter :name, :fuzzy
       end
@@ -68,8 +52,7 @@ class TestQueryDefinition < Minitest::Test
 
   def test_filter_rejects_duplicate
     err = assert_raises(ArgumentError) do
-      build_query do
-        scope { QueryUser.all }
+      build_query(scope_model: QueryUser) do
         prop? :name, String
         filter :name
         filter :name
@@ -79,8 +62,7 @@ class TestQueryDefinition < Minitest::Test
   end
 
   def test_block_filter_requires_single_name
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :name, String
       filter(:name) { |scope, _value| scope }
     end
@@ -90,8 +72,7 @@ class TestQueryDefinition < Minitest::Test
 
   def test_sort_rejects_duplicate
     err = assert_raises(ArgumentError) do
-      build_query do
-        scope { QueryUser.all }
+      build_query(scope_model: QueryUser) do
         sort :name
         sort :name
       end
@@ -101,8 +82,7 @@ class TestQueryDefinition < Minitest::Test
 
   def test_sort_default_references_declared_sort
     err = assert_raises(ArgumentError) do
-      build_query do
-        scope { QueryUser.all }
+      build_query(scope_model: QueryUser) do
         sort :name, default: "-created_at"
       end
     end
@@ -111,8 +91,7 @@ class TestQueryDefinition < Minitest::Test
 
   def test_multiple_defaults_rejected
     err = assert_raises(ArgumentError) do
-      build_query do
-        scope { QueryUser.all }
+      build_query(scope_model: QueryUser) do
         sort :name, default: "name"
         sort :email, default: "email"
       end
@@ -121,8 +100,7 @@ class TestQueryDefinition < Minitest::Test
   end
 
   def test_filters_introspection
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :name, String
       prop? :role, String
       filter :name, :contains
@@ -133,8 +111,7 @@ class TestQueryDefinition < Minitest::Test
   end
 
   def test_sorts_introspection
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       sort :name, :created_at
     end
 

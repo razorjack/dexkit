@@ -5,14 +5,11 @@ require "test_helper"
 class TestQueryFilters < Minitest::Test
   def setup
     setup_query_database
-    QueryUser.create!(name: "Alice", email: "alice@example.com", role: "admin", age: 30, status: "active")
-    QueryUser.create!(name: "Bob", email: "bob@example.com", role: "user", age: 25, status: "active")
-    QueryUser.create!(name: "Charlie", email: "charlie@example.com", role: "user", age: 35, status: "inactive")
+    seed_query_users
   end
 
   def test_eq_strategy
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -23,8 +20,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_not_eq_strategy
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       filter :role, :not_eq
     end
@@ -34,8 +30,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_contains_strategy
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :name, String
       filter :name, :contains
     end
@@ -45,8 +40,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_starts_with_strategy
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :name, String
       filter :name, :starts_with
     end
@@ -57,8 +51,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_ends_with_strategy
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :name, String
       filter :name, :ends_with
     end
@@ -69,8 +62,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_gt_strategy
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :age, Integer
       filter :age, :gt
     end
@@ -80,8 +72,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_gte_strategy
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :age, Integer
       filter :age, :gte
     end
@@ -91,8 +82,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_lt_strategy
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :age, Integer
       filter :age, :lt
     end
@@ -103,8 +93,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_lte_strategy
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :age, Integer
       filter :age, :lte
     end
@@ -114,8 +103,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_in_strategy
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, _Array(String)
       filter :role, :in
     end
@@ -125,8 +113,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_not_in_strategy
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, _Array(String)
       filter :role, :not_in
     end
@@ -136,8 +123,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_custom_filter_block
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :search, String
       filter(:search) do |scope, value|
         sanitized = ActiveRecord::Base.sanitize_sql_like(value)
@@ -151,8 +137,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_nil_skip_for_optional_prop
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
@@ -162,8 +147,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_nil_skip_for_optional_block_filter
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :search, String
       filter(:search) { |scope, _value| scope.where(role: "admin") }
     end
@@ -173,8 +157,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_custom_filter_block_returning_nil_preserves_scope
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :search, String
       prop? :role, String
       filter(:search) { |scope, value| scope.where("name LIKE ?", "%#{value}%") if value.present? }
@@ -187,8 +170,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_in_skip_on_nil
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, _Array(String)
       filter :role, :in
     end
@@ -198,8 +180,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_in_skip_on_empty_array
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, _Array(String)
       filter :role, :in
     end
@@ -209,8 +190,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_not_in_skip_on_empty_array
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, _Array(String)
       filter :role, :not_in
     end
@@ -220,8 +200,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_column_mapping
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :user_role, String
       filter :user_role, :eq, column: :role
     end
@@ -234,8 +213,7 @@ class TestQueryFilters < Minitest::Test
   def test_like_wildcards_are_sanitized
     QueryUser.create!(name: "Test%User", email: "test@example.com", role: "user", age: 20, status: "active")
 
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :name, String
       filter :name, :contains
     end
@@ -246,8 +224,7 @@ class TestQueryFilters < Minitest::Test
   end
 
   def test_interleaved_optional_prop_and_filter_declarations
-    query_class = build_query do
-      scope { QueryUser.all }
+    query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       filter :role
       prop? :status, String

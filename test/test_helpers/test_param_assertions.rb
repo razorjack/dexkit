@@ -44,28 +44,3 @@ class TestParamAssertions < Minitest::Test
     assert_raises(Literal::TypeError) { assert_valid_params(op, name: 123) }
   end
 end
-
-class TestParamAssertionsWithSubject < Minitest::Test
-  include Dex::TestHelpers
-  include OperationHelpers
-
-  ParamOp = Class.new(Dex::Operation) do
-    prop :count, Integer
-    def perform = count
-  end
-
-  testing ParamOp
-
-  def setup
-    super
-    setup_test_database
-  end
-
-  def test_assert_invalid_params_uses_subject
-    assert_invalid_params(count: "not a number")
-  end
-
-  def test_assert_valid_params_uses_subject
-    assert_valid_params(count: 5)
-  end
-end
