@@ -8,29 +8,33 @@ Hook into the operation lifecycle with `before`, `after`, and `around`. Callback
 
 ## before
 
-Runs before `perform`. Use it for validation, setup, or precondition checks.
+Runs before `perform`. Use it for setup, data preparation, or acquiring resources that `perform` needs. For precondition checks, prefer [Guards](/operation/guards) – they're introspectable, collect all failures, and power `callable?`.
 
 ```ruby
 class Order::Place < Dex::Operation
-  prop :product_id, Integer
+  prop :customer, _Ref(Customer)
+  prop :product, _Ref(Product)
   prop :quantity, _Integer(1..)
 
-  before :check_stock
+  before :snapshot_pricing
 
   def perform
-    Order.create!(product_id: product_id, quantity: quantity)
+    Order.create!(
+      customer: customer, product: product, quantity: quantity,
+      unit_price: @unit_price, total: @total
+    )
   end
 
   private
 
-  def check_stock
-    stock = Product.find(product_id).stock
-    error!(:out_of_stock, "Only #{stock} left") if stock < quantity
+  def snapshot_pricing
+    @unit_price = product.current_price
+    @total = @unit_price * quantity
   end
 end
 ```
 
-Calling `error!` in a `before` callback stops execution – `perform` is never reached.
+`before` callbacks can also call `error!` to stop execution – `perform` is never reached.
 
 ## after
 
@@ -84,10 +88,10 @@ All three callbacks accept a Symbol (method name), a block, or a callable (lambd
 ```ruby
 class Order::Process < Dex::Operation
   # Symbol – calls the named method
-  before :validate_stock
+  before :lock_pricing
 
   # Block – executed via instance_exec (has access to props, error!, etc.)
-  before { error!(:closed) if store_closed? }
+  before { @submitted_at = Time.current }
 
   # Lambda – for around, receives a continuation
   around ->(cont) {
