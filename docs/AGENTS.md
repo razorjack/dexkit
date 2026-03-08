@@ -13,7 +13,8 @@
 2. Add the page to the relevant sidebar group in `docs/.vitepress/config.ts`.
 3. If needed, add or update a top-nav entry in `themeConfig.nav`.
 4. Make sure the page is not excluded by `srcExclude`. Built docs pages are included in the sitemap automatically.
-5. Add a `description` field in the page's YAML frontmatter. This is used for the `<meta name="description">` tag, Open Graph/Twitter cards, and JSON-LD structured data. Keep it under 160 characters, specific to the page content, and include relevant class names (e.g., `Dex::Operation`). Example:
+5. If adding a page to the Operation section, add it to the "What's next" list in `docs/operation/index.md` with a short description.
+6. Add a `description` field in the page's YAML frontmatter. This is used for the `<meta name="description">` tag, Open Graph/Twitter cards, and JSON-LD structured data. Keep it under 160 characters, specific to the page content, and include relevant class names (e.g., `Dex::Operation`). Example:
    ```yaml
    ---
    description: Build Rails service objects with Dex::Operation – typed props, structured errors, transactions, and async execution.
