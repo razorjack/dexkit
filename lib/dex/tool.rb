@@ -43,7 +43,7 @@ module Dex
       Class.new(RubyLLM::Tool) do
         define_method(:name) { "dex_#{op.name.gsub("::", "_").downcase}" }
         define_method(:description) { tool_description }
-        define_method(:params) { schema }
+        define_method(:params_schema) { schema }
 
         define_method(:execute) do |**params|
           coerced = params.transform_keys(&:to_sym)
@@ -81,7 +81,7 @@ module Dex
       Class.new(RubyLLM::Tool) do
         define_method(:name) { "dex_explain" }
         define_method(:description) { "Check if an operation can be executed with given params, without running it." }
-        define_method(:params) do
+        define_method(:params_schema) do
           {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
             type: "object",

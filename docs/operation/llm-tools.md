@@ -89,7 +89,7 @@ If your operations use [ambient context](/operation/context), wrap the LLM inter
 ```ruby
 Dex.with_context(current_customer: current_user) do
   chat = RubyLLM.chat(model: "gpt-5-mini")
-  chat.with_tools(Dex::Tool.from_namespace("Order"))
+  chat.with_tools(*Dex::Tool.from_namespace("Order"))
   chat.ask("Cancel my order #42")
 end
 ```
@@ -102,7 +102,7 @@ The operation resolves `current_customer` from the ambient context – the LLM n
 
 ```ruby
 tools = Dex::Tool.from_namespace("Order") + [Dex::Tool.explain_tool]
-chat.with_tools(tools)
+chat.with_tools(*tools)
 ```
 
 The explain tool accepts an operation name and params, runs [explain](/operation/explain) on it, and returns the callable status, guard results, once status, and lock info – without executing anything. The LLM can use this to check preconditions, report why something won't work, or decide which operation to try.
@@ -122,7 +122,7 @@ class AgentController < ApplicationController
 
     Dex.with_context(current_customer: current_user) do
       chat = RubyLLM.chat(model: "gpt-5-mini")
-      chat.with_tools(tools)
+      chat.with_tools(*tools)
       response = chat.ask(params[:message])
       render json: { reply: response.content }
     end
