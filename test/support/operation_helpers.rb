@@ -4,6 +4,7 @@ module OperationHelpers
   include TemporaryConstants
 
   def teardown
+    _deregister_tracked(:operation, Dex::Operation)
     _cleanup_tracked_constants(:operation)
     super
   end

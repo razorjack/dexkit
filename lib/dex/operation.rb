@@ -49,7 +49,32 @@ module Dex
     include TypeCoercion
     include ContextSetup
 
-    Contract = Data.define(:params, :success, :errors, :guards)
+    Contract = Data.define(:params, :success, :errors, :guards) do
+      attr_reader :source_class
+
+      def initialize(params:, success:, errors:, guards:, source_class: nil)
+        @source_class = source_class
+        super(params: params, success: success, errors: errors, guards: guards)
+      end
+
+      def to_h
+        if @source_class
+          Operation::Export.build_hash(@source_class, self)
+        else
+          super
+        end
+      end
+
+      def to_json_schema(**options)
+        unless @source_class
+          raise ArgumentError, "to_json_schema requires a source_class (use OperationClass.contract.to_json_schema)"
+        end
+
+        Operation::Export.build_json_schema(@source_class, self, **options)
+      end
+    end
+
+    extend Registry
 
     class << self
       def contract
@@ -57,8 +82,23 @@ module Dex
           params: _contract_params,
           success: _success_type,
           errors: _declared_errors,
-          guards: _contract_guards
+          guards: _contract_guards,
+          source_class: self
         )
+      end
+
+      def export(format: :hash, **options)
+        unless %i[hash json_schema].include?(format)
+          raise ArgumentError, "unknown format: #{format.inspect}. Known: :hash, :json_schema"
+        end
+
+        sorted = registry.sort_by(&:name)
+        sorted.map do |klass|
+          case format
+          when :hash then klass.contract.to_h
+          when :json_schema then klass.contract.to_json_schema(**options)
+          end
+        end
       end
 
       private
@@ -117,6 +157,7 @@ require_relative "operation/record_backend"
 require_relative "operation/transaction_adapter"
 require_relative "operation/jobs"
 require_relative "operation/explain"
+require_relative "operation/export"
 
 Dex::Operation.extend(Dex::Operation::Explain)
 

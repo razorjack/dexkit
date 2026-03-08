@@ -17,9 +17,16 @@ module Dex
     end
 
     module ClassMethods
-      def prop(name, type, kind = :keyword, **options, &block)
+      def prop(name, type, kind = :keyword, desc: nil, **options, &block)
         if const_defined?(:RESERVED_PROP_NAMES) && self::RESERVED_PROP_NAMES.include?(name)
           raise ArgumentError, "Property :#{name} is reserved."
+        end
+        if !desc.nil?
+          raise ArgumentError, "desc: must be a String, got #{desc.class}" unless desc.is_a?(String)
+
+          _prop_desc_own[name] = desc
+        elsif superclass.respond_to?(:prop_descriptions) && superclass.prop_descriptions.key?(name)
+          _prop_desc_own[name] = nil
         end
         options[:reader] = :public unless options.key?(:reader)
         if type.is_a?(Dex::RefType) && !block
@@ -29,7 +36,12 @@ module Dex
         super(name, type, kind, **options, &block)
       end
 
-      def prop?(name, type, kind = :keyword, **options, &block)
+      def prop?(name, type, kind = :keyword, desc: nil, **options, &block)
+        if !desc.nil?
+          raise ArgumentError, "desc: must be a String, got #{desc.class}" unless desc.is_a?(String)
+
+          _prop_desc_own[name] = desc
+        end
         options[:reader] = :public unless options.key?(:reader)
         options[:default] = nil unless options.key?(:default)
         if type.is_a?(Dex::RefType) && !block
@@ -39,8 +51,19 @@ module Dex
         prop(name, _Nilable(type), kind, **options, &block)
       end
 
+      def prop_descriptions
+        parent = superclass.respond_to?(:prop_descriptions) ? superclass.prop_descriptions : {}
+        parent.merge(_prop_desc_own).compact
+      end
+
       def _Ref(model_class, lock: false) # rubocop:disable Naming/MethodName
         Dex::RefType.new(model_class, lock: lock)
+      end
+
+      private
+
+      def _prop_desc_own
+        @_prop_desc_own ||= {}
       end
     end
   end

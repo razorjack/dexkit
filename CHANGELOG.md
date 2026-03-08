@@ -2,7 +2,31 @@
 
 ### Added
 
+- **Registry** — `Dex::Operation.registry`, `Dex::Event.registry`, and `Dex::Event::Handler.registry` return frozen Sets of all named subclasses. Populated automatically via `inherited`; anonymous and stale (unreachable after code reload) classes are excluded. `deregister(klass)` removes entries. `clear!` empties the registry. Zeitwerk-compatible — registries reflect loaded classes; eager-load to get the full list
+- **Description & prop descriptions** — `description "text"` class-level DSL for operations and events. `desc:` keyword on `prop`/`prop?` for per-property descriptions (validated as String). Both appear in `contract.to_h`, `to_json_schema`, and `explain` output. Optional — no error or warning when omitted
+- **`contract.to_h` export** — serializes the full operation contract to a plain Ruby Hash: `name`, `description`, `params` (with typed strings and `desc`), `success`, `errors`, `guards`, `context`, `pipeline`, `settings`. Types are human-readable strings (`"String"`, `"Integer(1..)"`, `"Ref(Product)"`, `"Nilable(String)"`). Omits nil/empty fields
+- **`contract.to_json_schema` export** — generates JSON Schema (Draft 2020-12) from the operation contract. Default section is `:params` (input schema for LLM tools, form generation, API validation). Also supports `:success`, `:errors`, and `:full` sections
+- **Event export** — `Event.to_h` and `Event.to_json_schema` class methods for serializing event definitions. Same type serialization as operations
+- **Handler export** — `Handler.to_h` returns name, events (array), retries, transaction, and pipeline metadata. `handled_events` returns all subscribed event classes
+- **Bulk export** — `Dex::Operation.export(format: :hash|:json_schema)`, `Dex::Event.export(format: :hash|:json_schema)`, `Dex::Event::Handler.export(format: :hash)`. Returns arrays sorted by name — directly serializable with `JSON.generate`
+- **`Dex::Tool` — ruby-llm integration** — bridges dexkit operations to [ruby-llm](https://rubyllm.com/) tools. `Dex::Tool.from(Op)` generates a `RubyLLM::Tool` from an operation's contract. `Dex::Tool.all` converts all registered operations. `Dex::Tool.from_namespace("Order")` filters by namespace. `Dex::Tool.explain_tool` provides a built-in preflight check tool. Lazy-loaded — ruby-llm is only required when you call `Dex::Tool`
+- **`Dex::TypeSerializer`** — converts Literal types to human-readable strings and JSON Schema. Handles `String`, `Integer`, `Float`, `Boolean`, `Symbol`, `Hash`, `Date`, `Time`, `DateTime`, `BigDecimal`, `_Nilable`, `_Array`, `_Union`, `_Ref`, and range-constrained types (`_Integer(1..)`)
+- **Rake task** — `rake dex:export` with `FORMAT=hash|json_schema`, `SECTION=operations|events|handlers`, `FILE=path` environment variables. Auto-loaded via Railtie in Rails apps
+- **`explain` includes `description`** — `explain` output now contains `:description` when set on the operation
 - **`explain` class method for operations** — `MyOp.explain(**kwargs)` returns a frozen Hash with the full preflight state: resolved props, context source tracking (`:explicit`/`:ambient`/`:default`), per-guard pass/fail results with messages, once key and status (`:fresh`/`:exists`/`:expired`/`:pending`/`:invalid`/`:misconfigured`/`:unavailable`), advisory lock key, record/transaction/rescue/callback settings, pipeline steps, and overall `callable` verdict (accounts for both guard failures and once blocking statuses). No side effects — `perform` is never called. Gracefully handles invalid props — returns partial results with `error` key instead of raising, class-level information always available. Respects pipeline customization — removed steps report inactive. Custom middleware can contribute via `_name_explain` class methods
+
+### Breaking
+
+- **`contract.to_h` returns rich format** — `contract.to_h` now returns a comprehensive serialized Hash with string-typed params, description, context, pipeline, and settings instead of the raw `Data#to_h` shape. Before: `contract.to_h[:success]` returned `String` (the class). After: it returns `"String"` (a string). Code doing type comparisons like `contract.to_h[:success] == String` must update to use `contract.success` (which still returns raw types) or compare against `"String"`. The raw Ruby types remain accessible via `contract.params`, `contract.success`, `contract.errors`, `contract.guards`
+- **`_Ref` JSON Schema type changed from `"integer"` to `"string"`** — `_Ref(Model)` now serializes as `{ type: "string" }` in JSON Schema. IDs are treated as opaque strings to support Mongoid BSON::ObjectId, UUIDs, and other non-integer primary key formats. Code that relied on `type: "integer"` for Ref params must update
+
+### Fixed
+
+- **`Handler.deregister` now unsubscribes from Bus** — `Dex::Event::Handler.deregister(klass)` removes the handler from both the registry and the event Bus. Previously, deregistered handlers remained subscribed and would still fire on published events
+- **Registry prunes stale entries** — `registry` now removes unreachable class references from the backing Set during each call, preventing memory leaks from code reload cycles
+- **`description(false)` and `desc: false` now raise `ArgumentError`** — previously accepted as "missing" values due to falsey evaluation. Both DSL methods now validate with `!text.nil?` / `!desc.nil?` to enforce the String requirement, matching the library's fail-fast convention
+- **`prop_descriptions` no longer leaks parent descriptions for redeclared props** — when a child class redefines a prop without `desc:`, the parent's description is cleared instead of being inherited. Providing a new `desc:` on the child works as before
+- **Rake task validates handler format** — `rake dex:export SECTION=handlers FORMAT=json_schema` now raises a clear error instead of hitting `Handler.export`'s `ArgumentError`
 
 ## [0.7.0] - 2026-03-08
 

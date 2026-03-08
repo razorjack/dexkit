@@ -163,6 +163,24 @@ op = Shipment::Track.new(api_key: "sk-123")
 op.api_key  # => NoMethodError (private)
 ```
 
+## Property descriptions
+
+Add `desc:` to document what a property represents. Descriptions appear in [contract export](/operation/registry#exporting-contracts), JSON Schema output, and LLM tool definitions:
+
+```ruby
+class Order::Place < Dex::Operation
+  prop :customer, _Ref(Customer), desc: "The customer placing the order"
+  prop :quantity, _Integer(1..), desc: "Number of units (minimum 1)"
+  prop? :note, String, desc: "Optional note for the warehouse"
+
+  def perform
+    # ...
+  end
+end
+```
+
+`desc:` works on both `prop` and `prop?`. It's purely for introspection – it has no effect on validation or runtime behavior.
+
 ## Reserved names
 
 A few names are reserved and can't be used as property names: `call`, `perform`, `async`, `safe`, `initialize`. Using them raises `ArgumentError` at class definition time.

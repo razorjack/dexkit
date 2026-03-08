@@ -9,6 +9,17 @@ module TemporaryConstants
     value
   end
 
+  def _deregister_tracked(bucket, *registries)
+    return unless defined?(@_tracked_constants)
+
+    _tracked_constants[bucket].each do |const_name|
+      next unless Object.const_defined?(const_name)
+
+      klass = Object.const_get(const_name)
+      registries.each { |r| r.deregister(klass) }
+    end
+  end
+
   def _cleanup_tracked_constants(bucket)
     return unless defined?(@_tracked_constants)
 

@@ -19,8 +19,11 @@ require_relative "dex/error"
 require_relative "dex/settings"
 require_relative "dex/pipeline"
 require_relative "dex/executable"
+require_relative "dex/registry"
+require_relative "dex/type_serializer"
 require_relative "dex/operation"
 require_relative "dex/event"
+require_relative "dex/tool"
 require_relative "dex/form"
 require_relative "dex/query"
 
@@ -89,3 +92,5 @@ module Dex
     end
   end
 end
+
+require_relative "dex/railtie" if defined?(Rails::Railtie)

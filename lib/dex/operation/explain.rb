@@ -16,6 +16,8 @@ module Dex
         active = pipeline.steps.map(&:name).to_set
 
         info[:operation] = name || "(anonymous)"
+        desc = description
+        info[:description] = desc if desc
         info[:error] = "#{error.class}: #{error.message}" if error
         info[:props] = _explain_props(instance)
         info[:context] = _explain_context(instance, kwargs)

@@ -35,6 +35,14 @@ features:
     details: Minitest helpers for operations and events – execution, assertions, stubs, spies, contract verification, and a global activity log.
     link: /operation/testing
     linkText: See testing docs
+  - title: Registry & Export
+    details: Auto-tracked class registry, contract export as hashes or JSON Schema, description DSL for operations and events, and a rake task for bulk export.
+    link: /operation/registry
+    linkText: See export docs
+  - title: LLM Tools
+    details: Turn operations into LLM-callable tools via ruby-llm – typed params, guards as preconditions, explain for preflight checks, and recording as audit trail.
+    link: /operation/llm-tools
+    linkText: See LLM docs
   - title: AI agent ready
     details: Ships LLM-optimized guides you drop into your project. Consistent structure means coding agents learn one pattern and know them all.
     link: /guide/philosophy

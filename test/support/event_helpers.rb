@@ -4,6 +4,7 @@ module EventHelpers
   include TemporaryConstants
 
   def teardown
+    _deregister_tracked(:event, Dex::Event, Dex::Event::Handler)
     _cleanup_tracked_constants(:event)
     Dex::Event::Bus.clear!
     Dex::Event::Trace.clear!

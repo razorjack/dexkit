@@ -141,6 +141,21 @@ info[:once][:status]       # => :fresh (would execute, not replay)
 info[:context][:source]    # => { customer: :ambient }
 ```
 
+**Registry & Export** — list all operations, export contracts as JSON or JSON Schema, and bridge to LLM function-calling via [ruby-llm](https://rubyllm.com/):
+
+```ruby
+# List all operations
+Dex::Operation.registry  # => #<Set: {Order::Place, Order::Cancel, ...}>
+
+# Export contracts
+Dex::Operation.export(format: :json_schema)
+
+# LLM tools (requires ruby-llm gem)
+chat = RubyLLM.chat
+chat.with_tools(*Dex::Tool.all)
+chat.ask("Place an order for 2 units of product #42")
+```
+
 **Transactions** on by default, **advisory locking**, **recording** to database, **callbacks**, and a customizable **pipeline** – all composable, all optional.
 
 ### Testing

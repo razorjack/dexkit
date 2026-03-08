@@ -17,6 +17,32 @@ module Dex
     include TypeCoercion
     include ContextSetup
 
+    extend Registry
+
+    class << self
+      def to_h
+        Export.build_hash(self)
+      end
+
+      def to_json_schema
+        Export.build_json_schema(self)
+      end
+
+      def export(format: :hash)
+        unless %i[hash json_schema].include?(format)
+          raise ArgumentError, "unknown format: #{format.inspect}. Known: :hash, :json_schema"
+        end
+
+        sorted = registry.sort_by(&:name)
+        sorted.map do |klass|
+          case format
+          when :hash then klass.to_h
+          when :json_schema then klass.to_json_schema
+          end
+        end
+      end
+    end
+
     def self._warn(message)
       Dex.warn("Event: #{message}")
     end
@@ -84,3 +110,4 @@ end
 require_relative "event/bus"
 require_relative "event/handler"
 require_relative "event/processor"
+require_relative "event/export"

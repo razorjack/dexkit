@@ -28,7 +28,11 @@ lib/
     settings.rb          # Dex::Settings (set, settings_for, validate_options!)
     pipeline.rb          # Dex::Pipeline (shared execution pipeline)
     executable.rb        # Dex::Executable (shared skeleton: Settings, Pipeline, use DSL)
+    registry.rb          # Dex::Registry (shared subclass registry for Operation, Event, Handler)
+    type_serializer.rb   # Dex::TypeSerializer (type → string and type → JSON Schema)
     match.rb             # Dex::Ok, Dex::Err aliases + Dex::Match
+    tool.rb              # Dex::Tool (ruby-llm integration, lazy-loaded)
+    railtie.rb           # Dex::Railtie (rake tasks, auto-loaded in Rails)
     operation.rb         # Operation class orchestrator (requires all parts)
     operation/
       result_wrapper.rb  # Dex::ResultWrapper
@@ -40,8 +44,9 @@ lib/
       safe_wrapper.rb    # Dex::SafeWrapper
       rescue_wrapper.rb  # Dex::RescueWrapper
       callback_wrapper.rb # Dex::CallbackWrapper
-      guard_wrapper.rb # Dex::GuardWrapper
-      explain.rb       # Dex::Operation::Explain (preflight introspection)
+      guard_wrapper.rb   # Dex::GuardWrapper
+      explain.rb         # Dex::Operation::Explain (preflight introspection)
+      export.rb          # Dex::Operation::Export (contract.to_h, to_json_schema)
       outcome.rb         # Operation::Ok, Err, SafeProxy
       async_proxy.rb     # Operation::AsyncProxy
       record_backend.rb  # Operation::RecordBackend + adapters
@@ -55,6 +60,7 @@ lib/
       bus.rb             # Dex::Event::Bus (global pub/sub, sync/async dispatch, persistence)
       handler.rb         # Dex::Event::Handler (on, retries, callbacks, transaction, pipeline)
       processor.rb       # Dex::Event::Processor (ActiveJob, lazy-loaded via const_missing)
+      export.rb          # Dex::Event::Export (to_h, to_json_schema)
     test_log.rb          # Dex::TestLog (global activity log for tests)
     test_helpers.rb      # Dex::TestHelpers + Dex::TestWrapper
     test_helpers/

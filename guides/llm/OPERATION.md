@@ -95,7 +95,7 @@ prop? :note, String                       # optional (nilable, default: nil)
 
 ### _Ref(Model)
 
-Accepts model instances or IDs, coerces IDs via `Model.find(id)`. With `lock: true`, uses `Model.lock.find(id)` (SELECT FOR UPDATE). Instances pass through without re-locking. In serialization (recording, async), stores model ID only.
+Accepts model instances or IDs, coerces IDs via `Model.find(id)`. With `lock: true`, uses `Model.lock.find(id)` (SELECT FOR UPDATE). Instances pass through without re-locking. In serialization (recording, async), stores model ID only. IDs are treated as strings in JSON Schema – this supports integer PKs, UUIDs, and Mongoid BSON::ObjectId equally.
 
 Outside the class body (e.g., in tests), use `Dex::RefType.new(Model)` instead of `_Ref(Model)`.
 
@@ -822,6 +822,65 @@ class CreateUserTest < Minitest::Test
   end
 end
 ```
+
+---
+
+## Registry, Export & Description
+
+### Description
+
+Operations can declare a human-readable description. Props can include `desc:`:
+
+```ruby
+class Order::Place < Dex::Operation
+  description "Places a new order, charges payment, and schedules fulfillment"
+
+  prop :product, _Ref(Product), desc: "Product to order"
+  prop :quantity, _Integer(1..), desc: "Number of units"
+end
+```
+
+Descriptions appear in `contract.to_h`, `to_json_schema`, `explain`, and LLM tool definitions.
+
+### Registry
+
+```ruby
+Dex::Operation.registry          # => #<Set: {Order::Place, Order::Cancel, ...}>
+Dex::Operation.deregister(klass) # remove from registry (useful in tests)
+Dex::Operation.clear!            # empty the registry
+```
+
+Only named, reachable classes are included. Anonymous classes and stale objects from code reloads are excluded. Populates lazily via `inherited` — in Rails, `eager_load!` to get the full list.
+
+### Export
+
+```ruby
+Order::Place.contract.to_h
+# => { name: "Order::Place", description: "...", params: { product: { type: "Ref(Product)", required: true, desc: "..." } }, ... }
+
+Order::Place.contract.to_json_schema                    # params input schema (default)
+Order::Place.contract.to_json_schema(section: :success) # success return schema
+Order::Place.contract.to_json_schema(section: :errors)  # error catalog schema
+Order::Place.contract.to_json_schema(section: :full)    # everything
+
+Dex::Operation.export                          # all operations as hashes
+Dex::Operation.export(format: :json_schema)    # all as JSON Schema
+```
+
+### LLM Tools (ruby-llm integration)
+
+```ruby
+chat = RubyLLM.chat
+chat.with_tools(*Dex::Tool.all)                     # all operations as tools
+chat.with_tools(*Dex::Tool.from_namespace("Order")) # namespace filter
+chat.with_tools(Dex::Tool.explain_tool)              # preflight check tool
+
+Dex.with_context(current_user: user) do
+  chat.ask("Place an order for 2 units of product #42")
+end
+```
+
+Requires `gem 'ruby_llm'` in your Gemfile. Lazy-loaded — ruby-llm is only required when you call `Dex::Tool`.
 
 ---
 

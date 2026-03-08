@@ -72,6 +72,7 @@ Order::Place.explain(product: product, customer: customer, quantity: 2)
 | Key | Source | Description |
 |---|---|---|
 | `operation` | Core | Class name |
+| `description` | Core | Operation description (present only when set via `description` DSL) |
 | `error` | Core | Present only when props are invalid; error message string |
 | `props` | Core | Resolved and coerced property values |
 | `context` | ContextSetup | Resolution details per mapped prop |

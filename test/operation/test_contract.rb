@@ -106,8 +106,32 @@ class TestOperationContract < Minitest::Test
 
     h = op.contract.to_h
     assert_instance_of Hash, h
-    assert_equal String, h[:success]
+    assert_equal "String", h[:success]
     assert_equal [:fail], h[:errors]
     assert h.key?(:params)
+  end
+
+  def test_to_h_without_source
+    c = Dex::Operation::Contract.new(params: {}, success: nil, errors: [], guards: [])
+    h = c.to_h
+    assert_instance_of Hash, h
+    assert_nil h[:success]
+    assert_equal [], h[:errors]
+  end
+
+  def test_to_json_schema_without_source_raises
+    c = Dex::Operation::Contract.new(params: {}, success: nil, errors: [], guards: [])
+    assert_raises(ArgumentError) { c.to_json_schema }
+  end
+
+  def test_source_class_accessible
+    op = build_operation { def perform = "ok" }
+    c = op.contract
+    assert_equal op, c.source_class
+  end
+
+  def test_source_class_nil_without_source
+    c = Dex::Operation::Contract.new(params: {}, success: nil, errors: [], guards: [])
+    assert_nil c.source_class
   end
 end

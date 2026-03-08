@@ -383,4 +383,46 @@ end
 
 ---
 
+## Registry, Export & Description
+
+### Description
+
+Events can declare a human-readable description. Props can include `desc:`:
+
+```ruby
+class Order::Placed < Dex::Event
+  description "Emitted after an order is successfully placed"
+
+  prop :order_id, Integer, desc: "The placed order"
+  prop :total, BigDecimal, desc: "Order total"
+end
+```
+
+### Registry
+
+```ruby
+Dex::Event.registry            # => #<Set: {Order::Placed, Order::Cancelled, ...}>
+Dex::Event::Handler.registry   # => #<Set: {NotifyWarehouse, SendConfirmation, ...}>
+Dex::Event.deregister(klass)
+Dex::Event::Handler.deregister(klass)
+```
+
+### Export
+
+```ruby
+Order::Placed.to_h
+# => { name: "Order::Placed", description: "...", props: { order_id: { type: "Integer", ... } } }
+
+Order::Placed.to_json_schema   # JSON Schema (Draft 2020-12)
+
+NotifyWarehouse.to_h
+# => { name: "NotifyWarehouse", events: ["Order::Placed"], retries: 3, ... }
+
+Dex::Event.export                         # all events as hashes
+Dex::Event.export(format: :json_schema)   # all as JSON Schema
+Dex::Event::Handler.export                # all handlers as hashes
+```
+
+---
+
 **End of reference.**

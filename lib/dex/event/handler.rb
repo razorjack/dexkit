@@ -5,13 +5,46 @@ module Dex
     class Handler
       include Dex::Executable
 
+      extend Registry
+
+      def self.deregister(klass)
+        if klass.respond_to?(:handled_events)
+          klass.handled_events.each { |ec| Bus.unsubscribe(ec, klass) }
+        end
+        super
+      end
+
       attr_reader :event
 
       def self.on(*event_classes)
         event_classes.each do |ec|
           Event.validate_event_class!(ec)
           Bus.subscribe(ec, self)
+          (@_handled_events ||= []) << ec
         end
+      end
+
+      def self.handled_events
+        defined?(@_handled_events) ? @_handled_events.dup.freeze : [].freeze
+      end
+
+      def self.to_h
+        h = {}
+        h[:name] = name if name
+        event_names = handled_events.filter_map(&:name)
+        h[:events] = event_names unless event_names.empty?
+        retry_config = _event_handler_retry_config
+        h[:retries] = retry_config[:count] if retry_config
+        tx_s = settings_for(:transaction)
+        h[:transaction] = tx_s.fetch(:enabled, false)
+        h[:pipeline] = pipeline.steps.map(&:name)
+        h
+      end
+
+      def self.export(format: :hash)
+        raise ArgumentError, "unknown format: #{format.inspect}. Known: :hash" unless format == :hash
+
+        registry.sort_by(&:name).map(&:to_h)
       end
 
       def self.retries(count, **opts)

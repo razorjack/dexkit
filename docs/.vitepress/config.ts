@@ -272,6 +272,8 @@ export default defineConfig({
           { text: 'Middleware', link: '/operation/pipeline' },
           { text: 'Contracts', link: '/operation/contracts' },
           { text: 'Explain', link: '/operation/explain' },
+          { text: 'Registry & Export', link: '/operation/registry' },
+          { text: 'LLM Tools', link: '/operation/llm-tools' },
           { text: 'Testing', link: '/operation/testing' }
         ]
       },
