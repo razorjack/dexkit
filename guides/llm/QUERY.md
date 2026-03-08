@@ -1,6 +1,6 @@
 # Dex::Query — LLM Reference
 
-Copy this to your app's queries directory (e.g., `app/queries/AGENTS.md`) so coding agents know the full API when implementing and testing queries.
+Install with `rake dex:guides` or copy manually to `app/queries/AGENTS.md`.
 
 ---
 

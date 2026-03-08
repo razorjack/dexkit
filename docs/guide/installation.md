@@ -84,6 +84,16 @@ end
 
 All columns except `name` are optional – dexkit only writes to columns that exist on the model. See [Recording](/operation/recording) for details on controlling what gets recorded.
 
+### AI coding agents
+
+Install LLM-optimized guides as `AGENTS.md` files in your app directories:
+
+```bash
+rake dex:guides
+```
+
+This copies reference docs into `app/operations/`, `app/events/`, `app/forms/`, and `app/queries/` (only directories that exist). Re-run after upgrading dexkit. See [Registry & Export](/operation/registry#llm-guides) for details.
+
 ### Test setup
 
 ```ruby

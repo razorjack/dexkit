@@ -1,6 +1,6 @@
 # Dex::Event — LLM Reference
 
-Copy this to your app's event handlers directory (e.g., `app/event_handlers/AGENTS.md`) so coding agents know the full API when implementing and testing events.
+Install with `rake dex:guides` or copy manually to `app/events/AGENTS.md`.
 
 ---
 

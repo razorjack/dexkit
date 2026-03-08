@@ -1,6 +1,6 @@
 # Dex::Operation — LLM Reference
 
-Copy this to your app's operations directory (e.g., `app/operations/AGENTS.md`) so coding agents know the full API when implementing and testing operations.
+Install with `rake dex:guides` or copy manually to `app/operations/AGENTS.md`.
 
 ---
 

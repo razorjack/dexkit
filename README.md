@@ -350,13 +350,18 @@ Full documentation at **[dex.razorjack.net](https://dex.razorjack.net)**.
 
 ## AI Coding Assistant Setup
 
-dexkit ships LLM-optimized guides. Copy them into your project so AI agents automatically know the API:
+dexkit ships LLM-optimized guides. Install them as `AGENTS.md` files in your app directories so AI coding agents automatically know the API:
 
 ```bash
-cp $(bundle show dexkit)/guides/llm/OPERATION.md app/operations/CLAUDE.md
-cp $(bundle show dexkit)/guides/llm/EVENT.md app/event_handlers/CLAUDE.md
-cp $(bundle show dexkit)/guides/llm/FORM.md app/forms/CLAUDE.md
-cp $(bundle show dexkit)/guides/llm/QUERY.md app/queries/CLAUDE.md
+rake dex:guides
+```
+
+This copies guides into directories that exist (`app/operations/`, `app/events/`, `app/event_handlers/`, `app/forms/`, `app/queries/`), stamped with the installed dexkit version. Re-run after upgrading dexkit to sync. Existing hand-written `AGENTS.md` files are never overwritten (use `FORCE=1` to override).
+
+Override paths for non-standard directory names:
+
+```bash
+rake dex:guides OPERATIONS_PATH=app/services
 ```
 
 ## License

@@ -1,6 +1,6 @@
 # Dex::Form — LLM Reference
 
-Copy this to your app's forms directory (e.g., `app/forms/AGENTS.md`) so coding agents know the full API when implementing and testing forms.
+Install with `rake dex:guides` or copy manually to `app/forms/AGENTS.md`.
 
 ---
 
