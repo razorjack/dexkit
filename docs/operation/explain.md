@@ -72,6 +72,7 @@ Order::Place.explain(product: product, customer: customer, quantity: 2)
 | Key | Source | Description |
 |---|---|---|
 | `operation` | Core | Class name |
+| `error` | Core | Present only when props are invalid; error message string |
 | `props` | Core | Resolved and coerced property values |
 | `context` | ContextSetup | Resolution details per mapped prop |
 | `guards` | GuardWrapper | Per-guard pass/fail results |
@@ -108,6 +109,7 @@ Source values:
 - `:explicit` – passed as a keyword argument
 - `:ambient` – filled from `Dex.context`
 - `:default` – fell through to the prop's default value
+- `:missing` – not provided and no default exists (partial explain only)
 
 ## Once status
 
@@ -141,16 +143,25 @@ Failed guards include a `:message` with the reason. Skipped guards have `skipped
 
 `explain` respects pipeline customization. If a step is removed via `pipeline.remove(:guard)`, explain skips guard evaluation and reports `callable: true`. Each section reflects the actual pipeline — if a step isn't there, its section shows the "inactive" state (`{ active: false }`, `{ enabled: false }`, etc.).
 
-## Errors
+## Partial explain
 
-`explain` validates props the same way `new` does. Invalid types raise `Literal::TypeError`:
+When props are invalid (wrong types, missing required arguments), `explain` returns a partial result instead of raising. Only prop validation errors (`Literal::TypeError`, `ArgumentError`) trigger partial mode – other errors (bugs in initialization hooks, coercion failures) propagate normally. An `error` key appears with the error message, and sections that require a valid instance degrade gracefully:
 
 ```ruby
-Order::Place.explain(product: "not an id", quantity: -1)
-# => Literal::TypeError
+info = Order::Place.explain(product: "not an id")
+info[:error]      # => "Literal::TypeError: ..."
+info[:props]      # => {}
+info[:guards]     # => { passed: false, results: [] }
+info[:callable]   # => false
+
+info[:record]     # => { enabled: true, params: true, result: true }
+info[:callbacks]  # => { before: 1, after: 2, around: 0 }
+info[:pipeline]   # => [:result, :guard, :once, ...]
 ```
 
-This is intentional – explain needs a valid operation instance to evaluate guards and compute keys.
+Class-level information (record, transaction, rescue, callbacks, pipeline) is always available. Instance-dependent sections (props, guards, once key, lock key) report empty or nil values. Context mappings and source tracking still work – only resolved values require a valid instance. Static advisory lock keys (string literals) are preserved even in partial mode. Context source reports `:missing` for props that have no default and no ambient value.
+
+The `error` key is absent when props are valid.
 
 ## Custom middleware
 

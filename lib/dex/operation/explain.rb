@@ -4,11 +4,19 @@ module Dex
   class Operation
     module Explain
       def explain(**kwargs)
-        instance = new(**kwargs)
+        error = nil
+        instance = begin
+          new(**kwargs)
+        rescue Literal::TypeError, ArgumentError => e
+          error = e
+          nil
+        end
+
         info = {}
         active = pipeline.steps.map(&:name).to_set
 
         info[:operation] = name || "(anonymous)"
+        info[:error] = "#{error.class}: #{error.message}" if error
         info[:props] = _explain_props(instance)
         info[:context] = _explain_context(instance, kwargs)
         info[:guards] = active.include?(:guard) ? _explain_guards(instance) : { passed: true, results: [] }
@@ -19,14 +27,15 @@ module Dex
         info[:rescue_from] = active.include?(:rescue) ? _explain_rescue : {}
         info[:callbacks] = active.include?(:callback) ? _explain_callbacks : { before: 0, after: 0, around: 0 }
 
-        # Let custom middleware contribute via _name_explain class methods
-        pipeline.steps.each do |step|
-          method_name = :"_#{step.name}_explain"
-          send(method_name, instance, info) if respond_to?(method_name, true)
+        if instance
+          pipeline.steps.each do |step|
+            method_name = :"_#{step.name}_explain"
+            send(method_name, instance, info) if respond_to?(method_name, true)
+          end
         end
 
         info[:pipeline] = pipeline.steps.map(&:name)
-        info[:callable] = _explain_callable?(info)
+        info[:callable] = instance ? _explain_callable?(info) : false
         info.freeze
       end
 
@@ -46,6 +55,7 @@ module Dex
 
       def _explain_props(instance)
         return {} unless respond_to?(:literal_properties)
+        return {} unless instance
 
         literal_properties.each_with_object({}) do |prop, hash|
           hash[prop.name] = instance.public_send(prop.name)
@@ -61,13 +71,15 @@ module Dex
         source = {}
 
         mappings.each do |prop_name, context_key|
-          resolved[prop_name] = instance.public_send(prop_name)
+          resolved[prop_name] = instance.public_send(prop_name) if instance
           source[prop_name] = if explicit_kwargs.key?(prop_name)
             :explicit
           elsif ambient.key?(context_key)
             :ambient
-          else
+          elsif instance || _explain_prop_has_default?(prop_name)
             :default
+          else
+            :missing
           end
         end
 
@@ -75,6 +87,8 @@ module Dex
       end
 
       def _explain_guards(instance)
+        return { passed: false, results: [] } unless instance
+
         all_results = instance.send(:_guard_evaluate_all)
         results = all_results.map do |r|
           entry = { name: r[:name], passed: r[:passed] }
@@ -89,7 +103,7 @@ module Dex
         settings = settings_for(:once)
         return { active: false } unless settings.fetch(:defined, false)
 
-        key = instance.send(:_once_derive_key)
+        key = instance&.send(:_once_derive_key)
         {
           active: true,
           key: key,
@@ -128,7 +142,22 @@ module Dex
         settings = settings_for(:advisory_lock)
         return { active: false } unless settings.fetch(:enabled, false)
 
-        { active: true, key: instance.send(:_lock_key), timeout: settings[:timeout] }
+        key = if instance
+          instance.send(:_lock_key)
+        else
+          case settings[:key]
+          when String then settings[:key]
+          when nil then name
+          end
+        end
+
+        { active: true, key: key, timeout: settings[:timeout] }
+      end
+
+      def _explain_prop_has_default?(prop_name)
+        return false unless respond_to?(:literal_properties)
+
+        literal_properties.any? { |p| p.name == prop_name && p.default? }
       end
 
       def _explain_record

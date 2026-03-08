@@ -52,12 +52,16 @@ class TestOperationExplain < Minitest::Test
     assert_equal({}, op.explain[:props])
   end
 
-  def test_invalid_props_raise
+  def test_invalid_props_return_partial_explain
     op = build_operation do
       prop :name, String
       def perform = "ok"
     end
-    assert_raises(Literal::TypeError) { op.explain(name: 123) }
+    info = op.explain(name: 123)
+    assert info.key?(:error)
+    assert_match(/Literal::TypeError/, info[:error])
+    assert_equal({}, info[:props])
+    refute info[:callable]
   end
 
   # Context
@@ -713,5 +717,228 @@ class TestOperationExplain < Minitest::Test
     # but it exists as a constant. This test verifies the declared setting.
     info = op.explain
     assert info[:transaction][:enabled]
+  end
+
+  # Partial explain (invalid props)
+
+  def test_partial_missing_required_prop
+    op = build_operation do
+      prop :name, String
+      def perform = "ok"
+    end
+    info = op.explain
+    assert info.key?(:error)
+    assert_match(/ArgumentError/, info[:error])
+    refute info[:callable]
+  end
+
+  def test_partial_wrong_type
+    op = build_operation do
+      prop :count, Integer
+      def perform = "ok"
+    end
+    info = op.explain(count: "not a number")
+    assert info.key?(:error)
+    assert_match(/Literal::TypeError/, info[:error])
+  end
+
+  def test_partial_no_error_key_on_success
+    op = build_operation { def perform = "ok" }
+    info = op.explain
+    refute info.key?(:error)
+  end
+
+  def test_partial_still_frozen
+    op = build_operation do
+      prop :name, String
+      def perform = "ok"
+    end
+    info = op.explain(name: 123)
+    assert info.frozen?
+  end
+
+  def test_partial_props_empty
+    op = build_operation do
+      prop :name, String
+      prop :count, Integer
+      def perform = "ok"
+    end
+    info = op.explain(name: 123)
+    assert_equal({}, info[:props])
+  end
+
+  def test_partial_class_level_info_still_available
+    op = define_operation(:PartialClassLevel) do
+      prop :name, String
+      before {}
+      after {}
+      rescue_from ArgumentError, as: :bad_input
+      def perform = "ok"
+    end
+    with_recording do
+      info = op.explain(name: 123)
+      assert info[:record][:enabled]
+      assert info[:transaction][:enabled]
+      assert_equal({ "ArgumentError" => :bad_input }, info[:rescue_from])
+      assert_equal({ before: 1, after: 1, around: 0 }, info[:callbacks])
+      assert_equal %i[result guard once lock record transaction rescue callback], info[:pipeline]
+    end
+  end
+
+  def test_partial_guards_not_evaluated
+    op = build_operation do
+      prop :name, String
+      guard(:check, "Name required") { name.nil? }
+      def perform = "ok"
+    end
+    info = op.explain(name: 123)
+    refute info[:guards][:passed]
+    assert_empty info[:guards][:results]
+  end
+
+  def test_partial_once_shows_active_with_invalid_key
+    op = define_operation(:PartialOnce) do
+      prop :order_id, Integer
+      once :order_id
+      def perform = "ok"
+    end
+    with_recording do
+      info = op.explain(order_id: "bad")
+      assert info[:once][:active]
+      assert_nil info[:once][:key]
+      assert_equal :invalid, info[:once][:status]
+    end
+  end
+
+  def test_partial_lock_nil_key_for_dynamic_lock
+    op = build_operation do
+      prop :order_id, Integer
+      advisory_lock { "order:#{order_id}" }
+      def perform = "ok"
+    end
+    info = op.explain(order_id: "bad")
+    assert info[:lock][:active]
+    assert_nil info[:lock][:key]
+  end
+
+  def test_partial_lock_preserves_static_string_key
+    op = build_operation do
+      prop :name, String
+      advisory_lock "global_lock"
+      def perform = "ok"
+    end
+    info = op.explain(name: 123)
+    assert info[:lock][:active]
+    assert_equal "global_lock", info[:lock][:key]
+  end
+
+  def test_partial_lock_preserves_nil_key_as_class_name
+    define_operation(:PartialLockNamed) do
+      prop :name, String
+      advisory_lock
+      def perform = "ok"
+    end
+    info = PartialLockNamed.explain(name: 123)
+    assert info[:lock][:active]
+    assert_equal "PartialLockNamed", info[:lock][:key]
+  end
+
+  def test_partial_context_shows_mappings_and_source
+    op = build_operation do
+      prop :user, String
+      prop :count, Integer
+      context user: :current_user
+      def perform = "ok"
+    end
+    Dex.with_context(current_user: "admin") do
+      info = op.explain(count: "bad")
+      assert info.key?(:error)
+      assert_equal({ user: :current_user }, info[:context][:mappings])
+      assert_equal({ user: :ambient }, info[:context][:source])
+      assert_equal({}, info[:context][:resolved])
+    end
+  end
+
+  def test_partial_context_explicit_source_detected
+    op = build_operation do
+      prop :user, String
+      prop :role, String
+      context user: :current_user
+      def perform = "ok"
+    end
+    info = op.explain(user: "explicit_user")
+    assert_equal :explicit, info[:context][:source][:user]
+    assert_equal({}, info[:context][:resolved])
+  end
+
+  def test_partial_context_missing_without_default
+    op = build_operation do
+      prop :user, String
+      context user: :current_user
+      def perform = "ok"
+    end
+    info = op.explain
+    assert info.key?(:error)
+    assert_equal :missing, info[:context][:source][:user]
+  end
+
+  def test_partial_context_default_with_default_value
+    op = build_operation do
+      prop :locale, String, default: "en"
+      prop :count, Integer
+      context :locale
+      def perform = "ok"
+    end
+    info = op.explain(count: "bad")
+    assert info.key?(:error)
+    assert_equal :default, info[:context][:source][:locale]
+  end
+
+  def test_partial_custom_middleware_not_called
+    hook_called = false
+    class_methods = Module.new do
+      define_method(:_rate_limit_explain) do |_instance, info|
+        hook_called = true
+        info[:rate_limit] = { max: 100 }
+      end
+    end
+    wrapper = Module.new do
+      define_singleton_method(:name) { "RateLimitWrapper" }
+      define_method(:included) do |base|
+        base.extend(class_methods)
+        super(base)
+      end
+      module_function :included
+      define_method(:_rate_limit_wrap) { yield }
+    end
+    op = build_operation do
+      use wrapper
+      prop :name, String
+      def perform = "ok"
+    end
+    info = op.explain(name: 123)
+    refute hook_called
+    refute info.key?(:rate_limit)
+  end
+
+  def test_partial_operation_name_still_reported
+    define_operation(:PartialNamed) do
+      prop :name, String
+      def perform = "ok"
+    end
+    info = PartialNamed.explain(name: 123)
+    assert_equal "PartialNamed", info[:operation]
+  end
+
+  def test_non_validation_errors_still_raise
+    op = build_operation do
+      prop :name, String
+      def perform = "ok"
+    end
+    op.define_singleton_method(:new) do |**kwargs|
+      super(**kwargs)
+      raise NoMethodError, "bug in init hook"
+    end
+    assert_raises(NoMethodError) { op.explain(name: "valid") }
   end
 end

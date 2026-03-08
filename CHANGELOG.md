@@ -2,7 +2,7 @@
 
 ### Added
 
-- **`explain` class method for operations** — `MyOp.explain(**kwargs)` returns a frozen Hash with the full preflight state: resolved props, context source tracking (`:explicit`/`:ambient`/`:default`), per-guard pass/fail results with messages, once key and status (`:fresh`/`:exists`/`:expired`/`:pending`/`:invalid`/`:misconfigured`/`:unavailable`), advisory lock key, record/transaction/rescue/callback settings, pipeline steps, and overall `callable` verdict (accounts for both guard failures and once blocking statuses). No side effects — `perform` is never called. Respects pipeline customization — removed steps report inactive. Custom middleware can contribute via `_name_explain` class methods
+- **`explain` class method for operations** — `MyOp.explain(**kwargs)` returns a frozen Hash with the full preflight state: resolved props, context source tracking (`:explicit`/`:ambient`/`:default`), per-guard pass/fail results with messages, once key and status (`:fresh`/`:exists`/`:expired`/`:pending`/`:invalid`/`:misconfigured`/`:unavailable`), advisory lock key, record/transaction/rescue/callback settings, pipeline steps, and overall `callable` verdict (accounts for both guard failures and once blocking statuses). No side effects — `perform` is never called. Gracefully handles invalid props — returns partial results with `error` key instead of raising, class-level information always available. Respects pipeline customization — removed steps report inactive. Custom middleware can contribute via `_name_explain` class methods
 
 ## [0.7.0] - 2026-03-08
 

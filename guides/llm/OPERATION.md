@@ -269,8 +269,8 @@ info = Order::Place.explain(product: product, customer: customer, quantity: 2)
 # }
 ```
 
-- Invalid props raise `Literal::TypeError` (same as `new`)
-- `info[:callable]` is a full preflight verdict — checks guards AND once blocking statuses (`:invalid`, `:pending`, `:misconfigured`, `:unavailable`)
+- Invalid props (`Literal::TypeError`, `ArgumentError`) return a partial result with `info[:error]` — class-level info still available, instance-dependent sections degrade to empty/nil. Static lock keys preserved. Context source uses `:missing` for props without defaults. Other errors propagate normally
+- `info[:callable]` is a full preflight verdict — checks guards AND once blocking statuses; always `false` when props are invalid
 - Once status: `:fresh` (new), `:exists` (would replay), `:expired`, `:pending` (in-flight), `:invalid` (nil key), `:misconfigured` (anonymous op, missing record step, missing column), `:unavailable` (no backend)
 - Guard results include `message:` on failures and `skipped: true` when a guard was skipped via `requires:` dependency
 - Custom middleware can contribute via `_name_explain(instance, info)` class methods
