@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.7.0] - 2026-03-08
+
 ### Breaking
 
 - **Operation record schema refactored** — the `response` column is renamed to `result`, the `error` column is split into `error_code`, `error_message`, and `error_details`, `params` no longer has `default: {}` (nil means "not captured"), and `status` is now `null: false`. The `record response: false` DSL option is now `record result: false`. Status value `done` is renamed to `completed`, and a new `error` status represents business errors via `error!`
