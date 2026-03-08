@@ -4,7 +4,7 @@ description: Turn Dex::Operation classes into LLM-callable tools with Dex::Tool 
 
 # LLM Tools
 
-`Dex::Tool` turns your operations into tools that LLMs can call directly. It builds on [ruby-llm](https://github.com/crmne/ruby-llm) and uses the [registry](/operation/registry) and [JSON Schema export](/operation/registry#json-schema) to generate tool definitions automatically.
+`Dex::Tool` turns your operations into tools that LLMs can call directly. It builds on [ruby-llm](https://github.com/crmne/ruby-llm) and uses the [registry](/guide/registry) and [JSON Schema export](/guide/registry#json-schema) to generate tool definitions automatically.
 
 ## Setup
 

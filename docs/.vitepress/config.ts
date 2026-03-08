@@ -250,7 +250,9 @@ export default defineConfig({
         items: [
           { text: 'Introduction', link: '/guide/introduction' },
           { text: 'Installation', link: '/guide/installation' },
-          { text: 'DX Meets AI', link: '/guide/philosophy' }
+          { text: 'DX Meets AI', link: '/guide/philosophy' },
+          { text: 'Registry & Export', link: '/guide/registry' },
+          { text: 'LLM Guides', link: '/guide/llm-guides' }
         ]
       },
       {
@@ -272,14 +274,13 @@ export default defineConfig({
           { text: 'Middleware', link: '/operation/pipeline' },
           { text: 'Contracts', link: '/operation/contracts' },
           { text: 'Explain', link: '/operation/explain' },
-          { text: 'Registry & Export', link: '/operation/registry' },
           { text: 'LLM Tools', link: '/operation/llm-tools' },
           { text: 'Testing', link: '/operation/testing' }
         ]
       },
       {
         text: 'Form',
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: 'Overview', link: '/form/' },
           { text: 'Attributes & Normalization', link: '/form/attributes' },
@@ -291,7 +292,7 @@ export default defineConfig({
       },
       {
         text: 'Event',
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: 'Overview', link: '/event/' },
           { text: 'Publishing', link: '/event/publishing' },
@@ -302,7 +303,7 @@ export default defineConfig({
       },
       {
         text: 'Query',
-        collapsed: false,
+        collapsed: true,
         items: [
           { text: 'Overview', link: '/query/' },
           { text: 'Filtering', link: '/query/filtering' },

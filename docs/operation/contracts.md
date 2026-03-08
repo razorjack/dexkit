@@ -49,7 +49,7 @@ When error codes are declared, calling `error!` with an undeclared code raises `
 
 ## Description
 
-Use `description` to document what the operation does, and `desc:` on individual props for per-field documentation. These flow into contract introspection, JSON Schema export, and LLM tool definitions – see [Registry & Export](/operation/registry) for the full story.
+Use `description` to document what the operation does, and `desc:` on individual props for per-field documentation. These flow into contract introspection, JSON Schema export, and LLM tool definitions – see [Registry & Export](/guide/registry) for the full story.
 
 ```ruby
 class Employee::Onboard < Dex::Operation
@@ -134,6 +134,6 @@ Contracts are useful for:
 - **Documentation** – describe intent at the class level, not just in comments
 - **Testing** – assert the contract without calling the operation (see [Testing](/operation/testing#contract-assertions))
 - **Tooling** – build admin panels, API docs, or monitoring dashboards from contract data
-- **Export** – serialize contracts as hashes or JSON Schema for external tools (see [Registry & Export](/operation/registry))
+- **Export** – serialize contracts as hashes or JSON Schema for external tools (see [Registry & Export](/guide/registry))
 - **LLM integration** – turn operations into LLM-callable tools (see [LLM Tools](/operation/llm-tools))
 - **Catching mistakes** – typos in error codes and wrong return types are caught at runtime

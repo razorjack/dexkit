@@ -37,7 +37,7 @@ features:
     linkText: See testing docs
   - title: Registry & Export
     details: Auto-tracked class registry, contract export as hashes or JSON Schema, description DSL for operations and events, and a rake task for bulk export.
-    link: /operation/registry
+    link: /guide/registry
     linkText: See export docs
   - title: LLM Tools
     details: Turn operations into LLM-callable tools via ruby-llm – typed params, guards as preconditions, explain for preflight checks, and recording as audit trail.

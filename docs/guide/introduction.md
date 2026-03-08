@@ -70,7 +70,7 @@ in Err(code: :out_of_stock)
 end
 ```
 
-And there's more – [ambient context](/operation/context) for auto-filling `current_user` and friends, [guards](/operation/guards) for precondition checks, [async execution](/operation/async) via ActiveJob, [idempotency](/operation/once) with `once`, [advisory locks](/operation/advisory-lock), [DB recording](/operation/recording), [`rescue_from`](/operation/errors#rescue_from) for third-party exceptions, [callbacks](/operation/callbacks), a [customizable pipeline](/operation/pipeline), [registry & export](/operation/registry) for contract introspection and JSON Schema generation, and [LLM tool integration](/operation/llm-tools) via ruby-llm.
+And there's more – [ambient context](/operation/context) for auto-filling `current_user` and friends, [guards](/operation/guards) for precondition checks, [async execution](/operation/async) via ActiveJob, [idempotency](/operation/once) with `once`, [advisory locks](/operation/advisory-lock), [DB recording](/operation/recording), [`rescue_from`](/operation/errors#rescue_from) for third-party exceptions, [callbacks](/operation/callbacks), a [customizable pipeline](/operation/pipeline), [registry & export](/guide/registry) for contract introspection and JSON Schema generation, and [LLM tool integration](/operation/llm-tools) via ruby-llm.
 
 ### Events
 

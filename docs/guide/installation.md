@@ -92,7 +92,7 @@ Install LLM-optimized guides as `AGENTS.md` files in your app directories:
 rake dex:guides
 ```
 
-This copies reference docs into `app/operations/`, `app/events/`, `app/forms/`, and `app/queries/` (only directories that exist). Re-run after upgrading dexkit. See [Registry & Export](/operation/registry#llm-guides) for details.
+This copies reference docs into `app/operations/`, `app/events/`, `app/forms/`, and `app/queries/` (only directories that exist). Re-run after upgrading dexkit. See [LLM Guides](/guide/llm-guides) for details.
 
 ### Test setup
 
