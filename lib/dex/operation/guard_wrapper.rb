@@ -107,16 +107,17 @@ module Dex
 
     private
 
-    def _guard_evaluate
+    def _guard_evaluate_all
       guards = self.class._guard_list
       return [] if guards.empty?
 
       blocked_names = Set.new
-      failures = []
+      results = []
 
       guards.each do |guard|
         if guard.requires.any? { |dep| blocked_names.include?(dep) }
           blocked_names << guard.name
+          results << { name: guard.name, passed: false, skipped: true }
           next
         end
 
@@ -128,11 +129,21 @@ module Dex
 
         if threat
           blocked_names << guard.name
-          failures << { guard: guard.name, message: guard.message || guard.name.to_s }
+          results << { name: guard.name, passed: false, message: guard.message || guard.name.to_s }
+        else
+          results << { name: guard.name, passed: true }
         end
       end
 
-      failures
+      results
+    end
+
+    def _guard_evaluate
+      _guard_evaluate_all.filter_map do |r|
+        next if r[:passed] || r[:skipped]
+
+        { guard: r[:name], message: r[:message] }
+      end
     end
   end
 end

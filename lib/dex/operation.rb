@@ -116,6 +116,9 @@ require_relative "operation/async_proxy"
 require_relative "operation/record_backend"
 require_relative "operation/transaction_adapter"
 require_relative "operation/jobs"
+require_relative "operation/explain"
+
+Dex::Operation.extend(Dex::Operation::Explain)
 
 # Top-level aliases (depend on Operation::Ok/Err)
 require_relative "match"

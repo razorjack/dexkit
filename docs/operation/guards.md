@@ -107,6 +107,8 @@ result.details  # => [
 
 `callable` bypasses the pipeline entirely – no locks, no transactions, no recording, no callbacks. It's cheap and side-effect-free.
 
+For a richer report that includes guards plus context, idempotency, lock keys, and all other settings, see [Explain](/operation/explain).
+
 ## UI patterns
 
 ### Show or hide a button

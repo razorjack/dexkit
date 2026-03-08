@@ -42,6 +42,10 @@ module Dex
           raise NotImplementedError
         end
 
+        def find_pending_once_key(key)
+          raise NotImplementedError
+        end
+
         def update_record_by_once_key(key, **attributes)
           raise NotImplementedError
         end
@@ -78,6 +82,10 @@ module Dex
             .where(once_key: key, status: %w[completed error])
             .where("once_key_expires_at IS NOT NULL AND once_key_expires_at < ?", Time.now)
             .first
+        end
+
+        def find_pending_once_key(key)
+          record_class.where(once_key: key, status: %w[pending running]).first
         end
 
         def update_record_by_once_key(key, **attributes)
@@ -117,6 +125,10 @@ module Dex
             :once_key_expires_at.ne => nil,
             :once_key_expires_at.lt => Time.now
           ).first
+        end
+
+        def find_pending_once_key(key)
+          record_class.where(:once_key => key, :status.in => %w[pending running]).first
         end
 
         def update_record_by_once_key(key, **attributes)

@@ -132,6 +132,15 @@ end
 Order::Place.call(product: product, customer: customer)
 ```
 
+**Explain** – full preflight check in one call. Context, guards, idempotency, locks, settings – everything the operation would do, without doing it:
+
+```ruby
+info = Order::Place.explain(product: product, customer: customer, quantity: 2)
+info[:callable]            # => true (all guards pass)
+info[:once][:status]       # => :fresh (would execute, not replay)
+info[:context][:source]    # => { customer: :ambient }
+```
+
 **Transactions** on by default, **advisory locking**, **recording** to database, **callbacks**, and a customizable **pipeline** – all composable, all optional.
 
 ### Testing

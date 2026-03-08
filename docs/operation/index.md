@@ -97,4 +97,5 @@ Settings, callbacks, error declarations, and pipeline steps all inherit from par
 - [Recording](/operation/recording) – persist operation runs to the database
 - [Middleware](/operation/pipeline) – customize the execution pipeline
 - [Contracts](/operation/contracts) – introspect declared props, errors, and guards
+- [Explain](/operation/explain) – preflight check: context, guards, keys, and settings in one call
 - [Testing](/operation/testing) – helpers, assertions, and stubbing

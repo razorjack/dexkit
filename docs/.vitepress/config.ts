@@ -271,6 +271,7 @@ export default defineConfig({
           { text: 'Recording', link: '/operation/recording' },
           { text: 'Middleware', link: '/operation/pipeline' },
           { text: 'Contracts', link: '/operation/contracts' },
+          { text: 'Explain', link: '/operation/explain' },
           { text: 'Testing', link: '/operation/testing' }
         ]
       },

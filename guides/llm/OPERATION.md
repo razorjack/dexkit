@@ -234,6 +234,51 @@ result.details  # => [{ guard: :unauthorized, message: "..." }, ...]
 
 ---
 
+## Explain
+
+Full preflight check — resolves context, coerces props, evaluates guards, computes derived keys, reports settings. No side effects, `perform` never runs.
+
+```ruby
+info = Order::Place.explain(product: product, customer: customer, quantity: 2)
+```
+
+Returns a frozen Hash:
+
+```ruby
+info = Order::Place.explain(product: product, customer: customer, quantity: 2)
+# => {
+#   operation: "Order::Place",
+#   props: { product: #<Product>, customer: #<Customer>, quantity: 2 },
+#   context: {
+#     resolved: { customer: #<Customer> },
+#     mappings: { customer: :current_customer },
+#     source: { customer: :ambient }   # :ambient, :explicit, or :default
+#   },
+#   guards: {
+#     passed: true,
+#     results: [{ name: :out_of_stock, passed: true }, ...]
+#   },
+#   once: { active: true, key: "Order::Place/product_id=7", status: :fresh, expires_in: nil },
+#   lock: { active: true, key: "order:7", timeout: nil },
+#   record: { enabled: true, params: true, result: true },
+#   transaction: { enabled: true },
+#   rescue_from: { "Stripe::CardError" => :card_declined },
+#   callbacks: { before: 1, after: 2, around: 0 },
+#   pipeline: [:result, :guard, :once, :lock, :record, :transaction, :rescue, :callback],
+#   callable: true
+# }
+```
+
+- Invalid props raise `Literal::TypeError` (same as `new`)
+- `info[:callable]` is a full preflight verdict — checks guards AND once blocking statuses (`:invalid`, `:pending`, `:misconfigured`, `:unavailable`)
+- Once status: `:fresh` (new), `:exists` (would replay), `:expired`, `:pending` (in-flight), `:invalid` (nil key), `:misconfigured` (anonymous op, missing record step, missing column), `:unavailable` (no backend)
+- Guard results include `message:` on failures and `skipped: true` when a guard was skipped via `requires:` dependency
+- Custom middleware can contribute via `_name_explain(instance, info)` class methods
+
+**Use cases:** console debugging, admin tooling, LLM agent preflight, test assertions.
+
+---
+
 ## Flow Control
 
 All three halt execution immediately via non-local exit (work from `perform`, helpers, and callbacks).
