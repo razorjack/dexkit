@@ -165,7 +165,7 @@ op.api_key  # => NoMethodError (private)
 
 ## Property descriptions
 
-Add `desc:` to document what a property represents. Descriptions appear in [contract export](/guide/registry#exporting-contracts), JSON Schema output, and LLM tool definitions:
+Add `desc:` to document what a property represents. Descriptions appear in [contract export](/tooling/registry#exporting-contracts), JSON Schema output, and LLM tool definitions:
 
 ```ruby
 class Order::Place < Dex::Operation

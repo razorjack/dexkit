@@ -76,7 +76,7 @@ Dex::Event::Handler.registry
 # => #<Set: {NotifyWarehouse, SendConfirmation, ...}>
 ```
 
-See [Registry & Export](/guide/registry) for details on deregistering, Zeitwerk compatibility, and the `dex:export` rake task.
+See [Registry & Export](/tooling/registry) for details on deregistering, Zeitwerk compatibility, and the `dex:export` rake task.
 
 ## Export
 

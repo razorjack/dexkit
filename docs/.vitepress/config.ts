@@ -12,7 +12,8 @@ const SECTION_TITLES: Record<string, string> = {
   operation: 'Dex::Operation',
   form: 'Dex::Form',
   event: 'Dex::Event',
-  query: 'Dex::Query'
+  query: 'Dex::Query',
+  tooling: 'Tooling'
 }
 
 const SECTION_ENTRY_PATHS: Record<string, string> = {
@@ -20,7 +21,8 @@ const SECTION_ENTRY_PATHS: Record<string, string> = {
   operation: '/operation/',
   form: '/form/',
   event: '/event/',
-  query: '/query/'
+  query: '/query/',
+  tooling: '/tooling/registry.html'
 }
 
 function sectionFor(relativePath: string): string | null {
@@ -250,9 +252,7 @@ export default defineConfig({
         items: [
           { text: 'Introduction', link: '/guide/introduction' },
           { text: 'Installation', link: '/guide/installation' },
-          { text: 'DX Meets AI', link: '/guide/philosophy' },
-          { text: 'Registry & Export', link: '/guide/registry' },
-          { text: 'LLM Guides', link: '/guide/llm-guides' }
+          { text: 'DX Meets AI', link: '/guide/philosophy' }
         ]
       },
       {
@@ -310,6 +310,14 @@ export default defineConfig({
           { text: 'Sorting', link: '/query/sorting' },
           { text: 'Rails Integration', link: '/query/rails' },
           { text: 'Testing', link: '/query/testing' }
+        ]
+      },
+      {
+        text: 'Tooling',
+        collapsed: true,
+        items: [
+          { text: 'Registry & Export', link: '/tooling/registry' },
+          { text: 'LLM Guides', link: '/tooling/llm-guides' }
         ]
       }
     ],

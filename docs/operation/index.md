@@ -98,6 +98,6 @@ Settings, callbacks, error declarations, and pipeline steps all inherit from par
 - [Middleware](/operation/pipeline) – customize the execution pipeline
 - [Contracts](/operation/contracts) – introspect declared props, errors, and guards
 - [Explain](/operation/explain) – preflight check: context, guards, keys, and settings in one call
-- [Registry & Export](/guide/registry) – description DSL, class registry, contract export as hash or JSON Schema
+- [Registry & Export](/tooling/registry) – description DSL, class registry, contract export as hash or JSON Schema
 - [LLM Tools](/operation/llm-tools) – turn operations into LLM-callable tools via ruby-llm
 - [Testing](/operation/testing) – helpers, assertions, and stubbing
