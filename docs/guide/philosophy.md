@@ -14,22 +14,31 @@ With dexkit, that research phase almost disappears. The DSL *is* the convention 
 
 ## Token efficiency
 
-dexkit ships [LLM-optimized guides](https://github.com/razorjack/dexkit/tree/master/guides/llm) you drop into your project as `CLAUDE.md`. The agent reads ~550 lines instead of scanning thousands across dozens of files – roughly a 5–7x reduction in context tokens and 2–4 fewer agent loop turns. Guides are versioned with the gem, so `bundle update dexkit` keeps them accurate.
+dexkit ships [LLM-optimized guides](https://github.com/razorjack/dexkit/tree/master/guides/llm) you install as `AGENTS.md` files via `rake dex:guides`. The agent reads ~550 lines instead of scanning thousands across dozens of files – roughly a 5–7x reduction in context tokens and 2–4 fewer agent loop turns. Guides are versioned with the gem, so `bundle update dexkit` keeps them accurate.
 
 ## Code as documentation
 
 ```ruby
 class Order::Place < Dex::Operation
-  prop :customer, _Ref(Customer)
-  prop :line_items, _Array(Hash)
+  description "Place a new order for a customer"
+
+  prop :customer, _Ref(Customer), desc: "The customer placing the order"
+  prop :product, _Ref(Product)
+  prop :quantity, _Integer(1..)
   prop? :note, String
 
+  context customer: :current_customer
+
   success _Ref(Order)
-  error :out_of_stock, :invalid_items
+  error :out_of_stock
+
+  guard :active_customer, "Customer account must be active" do
+    !customer.suspended?
+  end
 end
 ```
 
-Five lines. Inputs, types, optionality, return type, failure modes – all without reading `perform`. A typical service object requires tracing the entire method body. When an agent writes a controller calling `Order::Place`, the contract tells it what to pass and what to handle. No need to open the implementation.
+Without reading `perform`, an agent (or a human) knows: what the operation does, what it accepts, which inputs are optional, what types are expected, which prop comes from ambient context, what it returns, which errors it can raise, and under what preconditions it refuses to run. A typical service object requires tracing the entire method body for half of that information.
 
 ## Quick feedback
 
@@ -38,6 +47,21 @@ Agents hallucinate, and the best defense is catching mistakes immediately. `erro
 ## Prescribed architecture
 
 Controller → Form (validates, normalizes) → Operation (transacts, persists) → Model. The agent never has to decide "should the form save directly?" or "who validates?" – the answers are built in.
+
+## Operations as LLM tools
+
+dexkit doesn't just play well with coding agents – it integrates directly with LLMs at runtime. Every operation can become a tool that an LLM calls:
+
+```ruby
+tools = Dex::Tool.from_namespace("Order")
+chat = RubyLLM.chat(model: "gpt-5-mini")
+chat.with_tools(*tools)
+chat.ask("Place an order for product 7, quantity 2")
+```
+
+The LLM sees typed parameters (from [JSON Schema export](/tooling/registry#json-schema)), guard preconditions in the tool description, and gets structured `Ok`/`Err` feedback. Context-mapped props like `current_customer` resolve from the ambient context – the LLM never sees or provides them. If [recording](/operation/recording) is on, every LLM-initiated call is persisted with full params and results – a complete audit trail with zero extra work.
+
+There's even an [explain tool](/operation/explain) the LLM can use to check whether an operation will succeed before executing it – inspecting guards, idempotency keys, and lock status without side effects.
 
 ## Why it compounds
 
