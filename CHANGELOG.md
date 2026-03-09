@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.8.0] - 2026-03-09
+
 ### Added
 
 - **Registry** — `Dex::Operation.registry`, `Dex::Event.registry`, and `Dex::Event::Handler.registry` return frozen Sets of all named subclasses. Populated automatically via `inherited`; anonymous and stale (unreachable after code reload) classes are excluded. `deregister(klass)` removes entries. `clear!` empties the registry. Zeitwerk-compatible — registries reflect loaded classes; eager-load to get the full list
