@@ -8,6 +8,8 @@ Rails patterns toolbelt. Equip to gain +4 DEX.
 
 Service objects with typed properties, transactions, error handling, and more.
 
+Mongoid-only Rails apps work too. Mongoid DB transactions are explicit opt-in (`config.transaction_adapter = :mongoid` or `transaction :mongoid`) and require a replica set or sharded cluster; `advisory_lock` remains ActiveRecord-only; operation/event store models can be Mongoid documents.
+
 ```ruby
 class Order::Place < Dex::Operation
   prop :customer, _Ref(Customer)

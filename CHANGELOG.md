@@ -1,5 +1,22 @@
 ## [Unreleased]
 
+### Breaking
+
+- **Mongoid transactions are now explicit opt-in** — Dex no longer auto-detects Mongoid as the default transaction adapter when `Mongoid` is merely loaded. Before: a Mongoid-only app could start wrapping every operation in `Mongoid.transaction`, which failed on deployments without transaction support. After: ActiveRecord is still auto-detected, but Mongoid transactions require `Dex.configure { |c| c.transaction_adapter = :mongoid }` or `transaction :mongoid`. Apps that relied on implicit Mongoid transactions must opt in explicitly
+- **Ambient `Mongoid.transaction` no longer runs Dex `after_commit` callbacks early** — when `after_commit` is used inside a Mongoid transaction opened outside Dex, Dex now raises a prescriptive runtime error instead of executing the callback before the real commit. Before: the callback fired immediately, which could leak side effects on rollback. After: use Dex-managed Mongoid transactions or switch that callback to `after`
+
+### Fixed
+
+- **Mongoid `_Ref` async/event serialization** — `_Ref(Model)` now serializes IDs via `id.as_json`, so Mongoid `BSON::ObjectId` values round-trip through async operations, async events, and recording without `ActiveJob::SerializationError`
+- **Mongoid `_Ref(lock: true)` validation** — lock-backed refs now fail fast with `ArgumentError` when the model does not support `.lock` (for example Mongoid documents), instead of crashing with `NoMethodError` later
+- **Mongoid query scope normalization** — query adapter detection and scope merging now normalize Mongoid association proxies/enumerables to `Mongoid::Criteria`, so scopes like `current_user.posts` work with built-in filters and injected scopes
+- **Mongoid form uniqueness validator** — persisted Mongoid records are excluded correctly during uniqueness checks, and `case_sensitive: false` now uses a case-insensitive regex path instead of falling back to exact equality
+- **Mongoid-only advisory lock errors** — `advisory_lock` now raises a clear `LoadError` explaining that it requires ActiveRecord, instead of leaking raw `NameError` / constant-resolution errors in Mongoid-only apps
+- **Mongoid transaction adapter load errors** — selecting `transaction :mongoid` without Mongoid loaded now raises the intended `LoadError`, instead of leaking `NameError` from exception constant resolution
+- **Mongoid callback queue isolation** — Dex transaction callback queues now use fiber-local storage, preventing Mongoid `after_commit` state from leaking across fibers on the same thread
+- **Mongoid recording of untyped document results** — recording/`once` now sanitize untyped return values to JSON-safe payloads before persistence, so Mongoid document results no longer leave `once` records stuck in `pending`
+- **Mongoid coverage expanded** — added Mongoid-only clean-process probes for explicit `:mongoid` load errors and Rails boot without `activerecord` in the bundle, plus CI coverage for Mongoid handler transactions
+
 ## [0.8.0] - 2026-03-09
 
 ### Added

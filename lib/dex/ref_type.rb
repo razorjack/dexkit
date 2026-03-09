@@ -7,6 +7,10 @@ module Dex
     attr_reader :model_class, :lock
 
     def initialize(model_class, lock: false)
+      if lock && !model_class.respond_to?(:lock)
+        raise ArgumentError, "_Ref(lock: true) requires a model class that responds to .lock"
+      end
+
       @model_class = model_class
       @lock = lock
     end

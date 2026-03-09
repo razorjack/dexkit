@@ -7,12 +7,14 @@ module MongoidHelpers
   def setup_mongoid_operation_database
     _setup_mongoid!
     _ensure_mongoid_operation_models
+    _ensure_mongoid_indexes(MongoOperationRecord)
     _clear_mongoid_collections(MongoOperationRecord, MinimalMongoOperationRecord, MongoTestModel)
   end
 
   def setup_mongoid_query_database
     _setup_mongoid!
     _ensure_mongoid_query_models
+    _ensure_mongoid_indexes(MongoQueryUser)
     _clear_mongoid_collections(MongoQueryUser)
   end
 
@@ -59,6 +61,12 @@ module MongoidHelpers
     models.each(&:delete_all)
   end
 
+  def _ensure_mongoid_indexes(*models)
+    models.each do |model|
+      model.create_indexes if model.respond_to?(:create_indexes)
+    end
+  end
+
   def _ensure_mongoid_operation_models
     unless defined?(MongoOperationRecord)
       Object.const_set(:MongoOperationRecord, Class.new do
@@ -77,6 +85,8 @@ module MongoidHelpers
         field :once_key, type: String
         field :once_key_expires_at, type: Time
         field :performed_at, type: Time
+
+        index({ once_key: 1 }, { unique: true, sparse: true })
       end)
     end
 

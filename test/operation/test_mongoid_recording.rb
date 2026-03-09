@@ -145,6 +145,28 @@ class TestOperationMongoidRecording < Minitest::Test
     end
   end
 
+  def test_recording_sanitizes_untyped_mongoid_document_results
+    with_mongoid_recording do
+      op = define_operation(:MongoidDocumentResultOp) do
+        prop :name, String
+
+        def perform
+          MongoTestModel.create!(name: name)
+        end
+      end
+
+      result = op.new(name: "World").call
+
+      assert_instance_of MongoTestModel, result
+
+      record = MongoOperationRecord.last
+      assert_equal "completed", record.status
+      assert_respond_to record.result, :[]
+      assert_respond_to record.result["_dex_value"], :[]
+      assert_equal "World", record.result["_dex_value"]["name"]
+    end
+  end
+
   private
 
   def with_mongoid_recording(record_class: MongoOperationRecord, &block)

@@ -5,10 +5,6 @@ require "zeitwerk"
 require "literal"
 require "time"
 
-loader = Zeitwerk::Loader.for_gem
-loader.ignore("#{__dir__}/dex")
-loader.setup
-
 require_relative "dex/version"
 require_relative "dex/concern"
 require_relative "dex/ref_type"

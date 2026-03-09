@@ -14,13 +14,13 @@ Then run `bundle install`. That's all you need to start using `Dex::Operation`, 
 
 ## Configuration
 
-dexkit works out of the box with zero configuration. Transactions use ActiveRecord by default, recording is off until you set it up, and events dispatch without any wiring. Create an initializer only when you need to change defaults or enable optional features:
+dexkit works out of the box with zero configuration. ActiveRecord transactions are auto-detected, recording is off until you set it up, and events dispatch without any wiring. Mongoid transactions are available, but they are explicit opt-in. Create an initializer only when you need to change defaults or enable optional features:
 
 ```ruby
 # config/initializers/dex.rb
 Dex.configure do |config|
-  # Transaction adapter – :active_record (default) or :mongoid
-  # config.transaction_adapter = :active_record
+  # Transaction adapter – ActiveRecord auto-detects; set :mongoid explicitly
+  # config.transaction_adapter = :mongoid
 
   # Recording – set a model class to enable operation recording
   # config.record_class = OperationRecord
@@ -40,23 +40,31 @@ The rest of this page walks through each feature that needs setup, roughly in th
 
 ## Transactions
 
-Operations run inside database transactions by default – no setup needed if you use ActiveRecord.
+Operations run inside database transactions by default when Dex has an active transaction adapter. ActiveRecord is auto-detected. Mongoid is explicit opt-in because MongoDB transactions require supported topology.
 
 | Adapter | Value | Uses |
 |---|---|---|
 | ActiveRecord | `:active_record` | `ActiveRecord::Base.transaction` |
 | Mongoid | `:mongoid` | `Mongoid.transaction` |
 
-The adapter is auto-detected, but you can set it explicitly in the initializer or override per-operation:
+Mongoid transactions are configured explicitly in the initializer or overridden per-operation:
 
 ```ruby
+Dex.configure do |config|
+  config.transaction_adapter = :mongoid
+end
+
 class Order::Import < Dex::Operation
   transaction :mongoid
 end
 ```
 
 ::: tip
-`after_commit` blocks inside operations require **Rails 7.2+** (specifically `ActiveRecord.after_all_transactions_commit`). On older Rails, use `after` callbacks instead.
+ActiveRecord-backed `after_commit` blocks inside operations require **Rails 7.2+** (specifically `ActiveRecord.after_all_transactions_commit`). Mongoid uses Dex's own callback queue and does not have that Rails version requirement.
+:::
+
+::: warning Mongoid requires transaction-capable deployment
+Use `:mongoid` only when MongoDB transactions are supported (replica set or sharded cluster). In standalone MongoDB deployments, Dex raises a prescriptive runtime error instead of silently pretending the transaction succeeded.
 :::
 
 See [Transactions](/operation/transactions) for details.
@@ -105,6 +113,28 @@ class OperationRecord < ApplicationRecord
 end
 ```
 
+Mongoid recording models work too. Define matching fields and the same unique `once_key` index if you use `once`:
+
+```ruby
+class OperationRecord
+  include Mongoid::Document
+  include Mongoid::Timestamps
+
+  field :name, type: String
+  field :params, type: Hash
+  field :result, type: Object
+  field :status, type: String
+  field :error_code, type: String
+  field :error_message, type: String
+  field :error_details, type: Hash
+  field :once_key, type: String
+  field :once_key_expires_at, type: Time
+  field :performed_at, type: Time
+
+  index({ once_key: 1 }, unique: true, sparse: true)
+end
+```
+
 ### Config
 
 ```ruby
@@ -118,7 +148,7 @@ See [Recording](/operation/recording) for controlling what gets recorded and [Id
 
 ## Advisory locking
 
-The `advisory_lock` DSL wraps operations in database-level mutual exclusion. It requires the [`with_advisory_lock`](https://github.com/ClosureTree/with_advisory_lock) gem – add it to your Gemfile:
+The `advisory_lock` DSL wraps operations in database-level mutual exclusion. It is **ActiveRecord-only** and requires the [`with_advisory_lock`](https://github.com/ClosureTree/with_advisory_lock) gem – add it to your Gemfile:
 
 ```ruby
 gem "with_advisory_lock"
@@ -181,6 +211,19 @@ add_index :event_records, :event_type
 ```ruby
 # app/models/event_record.rb
 class EventRecord < ApplicationRecord
+end
+```
+
+Mongoid event stores work too:
+
+```ruby
+class EventRecord
+  include Mongoid::Document
+  include Mongoid::Timestamps
+
+  field :event_type, type: String
+  field :payload, type: Hash
+  field :metadata, type: Hash
 end
 ```
 
@@ -274,7 +317,7 @@ A quick reference for what each feature needs:
 | Feature | What to set up | Required? |
 |---|---|---|
 | Operations, Forms, Queries | `gem "dexkit"` | Yes |
-| Transactions | Nothing (auto-detects ActiveRecord) | Zero-config |
+| Transactions | Nothing (auto-detects ActiveRecord) | Zero-config for ActiveRecord |
 | Recording | Migration + model + `config.record_class` | Only if you want recording |
 | Idempotency (`once`) | Recording + two extra columns | Only if you use `once` |
 | Advisory locking | `gem "with_advisory_lock"` | Only if you use `advisory_lock` |

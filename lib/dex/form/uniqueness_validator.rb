@@ -50,8 +50,12 @@ module Dex
       end
 
       def _build_query(model_class, column, value)
-        if options[:case_sensitive] == false && value.is_a?(String) && model_class.respond_to?(:arel_table)
+        return model_class.where(column => value) unless options[:case_sensitive] == false && value.is_a?(String)
+
+        if model_class.respond_to?(:arel_table)
           model_class.where(model_class.arel_table[column].lower.eq(value.downcase))
+        elsif _mongoid_model_class?(model_class)
+          model_class.where(column => /\A#{Regexp.escape(value)}\z/i)
         else
           model_class.where(column => value)
         end
@@ -78,8 +82,20 @@ module Dex
       def _exclude_current_record(query, form)
         return query unless form.record&.persisted?
 
+        if _mongoid_record?(form.record)
+          return query.where(:_id.ne => form.record.id)
+        end
+
         pk = form.record.class.primary_key
         query.where.not(pk => form.record.public_send(pk))
+      end
+
+      def _mongoid_model_class?(model_class)
+        defined?(Mongoid::Document) && model_class.include?(Mongoid::Document)
+      end
+
+      def _mongoid_record?(record)
+        _mongoid_model_class?(record.class)
       end
     end
   end

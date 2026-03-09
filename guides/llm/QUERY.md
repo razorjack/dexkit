@@ -91,7 +91,7 @@ Reserved prop names: `scope`, `sort`, `resolve`, `call`, `from_params`, `to_para
 | `:in` | `IN (values)` | `filter :roles, :in, column: :role` |
 | `:not_in` | `NOT IN (values)` | `filter :roles, :not_in, column: :role` |
 
-String strategies (`:contains`, `:starts_with`, `:ends_with`) use case-insensitive matching. With ActiveRecord, this uses Arel `matches` (LIKE); with Mongoid, case-insensitive regex. Wildcards in values are auto-sanitized. The adapter is auto-detected from the scope.
+String strategies (`:contains`, `:starts_with`, `:ends_with`) use case-insensitive matching. With ActiveRecord, this uses Arel `matches` (LIKE); with Mongoid, case-insensitive regex. Wildcards in values are auto-sanitized. The adapter is auto-detected from the scope, and Mongoid association scopes/proxies are normalized to `Mongoid::Criteria` automatically.
 
 ### Column Mapping
 
@@ -159,7 +159,7 @@ Only one default per class. Applied when no sort is provided.
 
 ### `.call`
 
-Returns a queryable scope (`ActiveRecord::Relation` or `Mongoid::Criteria`):
+Returns a queryable scope (`ActiveRecord::Relation` or `Mongoid::Criteria`). Association scopes like `current_user.posts` work too:
 
 ```ruby
 users = UserSearch.call(name: "ali", role: %w[admin], sort: "-name")

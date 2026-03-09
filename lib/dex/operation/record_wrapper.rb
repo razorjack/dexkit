@@ -142,8 +142,8 @@ module Dex
       else
         case result
         when nil then nil
-        when Hash then result
-        else { _dex_value: result } # namespaced key so replay can distinguish wrapped primitives from user hashes
+        when Hash then _record_sanitize_value(result)
+        else { "_dex_value" => _record_sanitize_value(result) } # namespaced key so replay can distinguish wrapped primitives from user hashes
         end
       end
     end
@@ -160,10 +160,19 @@ module Dex
       case value
       when NilClass, String, Integer, Float, TrueClass, FalseClass then value
       when Symbol then value.to_s
-      when Hash then value.transform_values { |v| _record_sanitize_value(v) }
+      when Hash
+        value.each_with_object({}) do |(key, nested_value), result|
+          result[key.to_s] = _record_sanitize_value(nested_value)
+        end
       when Array then value.map { |v| _record_sanitize_value(v) }
       when Exception then "#{value.class}: #{value.message}"
-      else value.to_s
+      else
+        if value.respond_to?(:as_json)
+          serialized = value.as_json
+          return _record_sanitize_value(serialized) unless serialized.equal?(value)
+        end
+
+        value.to_s
       end
     end
 

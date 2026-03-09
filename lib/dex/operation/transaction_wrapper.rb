@@ -7,10 +7,10 @@ module Dex
     DEFERRED_CALLBACKS_KEY = :_dex_after_commit_queue
 
     def _transaction_wrap
-      deferred = Thread.current[DEFERRED_CALLBACKS_KEY]
+      deferred = Fiber[DEFERRED_CALLBACKS_KEY]
       outermost = deferred.nil?
-      Thread.current[DEFERRED_CALLBACKS_KEY] = [] if outermost
-      snapshot = Thread.current[DEFERRED_CALLBACKS_KEY].length
+      Fiber[DEFERRED_CALLBACKS_KEY] = [] if outermost
+      snapshot = Fiber[DEFERRED_CALLBACKS_KEY].length
 
       result, interceptor = if _transaction_enabled?
         _transaction_run_adapter(snapshot) { yield }
@@ -23,16 +23,16 @@ module Dex
       interceptor&.rethrow!
       result
     rescue # rubocop:disable Style/RescueStandardError -- explicit for clarity
-      Thread.current[DEFERRED_CALLBACKS_KEY]&.slice!(snapshot..)
+      Fiber[DEFERRED_CALLBACKS_KEY]&.slice!(snapshot..)
       raise
     ensure
-      Thread.current[DEFERRED_CALLBACKS_KEY] = nil if outermost
+      Fiber[DEFERRED_CALLBACKS_KEY] = nil if outermost
     end
 
     def after_commit(&block)
       raise ArgumentError, "after_commit requires a block" unless block
 
-      deferred = Thread.current[DEFERRED_CALLBACKS_KEY]
+      deferred = Fiber[DEFERRED_CALLBACKS_KEY]
       if deferred
         deferred << block
       else
@@ -85,7 +85,7 @@ module Dex
       end
 
       if interceptor&.error?
-        Thread.current[DEFERRED_CALLBACKS_KEY]&.slice!(snapshot..)
+        Fiber[DEFERRED_CALLBACKS_KEY]&.slice!(snapshot..)
         interceptor.rethrow!
       end
 
@@ -96,7 +96,7 @@ module Dex
       interceptor = Operation::HaltInterceptor.new { yield }
 
       if interceptor.error?
-        Thread.current[DEFERRED_CALLBACKS_KEY]&.slice!(snapshot..)
+        Fiber[DEFERRED_CALLBACKS_KEY]&.slice!(snapshot..)
         interceptor.rethrow!
       end
 
@@ -117,7 +117,7 @@ module Dex
     end
 
     def _transaction_flush_deferred
-      callbacks = Thread.current[DEFERRED_CALLBACKS_KEY]
+      callbacks = Fiber[DEFERRED_CALLBACKS_KEY]
       return if callbacks.empty?
 
       flush = -> { callbacks.each(&:call) }
@@ -125,6 +125,11 @@ module Dex
       adapter = enabled && _transaction_adapter
       if adapter
         adapter.after_commit(&flush)
+      elsif Operation::TransactionAdapter.ambient_mongoid_transaction?
+        raise(
+          "after_commit cannot defer across an ambient Mongoid.transaction unless Dex manages the transaction. " \
+          "Use `transaction :mongoid` or replace after_commit with `after`."
+        )
       else
         flush.call
       end

@@ -125,6 +125,8 @@ Order::Debit.call(order: 42)
 
 This is especially useful inside transactions to prevent race conditions.
 
+`lock: true` requires a model class that responds to `.lock` (for example ActiveRecord models). Mongoid documents do not support this and raise `ArgumentError` at declaration time.
+
 ## Serialization
 
 Properties serialize cleanly for async jobs and recording. Ref types serialize as IDs, everything else uses `.as_json`:
@@ -143,7 +145,7 @@ op = Order::Charge.new(customer: 42, amount: 100)
 # Internal serialization: {"customer" => 42, "amount" => 100}
 ```
 
-Types like `Date`, `Time`, `BigDecimal`, and `Symbol` automatically survive the JSON round-trip when used with async – no manual conversion needed.
+Types like `Date`, `Time`, `BigDecimal`, and `Symbol` automatically survive the JSON round-trip when used with async – no manual conversion needed. Mongoid `BSON::ObjectId` ref IDs are serialized safely too.
 
 ## Reader visibility
 

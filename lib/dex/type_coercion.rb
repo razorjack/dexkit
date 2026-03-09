@@ -64,7 +64,10 @@ module Dex
         return _serialize_value(type.type, value) if type.is_a?(Literal::Types::NilableType)
 
         ref = _find_ref_type(type)
-        return value.id if ref
+        if ref
+          serialized_id = value.id
+          return serialized_id.respond_to?(:as_json) ? serialized_id.as_json : serialized_id
+        end
 
         value.respond_to?(:as_json) ? value.as_json : value
       end

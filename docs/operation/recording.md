@@ -8,7 +8,11 @@ Record operation executions to a database table for auditing, debugging, or anal
 
 ## Setup
 
-Create a model and table for storing records:
+Create a recording model that matches the fields you want to persist.
+
+### ActiveRecord
+
+Create a model and table:
 
 ```ruby
 # migration
@@ -35,6 +39,32 @@ class OperationRecord < ApplicationRecord
 end
 ```
 
+### Mongoid
+
+Mongoid recording models work too. Define matching fields and add the same sparse unique `once_key` index if you use `once`:
+
+```ruby
+class OperationRecord
+  include Mongoid::Document
+  include Mongoid::Timestamps
+
+  field :name, type: String
+  field :params, type: Hash
+  field :result, type: Hash
+  field :status, type: String
+  field :error_code, type: String
+  field :error_message, type: String
+  field :error_details, type: Hash
+  field :performed_at, type: Time
+  field :once_key, type: String
+
+  index({ name: 1 })
+  index({ status: 1 })
+  index({ name: 1, status: 1 })
+  index({ once_key: 1 }, unique: true, sparse: true)
+end
+```
+
 Then configure dexkit:
 
 ```ruby
@@ -44,7 +74,7 @@ Dex.configure do |config|
 end
 ```
 
-All columns except `name` and `status` are optional – dexkit only writes to columns that exist on the model. Add what you need, leave out what you don't.
+All fields except `name` and `status` are optional. dexkit only writes to attributes that exist on the recording model.
 
 ## What gets recorded
 
@@ -69,7 +99,7 @@ Employee::Onboard.call(email: "alice@example.com", name: "Alice")
 #   performed_at: 2024-01-15 10:30:00
 ```
 
-Ref types (`_Ref(Customer)`) serialize as IDs in both params and result, keeping records clean and compact.
+Ref types (`_Ref(Customer)`) serialize as IDs in both params and result, keeping records clean and compact. Mongoid `BSON::ObjectId` values are serialized safely too.
 
 ## Status values
 
@@ -134,13 +164,15 @@ end
 # result is stored as just the employee ID, not the full serialized object
 ```
 
-For other return types, the result is stored as-is (Hash), or wrapped in `{ value: ... }` for scalar values.
+For other return types, dexkit stores a JSON-safe version of the value. Plain Hash results round-trip as Hashes (with string keys after persistence), and scalar or object results are wrapped under `"_dex_value"`. Objects that respond to `as_json` use that representation.
 
 ## Transaction behavior
 
 Recording runs outside the operation's own transaction. Error and failure records survive the operation's transaction rollback – you always have a record of what happened, even when the operation's side effects are rolled back.
 
 If the operation runs inside an ambient transaction (e.g., called from another operation, or wrapped in `ActiveRecord::Base.transaction { ... }`), the record participates in that outer transaction and will be rolled back with it. This is consistent with Rails conventions – if the entire ambient transaction fails, neither the operation's effects nor its record persist. If you need recording to survive ambient rollbacks, configure your record model with a [separate database connection](https://guides.rubyonrails.org/active_record_multiple_databases.html).
+
+For Mongoid, Dex-managed transactions work the same way once you opt in with `config.transaction_adapter = :mongoid` or `transaction :mongoid`. Ambient `Mongoid.transaction` blocks opened outside Dex are not supported for Dex `after_commit` callbacks – Dex raises instead of firing those callbacks early.
 
 ## Async integration
 

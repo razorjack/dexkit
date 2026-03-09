@@ -76,15 +76,28 @@ module Dex
       module_function
 
       def apply_strategy(scope, strategy, column, value)
+        scope = normalize_scope(scope)
         adapter_for(scope).apply(scope, strategy, column, value)
       end
 
       def adapter_for(scope)
+        scope = normalize_scope(scope)
+
         if defined?(Mongoid::Criteria) && scope.is_a?(Mongoid::Criteria)
           MongoidAdapter
         else
           ActiveRecordAdapter
         end
+      end
+
+      def normalize_scope(scope)
+        return scope unless defined?(Mongoid::Criteria)
+        return scope if scope.is_a?(Mongoid::Criteria)
+
+        criteria = scope.criteria if scope.respond_to?(:criteria)
+        criteria.is_a?(Mongoid::Criteria) ? criteria : scope
+      rescue
+        scope
       end
     end
   end

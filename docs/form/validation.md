@@ -94,7 +94,7 @@ The validator queries the model declared with `model` to check for duplicates. W
 | `model:` | Explicit model class (overrides `model` DSL) | `uniqueness: { model: Employee }` |
 | `attribute:` | Column name when it differs from the form attribute | `uniqueness: { attribute: :email }` |
 | `scope:` | Scope the check to other attributes | `uniqueness: { scope: :tenant_id }` |
-| `case_sensitive:` | Case-insensitive comparison (uses SQL `LOWER()`) | `uniqueness: { case_sensitive: false }` |
+| `case_sensitive:` | Case-insensitive comparison (`LOWER()` on ActiveRecord, regex on Mongoid) | `uniqueness: { case_sensitive: false }` |
 | `conditions:` | Additional query constraints | `uniqueness: { conditions: -> { where(active: true) } }` |
 | `message:` | Custom error message | `uniqueness: { message: "already registered" }` |
 
@@ -127,7 +127,7 @@ end
 validates :email, uniqueness: { case_sensitive: false }
 ```
 
-When the model supports Arel (ActiveRecord models do), this generates a `LOWER(column) = LOWER(value)` query for proper database-level comparison.
+When the model supports Arel (ActiveRecord models do), this generates a `LOWER(column) = LOWER(value)` query. On Mongoid, dexkit uses a case-insensitive exact-match regex.
 
 ## ValidationError
 

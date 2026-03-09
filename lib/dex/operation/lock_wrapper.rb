@@ -54,11 +54,24 @@ module Dex
       _lock_ensure_loaded!
       key = _lock_key
       ActiveRecord::Base.with_advisory_lock!(key, **_lock_options, &block)
-    rescue WithAdvisoryLock::FailedToAcquireLock
-      raise Dex::Error.new(:lock_timeout, "Could not acquire advisory lock: #{key}")
+    rescue => e
+      if defined?(WithAdvisoryLock::FailedToAcquireLock) && e.is_a?(WithAdvisoryLock::FailedToAcquireLock)
+        raise Dex::Error.new(:lock_timeout, "Could not acquire advisory lock: #{key}")
+      end
+
+      raise
     end
 
     def _lock_ensure_loaded!
+      unless defined?(ActiveRecord::Base)
+        raise LoadError, "advisory_lock requires ActiveRecord and is not supported in Mongoid-only apps."
+      end
+
+      unless defined?(WithAdvisoryLock::FailedToAcquireLock)
+        raise LoadError,
+          "with_advisory_lock gem is required for advisory locking. Add 'with_advisory_lock' to your Gemfile."
+      end
+
       return if ActiveRecord::Base.respond_to?(:with_advisory_lock!)
 
       raise LoadError,

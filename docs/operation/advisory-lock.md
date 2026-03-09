@@ -8,6 +8,8 @@ Wrap operations in database advisory locks for mutual exclusion. Only one instan
 
 Requires the [`with_advisory_lock`](https://github.com/ClosureTree/with_advisory_lock) gem (not bundled with dexkit – add it to your Gemfile).
 
+This feature is ActiveRecord-only. In Mongoid-only apps, calling `advisory_lock` raises a clear `LoadError`.
+
 ## Basic usage
 
 ```ruby

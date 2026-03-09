@@ -19,9 +19,17 @@ module Dex
       def self.detect
         if defined?(ActiveRecord::Base)
           ActiveRecordAdapter
-        elsif defined?(Mongoid)
-          MongoidAdapter
         end
+      end
+
+      def self.ambient_mongoid_transaction?
+        return false unless defined?(Mongoid::Threaded) && Mongoid::Threaded.respond_to?(:sessions)
+
+        Mongoid::Threaded.sessions.values.any? do |session|
+          session.respond_to?(:in_transaction?) && session.in_transaction?
+        end
+      rescue
+        false
       end
 
       module ActiveRecordAdapter
@@ -53,7 +61,7 @@ module Dex
             raise LoadError, "Mongoid is required for transactions"
           end
 
-          callbacks = Thread.current[AFTER_COMMIT_KEY]
+          callbacks = Fiber[AFTER_COMMIT_KEY]
           outermost = callbacks.nil?
 
           unless outermost
@@ -69,7 +77,7 @@ module Dex
             end
           end
 
-          Thread.current[AFTER_COMMIT_KEY] = []
+          Fiber[AFTER_COMMIT_KEY] = []
           block_completed = false
           result = Mongoid.transaction do
             value = block.call
@@ -78,21 +86,31 @@ module Dex
           end
 
           if block_completed
-            Thread.current[AFTER_COMMIT_KEY].each(&:call)
+            Fiber[AFTER_COMMIT_KEY].each(&:call)
           end
 
           result
+        rescue => e
+          raise _transactions_not_supported_message if _transactions_not_supported?(e)
+
+          raise
         ensure
-          Thread.current[AFTER_COMMIT_KEY] = nil if outermost
+          Fiber[AFTER_COMMIT_KEY] = nil if outermost
         end
 
-        # NOTE: Only detects transactions opened via MongoidAdapter.wrap (i.e. Dex operations).
-        # Ambient Mongoid.transaction blocks opened outside Dex are invisible here —
-        # the callback will fire immediately instead of deferring to the outer commit.
+        # Mongoid stores sessions on the current thread rather than the current fiber.
+        # A sibling fiber on the same thread therefore participates in the same
+        # ambient transaction, so we must consult Mongoid's thread-scoped session
+        # state here instead of relying on Dex's fiber-local queue alone.
         def self.after_commit(&block)
-          callbacks = Thread.current[AFTER_COMMIT_KEY]
+          callbacks = Fiber[AFTER_COMMIT_KEY]
           if callbacks
             callbacks << block
+          elsif TransactionAdapter.ambient_mongoid_transaction?
+            raise(
+              "after_commit cannot attach to an ambient Mongoid.transaction opened outside Dex. " \
+              "Use Dex-managed transactions or an `after` callback instead."
+            )
           else
             block.call
           end
@@ -100,6 +118,17 @@ module Dex
 
         def self.rollback_exception_class
           Mongoid::Errors::Rollback
+        end
+
+        def self._transactions_not_supported?(exception)
+          defined?(Mongoid::Errors::TransactionsNotSupported) &&
+            exception.is_a?(Mongoid::Errors::TransactionsNotSupported)
+        end
+
+        def self._transactions_not_supported_message
+          "Mongoid transactions require a MongoDB replica set or sharded cluster. " \
+            "Configure Dex.transaction_adapter = :mongoid only when transactions are supported, " \
+            "or disable transactions for this operation."
         end
       end
     end

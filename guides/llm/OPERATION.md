@@ -95,7 +95,7 @@ prop? :note, String                       # optional (nilable, default: nil)
 
 ### _Ref(Model)
 
-Accepts model instances or IDs, coerces IDs via `Model.find(id)`. With `lock: true`, uses `Model.lock.find(id)` (SELECT FOR UPDATE). Instances pass through without re-locking. In serialization (recording, async), stores model ID only. IDs are treated as strings in JSON Schema – this supports integer PKs, UUIDs, and Mongoid BSON::ObjectId equally.
+Accepts model instances or IDs, coerces IDs via `Model.find(id)`. With `lock: true`, uses `Model.lock.find(id)` (SELECT FOR UPDATE) and therefore requires a model class that responds to `.lock` (Mongoid documents do not). Instances pass through without re-locking. In serialization (recording, async), stores model ID only via `id.as_json`, so Mongoid BSON::ObjectId values are safe in ActiveJob payloads too. IDs are treated as strings in JSON Schema – this supports integer PKs, UUIDs, and Mongoid BSON::ObjectId equally.
 
 Outside the class body (e.g., in tests), use `Dex::RefType.new(Model)` instead of `_Ref(Model)`.
 
@@ -408,11 +408,11 @@ end
 
 ## Transactions
 
-Operations run inside database transactions by default. All changes roll back on error. Nested operations share the outer transaction.
+Operations run inside database transactions when Dex has an active transaction adapter. ActiveRecord is auto-detected. Mongoid transactions are available, but explicit opt-in. Mongoid-only apps do not need ActiveRecord loaded — Dex only touches ActiveRecord when that adapter is selected or auto-detected.
 
 ```ruby
 transaction false        # disable
-transaction :mongoid     # adapter override (default: auto-detect AR → Mongoid)
+transaction :mongoid     # adapter override (Mongoid is explicit opt-in)
 ```
 
 Child classes can re-enable: `transaction true`.
@@ -441,13 +441,13 @@ Multiple blocks run in registration order.
 
 **ActiveRecord:** requires Rails 7.2+ (`after_all_transactions_commit`).
 
-**Mongoid:** deferred across nested Dex operations. Ambient `Mongoid.transaction` blocks opened outside Dex are not detected — callbacks will fire immediately in that case.
+**Mongoid:** deferred across nested Dex operations. Ambient `Mongoid.transaction` blocks opened outside Dex are not supported for `after_commit` — Dex raises and tells you to use Dex-managed transactions or `after`.
 
 ---
 
 ## Advisory Locking
 
-Mutual exclusion via database advisory locks (requires `with_advisory_lock` gem). Wraps **outside** the transaction.
+Mutual exclusion via database advisory locks (requires `with_advisory_lock` gem). Wraps **outside** the transaction. ActiveRecord-only; Mongoid-only apps get a clear `LoadError`.
 
 ```ruby
 advisory_lock { "pay:#{charge_id}" }    # dynamic key from props
@@ -510,7 +510,7 @@ record result: false      # params only
 record params: false      # result only
 ```
 
-All outcomes are recorded — success (`completed`), business errors (`error`), and exceptions (`failed`). Recording runs outside the operation's own transaction so error records survive its rollbacks. Records still participate in ambient transactions (e.g., an outer operation's transaction). Missing columns silently skipped.
+All outcomes are recorded — success (`completed`), business errors (`error`), and exceptions (`failed`). Recording runs outside the operation's own transaction so error records survive its rollbacks. Records still participate in ambient transactions (e.g., an outer operation's transaction). Missing columns silently skipped. Untyped results are sanitized to JSON-safe values before persistence: Hash keys round-trip as strings, and objects fall back to `as_json`/`to_s` under `"_dex_value"`.
 
 Status values: `pending` (async enqueued), `running` (async executing), `completed` (success), `error` (business error via `error!`), `failed` (unhandled exception).
 
@@ -586,7 +586,8 @@ Clearing is idempotent — clearing a non-existent key is a no-op. After clearin
 # config/initializers/dexkit.rb
 Dex.configure do |config|
   config.record_class = OperationRecord  # model for recording (default: nil)
-  config.transaction_adapter = nil        # auto-detect (default); or :active_record / :mongoid
+  config.transaction_adapter = nil       # auto-detect ActiveRecord only (default)
+  # config.transaction_adapter = :mongoid # explicit Mongoid opt-in
 end
 ```
 
@@ -607,7 +608,7 @@ end
 
 Not autoloaded — stays out of production. TestLog and stubs are auto-cleared in `setup`.
 
-For Mongoid-backed operation tests, run against a MongoDB replica set (MongoDB transactions require it).
+For Mongoid-backed operation tests, run against a MongoDB replica set or sharded cluster when you exercise Mongoid transactions.
 
 ### Subject & Execution
 

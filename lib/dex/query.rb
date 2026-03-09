@@ -209,9 +209,10 @@ module Dex
     end
 
     def resolve
-      base = _evaluate_scope
+      base = Query::Backend.normalize_scope(_evaluate_scope)
       base = _merge_injected_scope(base)
       base = _apply_filters(base)
+      base = Query::Backend.normalize_scope(base)
       _apply_sort(base)
     end
 
@@ -253,19 +254,22 @@ module Dex
     def _merge_injected_scope(base)
       return base unless @_injected_scope
 
+      base = Query::Backend.normalize_scope(base)
+      injected_scope = Query::Backend.normalize_scope(@_injected_scope)
+
       unless base.respond_to?(:klass)
         raise ArgumentError, "Scope block must return a queryable scope (ActiveRecord relation or Mongoid criteria), got #{base.class}."
       end
 
-      unless @_injected_scope.respond_to?(:klass)
+      unless injected_scope.respond_to?(:klass)
         raise ArgumentError, "Injected scope must be a queryable scope (ActiveRecord relation or Mongoid criteria), got #{@_injected_scope.class}."
       end
 
-      unless base.klass == @_injected_scope.klass
-        raise ArgumentError, "Scope model mismatch: expected #{base.klass}, got #{@_injected_scope.klass}."
+      unless base.klass == injected_scope.klass
+        raise ArgumentError, "Scope model mismatch: expected #{base.klass}, got #{injected_scope.klass}."
       end
 
-      base.merge(@_injected_scope)
+      base.merge(injected_scope)
     end
   end
 end

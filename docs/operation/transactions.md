@@ -4,11 +4,11 @@ description: Dex::Operation transaction defaults, disabling or forcing transacti
 
 # Transactions
 
-Operations run inside database transactions by default. If anything raises – including `error!` – the transaction is rolled back. If `perform` succeeds or calls `success!`, the transaction is committed.
+Operations run inside database transactions when Dex has an active transaction adapter. ActiveRecord is auto-detected. Mongoid transactions are available too, but they must be enabled explicitly.
 
 ## Default behavior
 
-You don't need to do anything – transactions are on by default:
+With ActiveRecord, you don't need to do anything – transactions are on by default:
 
 ```ruby
 class Order::Place < Dex::Operation
@@ -37,7 +37,7 @@ end
 
 ## Transaction adapters
 
-The default adapter is `:active_record`. If you use Mongoid, configure it globally:
+ActiveRecord is the only auto-detected adapter. If you use Mongoid, configure it globally:
 
 ```ruby
 # config/initializers/dex.rb
@@ -106,7 +106,7 @@ Multiple blocks run in registration order.
 
 **On rollback** (`error!` or exception), callbacks are discarded – they never fire.
 
-**Without a transaction** (no open transaction anywhere), `after_commit` executes the block immediately.
+**Without a database transaction**, `after_commit` still defers until the operation pipeline succeeds, then runs the block.
 
 **Nested operations** work correctly – an inner operation's `after_commit` blocks are deferred until the outermost transaction commits. If the outer transaction rolls back, inner callbacks are discarded too.
 
@@ -115,7 +115,7 @@ Multiple blocks run in registration order.
 :::
 
 ::: info Mongoid limitation
-The Mongoid adapter tracks transactions opened by Dex operations. Ambient `Mongoid.transaction` blocks opened outside of Dex are not detected – `after_commit` will execute immediately in that case.
+The Mongoid adapter only tracks transactions opened by Dex. If `after_commit` is used inside an ambient `Mongoid.transaction` opened outside Dex, Dex raises a runtime error instead of firing the callback early. Use `transaction :mongoid` (or global `config.transaction_adapter = :mongoid`) when you need Mongoid-backed `after_commit`.
 :::
 
 ## Inheritance

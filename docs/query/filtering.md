@@ -24,7 +24,7 @@ Filters connect props to query conditions. Each filter references a prop by name
 
 String strategies (`:contains`, `:starts_with`, `:ends_with`) are case-insensitive. Wildcards in user input are auto-sanitized – no manual escaping needed.
 
-The adapter is auto-detected from the scope: ActiveRecord uses Arel `matches` (LIKE), Mongoid uses case-insensitive regex.
+The adapter is auto-detected from the scope: ActiveRecord uses Arel `matches` (LIKE), Mongoid uses case-insensitive regex. Mongoid association scopes/proxies are normalized to `Mongoid::Criteria`, so scopes like `current_user.posts` work with built-in filters too.
 
 ## Column mapping
 
