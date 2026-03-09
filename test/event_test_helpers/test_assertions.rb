@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require "dex/event_test_helpers"
+require "dex/event/test_helpers"
 
 class TestEventAssertions < Minitest::Test
   include Dex::Event::TestHelpers

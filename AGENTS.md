@@ -62,14 +62,18 @@ lib/
       processor.rb       # Dex::Event::Processor (ActiveJob, lazy-loaded via const_missing)
       export.rb          # Dex::Event::Export (to_h, to_json_schema)
     test_log.rb          # Dex::TestLog (global activity log for tests)
-    test_helpers.rb      # Dex::TestHelpers + Dex::TestWrapper
-    test_helpers/
-      execution.rb       # call_operation, call_operation!
-      assertions.rb      # All assertion methods
-      stubbing.rb        # stub_operation, spy_on_operation, Spy class
-    event_test_helpers.rb # Dex::Event::TestHelpers + EventTestWrapper
-    event_test_helpers/
-      assertions.rb      # assert_event_published, refute_event_published, etc.
+    test_helpers.rb      # Dex::TestHelpers (convenience, includes Operation + Event helpers)
+    event_test_helpers.rb # backward-compat shim → dex/event/test_helpers
+    operation/
+      test_helpers.rb    # Dex::Operation::TestHelpers + Dex::Operation::TestWrapper
+      test_helpers/
+        execution.rb     # call_operation, call_operation!
+        assertions.rb    # All assertion methods
+        stubbing.rb      # stub_operation, spy_on_operation, Spy class
+    event/
+      test_helpers.rb    # Dex::Event::TestHelpers + EventTestWrapper
+      test_helpers/
+        assertions.rb    # assert_event_published, refute_event_published, etc.
     form.rb              # Form class orchestrator (requires all parts)
     form/
       nesting.rb         # Dex::Form::Nesting (nested_one, nested_many DSL)

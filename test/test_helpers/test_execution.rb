@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require "dex/test_helpers"
+require "dex/operation/test_helpers"
 
 class TestTestExecution < Minitest::Test
-  include Dex::TestHelpers
+  include Dex::Operation::TestHelpers
   include OperationHelpers
 
   def setup
@@ -67,7 +67,7 @@ class TestTestExecution < Minitest::Test
 end
 
 class TestTestExecutionWithSubject < Minitest::Test
-  include Dex::TestHelpers
+  include Dex::Operation::TestHelpers
   include OperationHelpers
 
   GreetOp = Class.new(Dex::Operation) do

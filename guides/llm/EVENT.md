@@ -294,7 +294,7 @@ Everything works without configuration. All three settings are optional.
 
 ```ruby
 # test/test_helper.rb
-require "dex/event_test_helpers"
+require "dex/event/test_helpers"
 
 class Minitest::Test
   include Dex::Event::TestHelpers

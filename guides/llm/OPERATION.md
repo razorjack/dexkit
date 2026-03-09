@@ -598,10 +598,10 @@ All DSL methods validate arguments at declaration time — typos and wrong types
 
 ```ruby
 # test/test_helper.rb
-require "dex/test_helpers"
+require "dex/operation/test_helpers"
 
 class Minitest::Test
-  include Dex::TestHelpers
+  include Dex::Operation::TestHelpers
 end
 ```
 
@@ -613,7 +613,7 @@ For Mongoid-backed operation tests, run against a MongoDB replica set (MongoDB t
 
 ```ruby
 class CreateUserTest < Minitest::Test
-  include Dex::TestHelpers
+  include Dex::Operation::TestHelpers
 
   testing CreateUser  # default for all helpers
 
@@ -778,7 +778,7 @@ Each entry has: `name`, `operation_class`, `params`, `result` (Ok/Err), `duratio
 
 ```ruby
 class CreateUserTest < Minitest::Test
-  include Dex::TestHelpers
+  include Dex::Operation::TestHelpers
 
   testing CreateUser
 

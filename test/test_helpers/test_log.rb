@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require "dex/test_helpers"
+require "dex/operation/test_helpers"
 
 class TestTestLog < Minitest::Test
-  include Dex::TestHelpers
+  include Dex::Operation::TestHelpers
   include OperationHelpers
 
   def setup

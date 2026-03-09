@@ -8,12 +8,16 @@ description: Test event publication and handler behavior with Dex::Event::TestHe
 
 ```ruby
 # test/test_helper.rb
-require "dex/event_test_helpers"
+require "dex/event/test_helpers"
 
 class Minitest::Test
   include Dex::Event::TestHelpers
 end
 ```
+
+::: tip
+If you use both operations and events, `require "dex/test_helpers"` and `include Dex::TestHelpers` gives you everything in one shot. See [Installation](/guide/installation#test-setup) for details.
+:::
 
 ## Capturing events
 

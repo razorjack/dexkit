@@ -10,14 +10,18 @@ dexkit ships test helpers for Minitest with execution helpers, assertions, stubb
 
 ```ruby
 # test/test_helper.rb
-require "dex/test_helpers"
+require "dex/operation/test_helpers"
 
 class Minitest::Test
-  include Dex::TestHelpers
+  include Dex::Operation::TestHelpers
 end
 ```
 
-Including `Dex::TestHelpers` automatically installs the test wrapper (which records all operation calls to `TestLog`) and clears state between tests.
+Including `Dex::Operation::TestHelpers` automatically installs the test wrapper (which records all operation calls to `TestLog`) and clears state between tests.
+
+::: tip
+If you use both operations and events, `require "dex/test_helpers"` and `include Dex::TestHelpers` gives you everything in one shot. See [Installation](/guide/installation#test-setup) for details.
+:::
 
 ## Subject declaration
 
