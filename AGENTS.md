@@ -2,6 +2,10 @@ dexkit. Module name: `Dex`
 
 Ruby library providing base classes for service/operation, event, and form object patterns in Rails apps.
 
+## Pre-1.0 Policy
+
+dexkit is pre-1.0. Backwards compatibility is not a concern. There is no migration path obligation between versions. Redundant features, mediocre APIs, and even good features should be removed without hesitation if replaced by a great feature that does the same thing better. Be bold in design decisions — backwards compatibility considerations must not slow down development while we're pre-1.0.
+
 ## Core Values
 
 1. Beautiful Ruby API — must read and feel good.

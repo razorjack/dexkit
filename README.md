@@ -2,6 +2,8 @@
 
 Rails patterns toolbelt. Equip to gain +4 DEX.
 
+> **Active development.** dexkit is pre-1.0 and evolving rapidly. The public API may change between minor versions as the library matures.
+
 **[Documentation](https://dex.razorjack.net)**
 
 ## Operations
