@@ -1,13 +1,16 @@
 # frozen_string_literal: true
 
+require "json"
 require "minitest/autorun"
 require "open3"
 
 class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
+  RESULT_MARKER = "__RESULT__"
 
   def test_boots_without_active_record_and_does_not_auto_enable_mongoid_transactions
-    output = run_probe(<<~'RUBY')
+    result = run_probe_json(<<~'RUBY')
+      require "json"
       require "mongoid"
       require "active_job"
 
@@ -34,20 +37,21 @@ class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
         def perform = { greeting: "hi #{name}" }
       end
 
-      puts({
+      puts "__RESULT__#{JSON.generate(
         active_record: defined?(ActiveRecord),
         detected_adapter: Dex::Operation::TransactionAdapter.detect.inspect,
         result: op.new(name: "Ada").call
-      }.inspect)
+      )}"
     RUBY
 
-    assert_match(/active_record: nil/, output)
-    assert_match(/detected_adapter: "nil"/, output)
-    assert_match(/greeting: "hi Ada"/, output)
+    assert_nil result["active_record"]
+    assert_equal "nil", result["detected_adapter"]
+    assert_equal({ "greeting" => "hi Ada" }, result["result"])
   end
 
   def test_explicit_mongoid_adapter_raises_load_error_when_mongoid_is_not_loaded
-    output = run_probe(<<~RUBY)
+    result = run_probe_json(<<~'RUBY')
+      require "json"
       require "dexkit"
 
       op = Class.new(Dex::Operation) do
@@ -59,16 +63,17 @@ class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
       begin
         op.new.call
       rescue LoadError, StandardError => e
-        puts({ error_class: e.class.name, error_message: e.message }.inspect)
+        puts "__RESULT__#{JSON.generate(error_class: e.class.name, error_message: e.message)}"
       end
     RUBY
 
-    assert_match(/error_class: "LoadError"/, output)
-    assert_match(/Mongoid is required for transactions/, output)
+    assert_equal "LoadError", result["error_class"]
+    assert_match(/Mongoid is required for transactions/, result["error_message"])
   end
 
   def test_async_operation_and_event_stringify_mongoid_ref_ids
-    output = run_probe(<<~'RUBY')
+    result = run_probe_json(<<~'RUBY')
+      require "json"
       require "mongoid"
       require "active_job"
 
@@ -109,19 +114,21 @@ class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
       serialized = operation_class.new(user: user).async.send(:serialized_params)
       event_class.new(user: user).publish(sync: false)
 
-      puts({
+      puts "__RESULT__#{JSON.generate(
         serialized_class: serialized["user"].class.name,
         jobs: ActiveJob::Base.queue_adapter.enqueued_jobs.size,
         handler_name: handler_class.name.nil?
-      }.inspect)
+      )}"
     RUBY
 
-    assert_match(/serialized_class: "String"/, output)
-    assert_match(/jobs: 1/, output)
+    assert_equal "String", result["serialized_class"]
+    assert_equal 1, result["jobs"]
+    assert_equal true, result["handler_name"]
   end
 
   def test_async_event_handlers_raise_prescriptive_load_error_without_active_job
-    output = run_probe(<<~'RUBY')
+    result = run_probe_json(<<~'RUBY')
+      require "json"
       require "mongoid"
 
       Mongoid.configure do |config|
@@ -145,16 +152,17 @@ class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
       begin
         event_class.new.publish(sync: false)
       rescue LoadError, StandardError => e
-        puts({ error_class: e.class.name, error_message: e.message }.inspect)
+        puts "__RESULT__#{JSON.generate(error_class: e.class.name, error_message: e.message)}"
       end
     RUBY
 
-    assert_match(/error_class: "LoadError"/, output)
-    assert_match(/ActiveJob is required for async event handlers/, output)
+    assert_equal "LoadError", result["error_class"]
+    assert_match(/ActiveJob is required for async event handlers/, result["error_message"])
   end
 
   def test_query_normalizes_mongoid_association_scopes_without_active_record
-    output = run_probe(<<~'RUBY')
+    result = run_probe_json(<<~'RUBY')
+      require "json"
       require "mongoid"
 
       Mongoid.configure do |config|
@@ -186,18 +194,19 @@ class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
 
       result = query_class.call(scope: ProbeChild.where(active: true), name: "al")
 
-      puts({
+      puts "__RESULT__#{JSON.generate(
         adapter: Dex::Query::Backend.adapter_for(ProbeParent.new.children).name,
         result_class: result.class.name
-      }.inspect)
+      )}"
     RUBY
 
-    assert_match(/Dex::Query::Backend::MongoidAdapter/, output)
-    assert_match(/result_class: "Mongoid::Criteria"/, output)
+    assert_equal "Dex::Query::Backend::MongoidAdapter", result["adapter"]
+    assert_equal "Mongoid::Criteria", result["result_class"]
   end
 
   def test_mongoid_uniqueness_and_locking_errors_are_prescriptive_without_active_record
-    output = run_probe(<<~'RUBY')
+    result = run_probe_json(<<~'RUBY')
+      require "json"
       require "mongoid"
 
       Mongoid.configure do |config|
@@ -258,29 +267,30 @@ class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
           lock_error = "#{e.class}: #{e.message}"
         end
 
-        puts({
+        puts "__RESULT__#{JSON.generate(
           form_ok: form_ok,
           first_clause_class: clauses.first[:email].class.name,
           clause_count: clauses.size,
           ref_error: ref_error,
           lock_error: lock_error
-        }.inspect)
+        )}"
       ensure
         ProbeUser.singleton_class.send(:define_method, :where, original_where)
       end
     RUBY
 
-    assert_match(/form_ok: true/, output)
-    assert_match(/first_clause_class: "Regexp"/, output)
-    assert_match(/clause_count: 2/, output)
-    assert_match(/_Ref\(lock: true\) requires/, output)
-    assert_match(/advisory_lock requires ActiveRecord/, output)
+    assert_equal true, result["form_ok"]
+    assert_equal "Regexp", result["first_clause_class"]
+    assert_equal 2, result["clause_count"]
+    assert_match(/_Ref\(lock: true\) requires/, result["ref_error"])
+    assert_match(/advisory_lock requires ActiveRecord/, result["lock_error"])
   end
 
   def test_rails_boots_with_mongoid_and_dex_without_active_record
     skip "Rails is unavailable in this bundle" unless rails_available?
 
-    output = run_probe(<<~'RUBY')
+    result = run_probe_json(<<~'RUBY')
+      require "json"
       require "fileutils"
       require "logger"
       require "rake"
@@ -319,20 +329,20 @@ class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
         def perform = :ok
       end
 
-      puts({
+      puts "__RESULT__#{JSON.generate(
         active_record: defined?(ActiveRecord),
         railtie: defined?(Dex::Railtie),
         export_task: Rake::Task.task_defined?("dex:export"),
         guides_task: Rake::Task.task_defined?("dex:guides"),
         result: op.new.call
-      }.inspect)
+      )}"
     RUBY
 
-    assert_match(/active_record: nil/, output)
-    assert_match(/railtie: "constant"/, output)
-    assert_match(/export_task: true/, output)
-    assert_match(/guides_task: true/, output)
-    assert_match(/result: :ok/, output)
+    assert_nil result["active_record"]
+    assert_equal "constant", result["railtie"]
+    assert_equal true, result["export_task"]
+    assert_equal true, result["guides_task"]
+    assert_equal "ok", result["result"]
   end
 
   private
@@ -344,13 +354,17 @@ class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
     @rails_available = status.success?
   end
 
-  def run_probe(code)
+  def run_probe_json(code)
     stdout, stderr, status = Open3.capture3(
       "bundle", "exec", "ruby", "-Ilib", "-e", code,
       chdir: ROOT
     )
 
     assert status.success?, "probe failed\nSTDOUT:\n#{stdout}\nSTDERR:\n#{stderr}"
-    stdout
+    result_line = stdout.lines.reverse.find { |line| line.include?(RESULT_MARKER) }
+
+    assert result_line, "probe did not emit a result marker\nSTDOUT:\n#{stdout}\nSTDERR:\n#{stderr}"
+
+    JSON.parse(result_line.split(RESULT_MARKER, 2).last)
   end
 end
