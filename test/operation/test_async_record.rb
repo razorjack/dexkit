@@ -295,16 +295,20 @@ class TestOperationAsyncRecord < Minitest::Test
     end
   end
 
-  def test_minimal_table_without_status_column
+  def test_async_record_requires_full_record_schema
     with_recording(record_class: MinimalOperationRecord) do
       define_operation(:TestMinimalTableAsync) do
         prop :name, String
         def perform = nil
       end
 
-      # Should not raise even though MinimalOperationRecord lacks status/error columns
-      TestMinimalTableAsync.new(name: "Test").async.call
-      assert_equal 1, MinimalOperationRecord.count
+      error = assert_raises(ArgumentError) do
+        TestMinimalTableAsync.new(name: "Test").async.call
+      end
+
+      assert_match(/missing required attributes/, error.message)
+      assert_match(/params/, error.message)
+      assert_match(/status/, error.message)
     end
   end
 

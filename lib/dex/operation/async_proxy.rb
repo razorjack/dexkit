@@ -27,6 +27,7 @@ module Dex
       end
 
       def enqueue_record_job
+        @operation.send(:_record_validate_backend!, async: true)
         record = Dex.record_backend.create_record(
           name: operation_class_name,
           params: serialized_params,

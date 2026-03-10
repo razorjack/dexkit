@@ -5,6 +5,7 @@ module Dex
     extend Dex::Concern
 
     def _record_wrap
+      _record_validate_backend! if _record_enabled? || _record_has_pending_record?
       interceptor = Operation::HaltInterceptor.new { yield }
 
       if _record_has_pending_record?
@@ -34,6 +35,14 @@ module Dex
             "record expects true, false, or nil, got: #{enabled.inspect}"
         end
       end
+
+      def _record_required_fields(async: false)
+        settings = settings_for(:record)
+        fields = %w[name status performed_at error_code error_message error_details]
+        fields << "params" if async || settings.fetch(:params, true)
+        fields << "result" if settings.fetch(:result, true)
+        fields
+      end
     end
 
     private
@@ -44,6 +53,13 @@ module Dex
 
       record_settings = self.class.settings_for(:record)
       record_settings.fetch(:enabled, true)
+    end
+
+    def _record_validate_backend!(async: false)
+      Dex.record_backend.ensure_fields!(
+        self.class.send(:_record_required_fields, async: async),
+        feature: async ? "async recording" : "operation recording"
+      )
     end
 
     def _record_has_pending_record?

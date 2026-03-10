@@ -63,7 +63,7 @@ end
 | `wait: 10` | Fixed 10s between retries |
 | `wait: ->(n) { n * 5 }` | Custom: 5s, 10s, 15s, ... |
 
-When retries are exhausted, the exception propagates to the job framework.
+When retries are exhausted, the exception propagates to the job framework. Async handlers and retries require ActiveJob to be loaded.
 
 ## Callbacks
 

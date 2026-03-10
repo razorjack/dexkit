@@ -18,6 +18,12 @@ module MongoidHelpers
     _clear_mongoid_collections(MongoQueryUser)
   end
 
+  def setup_mongoid_event_database
+    _setup_mongoid!
+    _ensure_mongoid_event_models
+    _clear_mongoid_collections(MongoEventStoreRecord)
+  end
+
   def mongoid_transactions_supported?
     hello = Mongoid.default_client.database.command(hello: 1).first
     !hello.fetch("setName", "").to_s.empty?
@@ -127,6 +133,21 @@ module MongoidHelpers
       field :role, type: String
       field :age, type: Integer
       field :status, type: String
+    end)
+  end
+
+  def _ensure_mongoid_event_models
+    return if defined?(MongoEventStoreRecord)
+
+    Object.const_set(:MongoEventStoreRecord, Class.new do
+      include Mongoid::Document
+      include Mongoid::Timestamps
+
+      store_in collection: "mongo_event_store_records"
+
+      field :event_type, type: String
+      field :payload, type: Hash
+      field :metadata, type: Hash
     end)
   end
 end

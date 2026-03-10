@@ -68,7 +68,7 @@ class TestOperationMongoidRecording < Minitest::Test
     end
   end
 
-  def test_minimal_mongoid_record_class_ignores_unknown_attributes
+  def test_minimal_mongoid_record_class_raises_prescriptive_error
     with_mongoid_recording(record_class: MinimalMongoOperationRecord) do
       op = define_operation(:MongoidMinimalRecordingOp) do
         prop :name, String
@@ -78,14 +78,13 @@ class TestOperationMongoidRecording < Minitest::Test
         end
       end
 
-      op.new(name: "World").call
+      error = assert_raises(ArgumentError) do
+        op.new(name: "World").call
+      end
 
-      assert_equal 1, MinimalMongoOperationRecord.count
-
-      record = MinimalMongoOperationRecord.last
-      assert_equal "MongoidMinimalRecordingOp", record.name
-      refute_includes record.attributes.keys, "params"
-      refute_includes record.attributes.keys, "result"
+      assert_match(/missing required attributes/, error.message)
+      assert_match(/status/, error.message)
+      assert_match(/performed_at/, error.message)
     end
   end
 

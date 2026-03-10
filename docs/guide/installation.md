@@ -75,7 +75,7 @@ Record operation executions to a database table for auditing, debugging, or anal
 
 ### Migration
 
-The migration below includes columns for all recording features. Comment out anything you don't need – dexkit only writes to columns that exist on the model.
+The migration below includes columns for all recording features. Only omit columns for features you explicitly disable — dexkit validates the configured record model before use and raises if a required attribute is missing.
 
 ```ruby
 create_table :operation_records do |t|
@@ -143,6 +143,14 @@ Dex.configure do |config|
   config.record_class = OperationRecord
 end
 ```
+
+Required attributes by feature:
+
+- Core recording: `name`, `status`, `error_code`, `error_message`, `error_details`, `performed_at`
+- Params capture: `params` unless `record params: false`
+- Result capture: `result` unless `record result: false`
+- Async record jobs: `params`
+- `once`: `once_key`, plus `once_key_expires_at` when `expires_in:` is used
 
 See [Recording](/operation/recording) for controlling what gets recorded and [Idempotency](/operation/once) for the `once` DSL.
 
@@ -231,7 +239,7 @@ See [Publishing](/event/publishing) for the publish flow and context capture.
 
 ## Event async context
 
-Event handlers run via ActiveJob by default. If your handlers need ambient state (like `Current.user`), configure context capture and restoration:
+Event handlers run via ActiveJob by default. If ActiveJob is not loaded, async publish raises `LoadError`. If your handlers need ambient state (like `Current.user`), configure context capture and restoration:
 
 ```ruby
 Dex.configure do |config|

@@ -23,6 +23,12 @@ module Dex
       end
 
       def self.ambient_mongoid_transaction?
+        return false unless defined?(Mongoid)
+
+        if Mongoid.respond_to?(:in_transaction?, true)
+          return Mongoid.send(:in_transaction?)
+        end
+
         return false unless defined?(Mongoid::Threaded) && Mongoid::Threaded.respond_to?(:sessions)
 
         Mongoid::Threaded.sessions.values.any? do |session|

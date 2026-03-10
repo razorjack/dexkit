@@ -120,6 +120,39 @@ class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
     assert_match(/jobs: 1/, output)
   end
 
+  def test_async_event_handlers_raise_prescriptive_load_error_without_active_job
+    output = run_probe(<<~'RUBY')
+      require "mongoid"
+
+      Mongoid.configure do |config|
+        config.clients.default = {
+          hosts: ["127.0.0.1:27017"],
+          database: "dexkit_probe_#{Process.pid}"
+        }
+      end
+
+      require "dexkit"
+
+      event_class = Class.new(Dex::Event)
+
+      Class.new(Dex::Event::Handler) do
+        on event_class
+
+        def perform
+        end
+      end
+
+      begin
+        event_class.new.publish(sync: false)
+      rescue LoadError, StandardError => e
+        puts({ error_class: e.class.name, error_message: e.message }.inspect)
+      end
+    RUBY
+
+    assert_match(/error_class: "LoadError"/, output)
+    assert_match(/ActiveJob is required for async event handlers/, output)
+  end
+
   def test_query_normalizes_mongoid_association_scopes_without_active_record
     output = run_probe(<<~'RUBY')
       require "mongoid"

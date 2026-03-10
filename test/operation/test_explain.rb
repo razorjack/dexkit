@@ -356,6 +356,19 @@ class TestOperationExplain < Minitest::Test
     end
   end
 
+  def test_record_reports_misconfigured_backend
+    op = define_operation(:RecordExplainMisconfigured) { def perform = "ok" }
+
+    with_recording(record_class: MinimalOperationRecord) do
+      info = op.explain
+
+      assert info[:record][:enabled]
+      assert_equal :misconfigured, info[:record][:status]
+      assert_includes info[:record][:missing_fields], "status"
+      refute info[:callable]
+    end
+  end
+
   # Transaction
 
   def test_transaction_enabled_by_default

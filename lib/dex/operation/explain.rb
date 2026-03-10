@@ -45,6 +45,7 @@ module Dex
 
       def _explain_callable?(info)
         return false unless info[:guards][:passed]
+        return false if info[:record][:enabled] && info[:record][:status] == :misconfigured
 
         if info[:once][:active]
           return false if ONCE_BLOCKING_STATUSES.include?(info[:once][:status])
@@ -119,12 +120,7 @@ module Dex
         return :misconfigured if name.nil?
         return :misconfigured unless pipeline.steps.any? { |s| s.name == :record }
         return :unavailable unless Dex.record_backend
-        return :misconfigured unless Dex.record_backend.has_field?("once_key")
-
-        settings = settings_for(:once)
-        if settings[:expires_in] && !Dex.record_backend.has_field?("once_key_expires_at")
-          return :misconfigured
-        end
+        return :misconfigured unless Dex.record_backend.missing_fields(send(:_once_required_fields)).empty?
 
         existing = Dex.record_backend.find_by_once_key(key)
         return :exists if existing
@@ -171,7 +167,15 @@ module Dex
           enabled: true,
           params: settings.fetch(:params, true),
           result: settings.fetch(:result, true)
-        }
+        }.tap do |entry|
+          missing = Dex.record_backend.missing_fields(send(:_record_required_fields))
+          if missing.empty?
+            entry[:status] = :ready
+          else
+            entry[:status] = :misconfigured
+            entry[:missing_fields] = missing
+          end
+        end
       end
 
       def _explain_transaction

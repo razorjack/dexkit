@@ -27,7 +27,7 @@ Useful when you need the event object (e.g., for tracing).
 
 ## Sync vs async
 
-**Async** (default): Each handler is dispatched as an ActiveJob. Handlers run independently — one failure doesn't affect others.
+**Async** (default): Each handler is dispatched as an ActiveJob. Handlers run independently — one failure doesn't affect others. If ActiveJob is not loaded, `publish(sync: false)` raises `LoadError`.
 
 **Sync**: Handlers called inline in the current thread. Useful for tests and when you need immediate execution.
 

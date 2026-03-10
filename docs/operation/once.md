@@ -10,7 +10,7 @@ Both successful results and business errors are replayed. Unhandled exceptions r
 
 ## Setup
 
-`once` builds on top of [Recording](/operation/recording) – it needs the record backend to store and look up idempotency keys. Add two columns to your record table:
+`once` builds on top of [Recording](/operation/recording) – it needs the record backend to store and look up idempotency keys. The record model must satisfy the core recording schema, and `once` additionally requires these columns:
 
 ```ruby
 # migration

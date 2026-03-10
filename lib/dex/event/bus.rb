@@ -81,6 +81,7 @@ module Dex
         end
 
         def enqueue(handler_class, event, trace_data)
+          ensure_active_job_loaded!
           ctx = event.context
 
           Dex::Event::Processor.perform_later(
@@ -91,6 +92,12 @@ module Dex
             trace: trace_data,
             context: ctx
           )
+        end
+
+        def ensure_active_job_loaded!
+          return if defined?(ActiveJob::Base)
+
+          raise LoadError, "ActiveJob is required for async event handlers. Add 'activejob' to your Gemfile."
         end
       end
     end

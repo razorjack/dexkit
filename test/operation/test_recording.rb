@@ -91,7 +91,7 @@ class TestOperationRecording < Minitest::Test
     end
   end
 
-  def test_missing_params_field_still_works
+  def test_missing_record_fields_raise_prescriptive_error
     with_recording(record_class: MinimalOperationRecord) do
       op = define_operation(:TestMinimalFieldsOp) do
         prop :name, String
@@ -99,10 +99,13 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").call
+      error = assert_raises(ArgumentError) do
+        op.new(name: "Test").call
+      end
 
-      assert_equal 1, MinimalOperationRecord.count
-      assert_equal "TestMinimalFieldsOp", MinimalOperationRecord.last.name
+      assert_match(/missing required attributes/, error.message)
+      assert_match(/status/, error.message)
+      assert_match(/performed_at/, error.message)
     end
   end
 
@@ -234,7 +237,7 @@ class TestOperationRecording < Minitest::Test
     end
   end
 
-  def test_missing_result_column_still_works
+  def test_missing_result_column_raises_prescriptive_error
     with_recording(record_class: MinimalOperationRecord) do
       op = define_operation(:TestMissingResultColumn) do
         prop :name, String
@@ -243,10 +246,12 @@ class TestOperationRecording < Minitest::Test
         end
       end
 
-      op.new(name: "Test").call
+      error = assert_raises(ArgumentError) do
+        op.new(name: "Test").call
+      end
 
-      assert_equal 1, MinimalOperationRecord.count
-      assert_equal "TestMissingResultColumn", MinimalOperationRecord.last.name
+      assert_match(/missing required attributes/, error.message)
+      assert_match(/result/, error.message)
     end
   end
 

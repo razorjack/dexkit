@@ -1,14 +1,14 @@
 ---
-description: Test Dex::Query objects with plain Minitest and database-backed assertions on filtered and sorted relations.
+description: Test Dex::Query objects with plain Minitest and database-backed assertions on filtered and sorted scopes.
 ---
 
 # Testing
 
-Queries return standard ActiveRecord relations, so testing is plain Minitest – no special helpers needed.
+Queries return standard ActiveRecord relations or Mongoid criteria, so testing is plain Minitest – no special helpers needed.
 
 ## Setup
 
-Queries need a database. In tests, an in-memory SQLite database works well:
+Queries need a database-backed scope. In tests, an in-memory SQLite database works well for ActiveRecord:
 
 ```ruby
 class EmployeeQueryTest < Minitest::Test
@@ -18,6 +18,19 @@ class EmployeeQueryTest < Minitest::Test
   end
 end
 ```
+
+Mongoid queries work the same way once your Mongoid test database is configured:
+
+```ruby
+class EmployeeQueryTest < Minitest::Test
+  def setup
+    Employee.create!(name: "Alice", role: "admin", status: "active")
+    Employee.create!(name: "Bob", role: "user", status: "inactive")
+  end
+end
+```
+
+The assertions below are identical for either backend. The only difference is the return type: `ActiveRecord::Relation` for ActiveRecord, `Mongoid::Criteria` for Mongoid.
 
 ## Testing filters
 

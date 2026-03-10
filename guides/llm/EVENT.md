@@ -56,7 +56,7 @@ event.publish(sync: true)        # sync
 OrderPlaced.publish(order_id: 1, total: 99.99, caused_by: parent_event)
 ```
 
-**Async** (default): handlers dispatched via ActiveJob. **Sync**: handlers called inline.
+**Async** (default): handlers dispatched via ActiveJob. If ActiveJob is not loaded, `publish(sync: false)` raises `LoadError`. **Sync**: handlers called inline.
 
 ---
 
@@ -109,7 +109,7 @@ class ProcessPayment < Dex::Event::Handler
 end
 ```
 
-When retries exhausted, exception propagates normally.
+When retries exhausted, exception propagates normally. Async handlers and retries require ActiveJob to be loaded.
 
 ### Callbacks
 

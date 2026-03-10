@@ -121,7 +121,7 @@ When `once` is active, the `status` field queries the record backend to determin
 - `:expired` – record exists but expired; would execute `perform`
 - `:pending` – another execution is in-flight with this key
 - `:invalid` – the derived key is `nil` (key block returned nil)
-- `:misconfigured` – operation is anonymous, record step is missing, `once_key` column is missing, or `expires_in` is set but the `once_key_expires_at` column is missing
+- `:misconfigured` – operation is anonymous, record step is missing, or the configured record backend is missing attributes required by `once` (for example `once_key` or `once_key_expires_at`)
 - `:unavailable` – no record backend configured
 
 This is a read-only query – no records are created or modified.
@@ -155,7 +155,7 @@ info[:props]      # => {}
 info[:guards]     # => { passed: false, results: [] }
 info[:callable]   # => false
 
-info[:record]     # => { enabled: true, params: true, result: true }
+info[:record]     # => { enabled: true, params: true, result: true, status: :ready }
 info[:callbacks]  # => { before: 1, after: 2, around: 0 }
 info[:pipeline]   # => [:result, :guard, :once, ...]
 ```

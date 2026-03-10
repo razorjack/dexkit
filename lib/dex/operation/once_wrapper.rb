@@ -44,6 +44,7 @@ module Dex
         else
           raise ArgumentError, "pass a String key or keyword arguments matching the once props"
         end
+        _once_validate_backend!
         Dex.record_backend.update_record_by_once_key(derived, once_key: nil)
       end
 
@@ -55,6 +56,27 @@ module Dex
       end
 
       private
+
+      def _once_required_fields
+        fields =
+          if respond_to?(:_record_required_fields, true)
+            send(:_record_required_fields)
+          else
+            []
+          end
+
+        fields << "once_key"
+        fields << "once_key_expires_at" if settings_for(:once)[:expires_in]
+        fields.uniq
+      end
+
+      def _once_validate_backend!
+        unless Dex.record_backend
+          raise "once requires a record backend (configure Dex.record_class)"
+        end
+
+        Dex.record_backend.ensure_fields!(_once_required_fields, feature: "once")
+      end
 
       def _once_validate_props!(prop_names)
         return unless respond_to?(:literal_properties)
@@ -112,21 +134,7 @@ module Dex
     end
 
     def _once_ensure_backend!
-      unless Dex.record_backend
-        raise "once requires a record backend (configure Dex.record_class)"
-      end
-
-      return if self.class.instance_variable_defined?(:@_once_fields_checked)
-
-      unless Dex.record_backend.has_field?("once_key")
-        raise "once requires once_key column on #{Dex.record_class}. Run the migration to add it."
-      end
-
-      if self.class.settings_for(:once)[:expires_in] && !Dex.record_backend.has_field?("once_key_expires_at")
-        raise "once with expires_in requires once_key_expires_at column on #{Dex.record_class}. Run the migration to add it."
-      end
-
-      self.class.instance_variable_set(:@_once_fields_checked, true)
+      self.class.send(:_once_validate_backend!)
     end
 
     def _once_derive_key

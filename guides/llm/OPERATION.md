@@ -510,7 +510,17 @@ record result: false      # params only
 record params: false      # result only
 ```
 
-All outcomes are recorded — success (`completed`), business errors (`error`), and exceptions (`failed`). Recording runs outside the operation's own transaction so error records survive its rollbacks. Records still participate in ambient transactions (e.g., an outer operation's transaction). Missing columns silently skipped. Untyped results are sanitized to JSON-safe values before persistence: Hash keys round-trip as strings, and objects fall back to `as_json`/`to_s` under `"_dex_value"`.
+All outcomes are recorded — success (`completed`), business errors (`error`), and exceptions (`failed`). Recording runs outside the operation's own transaction so error records survive its rollbacks. Records still participate in ambient transactions (e.g., an outer operation's transaction). Dex validates the configured record model before use and raises if required attributes are missing.
+
+Required attributes by feature:
+
+- Core recording: `name`, `status`, `error_code`, `error_message`, `error_details`, `performed_at`
+- Params capture: `params` unless `record params: false`
+- Result capture: `result` unless `record result: false`
+- Async record jobs: `params`
+- `once`: `once_key`, plus `once_key_expires_at` when `expires_in:` is used
+
+Untyped results are sanitized to JSON-safe values before persistence: Hash keys round-trip as strings, and objects fall back to `as_json`/`to_s` under `"_dex_value"`.
 
 Status values: `pending` (async enqueued), `running` (async executing), `completed` (success), `error` (business error via `error!`), `failed` (unhandled exception).
 
@@ -574,7 +584,7 @@ Clearing is idempotent — clearing a non-existent key is a no-op. After clearin
 **Requirements:**
 
 - Record backend must be configured (`Dex.configure { |c| c.record_class = OperationRecord }`)
-- The record table must have `once_key` and `once_key_expires_at` columns (see Recording schema above)
+- The record backend must satisfy the Recording requirements above, and `once` additionally requires `once_key` plus `once_key_expires_at` when `expires_in:` is used
 - `once` cannot be declared with `record false` — raises `ArgumentError`
 - Only one `once` declaration per operation
 

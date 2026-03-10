@@ -8,7 +8,7 @@ Record operation executions to a database table for auditing, debugging, or anal
 
 ## Setup
 
-Create a recording model that matches the fields you want to persist.
+Create a recording model with the fields required by the recording features you enable.
 
 ### ActiveRecord
 
@@ -57,6 +57,7 @@ class OperationRecord
   field :error_details, type: Hash
   field :performed_at, type: Time
   field :once_key, type: String
+  field :once_key_expires_at, type: Time
 
   index({ name: 1 })
   index({ status: 1 })
@@ -74,7 +75,15 @@ Dex.configure do |config|
 end
 ```
 
-All fields except `name` and `status` are optional. dexkit only writes to attributes that exist on the recording model.
+dexkit validates the configured record model before using it and raises if required attributes are missing.
+
+Required attributes by feature:
+
+- Core recording: `name`, `status`, `error_code`, `error_message`, `error_details`, `performed_at`
+- Params capture: `params` unless `record params: false`
+- Result capture: `result` unless `record result: false`
+- Async record jobs: `params`
+- `once`: `once_key`, plus `once_key_expires_at` when `expires_in:` is used
 
 ## What gets recorded
 

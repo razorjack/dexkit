@@ -627,12 +627,9 @@ class TestOperationOnce < Minitest::Test
         define_method(:perform) { "done" }
       end
 
-      # Clear cached check from other tests
-      op.remove_instance_variable(:@_once_fields_checked) if op.instance_variable_defined?(:@_once_fields_checked)
-
-      assert_raises(RuntimeError, /once requires once_key column/) do
-        op.call(order_id: 1)
-      end
+      error = assert_raises(ArgumentError) { op.call(order_id: 1) }
+      assert_match(/missing required attributes/, error.message)
+      assert_match(/once_key/, error.message)
     end
   end
 
@@ -644,11 +641,9 @@ class TestOperationOnce < Minitest::Test
         define_method(:perform) { "done" }
       end
 
-      op.remove_instance_variable(:@_once_fields_checked) if op.instance_variable_defined?(:@_once_fields_checked)
-
-      assert_raises(RuntimeError, /once_key_expires_at column/) do
-        op.call(user_id: 1)
-      end
+      error = assert_raises(ArgumentError) { op.call(user_id: 1) }
+      assert_match(/missing required attributes/, error.message)
+      assert_match(/once_key_expires_at/, error.message)
     end
   end
 

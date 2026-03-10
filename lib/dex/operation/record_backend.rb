@@ -58,6 +58,19 @@ module Dex
           attributes.select { |key, _| has_field?(key.to_s) }
         end
 
+        def missing_fields(*fields)
+          fields.flatten.uniq.reject { |field_name| has_field?(field_name) }
+        end
+
+        def ensure_fields!(*fields, feature:)
+          missing = missing_fields(*fields)
+          return if missing.empty?
+
+          raise ArgumentError,
+            "Dex record_class #{record_class} is missing required attributes for #{feature}: #{missing.join(", ")}. " \
+            "Define these attributes on #{record_class} or disable #{feature}."
+        end
+
         def has_field?(field_name)
           raise NotImplementedError
         end

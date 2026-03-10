@@ -93,6 +93,8 @@ Order::SendReport.new(order_id: 123).async.call
 # → exception → status: "failed", error_code: "RuntimeError", error_message: "..."
 ```
 
+Dex validates the configured record model before enqueueing a `RecordJob`. Missing required attributes (for example `params`, `status`, or `performed_at`) raise immediately instead of being silently skipped.
+
 ## Error handling
 
 If the job fails, the exception propagates normally through ActiveJob's retry mechanism. When recording is enabled, the record captures the outcome:

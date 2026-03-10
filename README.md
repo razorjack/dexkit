@@ -8,7 +8,7 @@ Rails patterns toolbelt. Equip to gain +4 DEX.
 
 Service objects with typed properties, transactions, error handling, and more.
 
-Mongoid-only Rails apps work too. Mongoid DB transactions are explicit opt-in (`config.transaction_adapter = :mongoid` or `transaction :mongoid`) and require a replica set or sharded cluster; `advisory_lock` remains ActiveRecord-only; operation/event store models can be Mongoid documents.
+Mongoid-only Rails apps work too. Mongoid DB transactions are explicit opt-in (`config.transaction_adapter = :mongoid` or `transaction :mongoid`) and require a replica set or sharded cluster; `advisory_lock` remains ActiveRecord-only; operation/event store models can be Mongoid documents; recording models must define the fields required by the enabled recording features.
 
 ```ruby
 class Order::Place < Dex::Operation
@@ -206,7 +206,7 @@ Order::Placed.publish(order_id: 1, total: 99.99)
 
 **Zero-config pub/sub** — define events and handlers, publish. No bus setup needed.
 
-**Async by default** — handlers dispatched via ActiveJob. `sync: true` for inline.
+**Async by default** — handlers dispatched via ActiveJob. `sync: true` for inline. If ActiveJob is not loaded, async publish raises `LoadError`.
 
 **Causality tracing** — link events in chains with shared `trace_id`:
 
