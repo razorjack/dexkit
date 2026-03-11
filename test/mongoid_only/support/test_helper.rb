@@ -10,7 +10,17 @@ require "active_job/test_helper"
 ActiveJob::Base.queue_adapter = :test
 ActiveJob::Base.logger = nil
 
+Warning.singleton_class.prepend(Module.new do
+  def warn(message, **)
+    return if message.include?("/mongoid-") || message.include?("/mongo-")
+
+    super
+  end
+end)
+original_verbose = $VERBOSE
+$VERBOSE = nil
 require "mongoid"
+$VERBOSE = original_verbose
 
 require_relative "../../support/temporary_constants"
 require_relative "../../support/operation_helpers"

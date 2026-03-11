@@ -13,6 +13,21 @@ ActiveJob::Base.logger = nil
 require "active_record"
 ActiveRecord::Base.logger = nil
 
+# Mongoid 9.x and the mongo driver emit harmless method-redefined and
+# URI-deprecation warnings on Ruby 3.2+.  Suppress load-time warnings
+# with $VERBOSE and runtime warnings with a Warning filter.
+Warning.singleton_class.prepend(Module.new do
+  def warn(message, **)
+    return if message.include?("/mongoid-") || message.include?("/mongo-")
+
+    super
+  end
+end)
+original_verbose = $VERBOSE
+$VERBOSE = nil
+require "mongoid"
+$VERBOSE = original_verbose
+
 # Load test support files
 require_relative "support/temporary_constants"
 require_relative "support/operation_helpers"

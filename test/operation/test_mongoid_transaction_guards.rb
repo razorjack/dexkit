@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require "mongoid"
 
 class TestOperationMongoidTransactionGuards < Minitest::Test
   def test_after_commit_is_fiber_local

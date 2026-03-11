@@ -25,7 +25,7 @@ module MongoidHelpers
   end
 
   def mongoid_transactions_supported?
-    hello = Mongoid.default_client.database.command(hello: 1).first
+    hello = _silence_mongoid_warnings { Mongoid.default_client.database.command(hello: 1).first }
     !hello.fetch("setName", "").to_s.empty?
   rescue
     false
@@ -37,7 +37,7 @@ module MongoidHelpers
     skip "Mongoid tests are disabled (set #{MONGOID_TEST_FLAG}=1)." unless ENV[MONGOID_TEST_FLAG] == "1"
 
     _configure_mongoid!
-    Mongoid.default_client.database.command(ping: 1)
+    _silence_mongoid_warnings { Mongoid.default_client.database.command(ping: 1) }
   rescue LoadError => e
     skip "Mongoid gem is unavailable: #{e.message}"
   rescue => e
@@ -45,22 +45,26 @@ module MongoidHelpers
   end
 
   def _configure_mongoid!
-    return if defined?(@_mongoid_configured) && @_mongoid_configured
+    return if MongoidHelpers.instance_variable_defined?(:@_configured) && MongoidHelpers.instance_variable_get(:@_configured)
 
     require "logger"
-    require "mongoid"
 
-    Mongoid::Config.load_configuration(
-      clients: {
-        default: {
-          uri: ENV.fetch(MONGODB_URI_ENV, "mongodb://127.0.0.1:27017/dexkit_test_#{Process.pid}?replicaSet=rs0")
-        }
-      },
-      options: { raise_not_found_error: true }
-    )
+    _silence_mongoid_warnings do
+      require "mongoid"
 
-    Mongo::Logger.logger.level = Logger::ERROR if defined?(Mongo::Logger)
-    @_mongoid_configured = true
+      Mongoid::Config.load_configuration(
+        clients: {
+          default: {
+            uri: ENV.fetch(MONGODB_URI_ENV, "mongodb://127.0.0.1:27017/dexkit_test_#{Process.pid}?replicaSet=rs0")
+          }
+        },
+        options: { raise_not_found_error: true }
+      )
+
+      Mongo::Logger.logger.level = Logger::ERROR if defined?(Mongo::Logger)
+      Mongoid.default_client # eagerly initialize client (triggers URI parsing)
+    end
+    MongoidHelpers.instance_variable_set(:@_configured, true)
   end
 
   def _clear_mongoid_collections(*models)
@@ -73,81 +77,95 @@ module MongoidHelpers
     end
   end
 
+  def _silence_mongoid_warnings
+    old_verbose = $VERBOSE
+    $VERBOSE = nil
+    yield
+  ensure
+    $VERBOSE = old_verbose
+  end
+
   def _ensure_mongoid_operation_models
-    unless defined?(MongoOperationRecord)
-      Object.const_set(:MongoOperationRecord, Class.new do
-        include Mongoid::Document
-        include Mongoid::Timestamps
+    _silence_mongoid_warnings do
+      unless defined?(MongoOperationRecord)
+        Object.const_set(:MongoOperationRecord, Class.new do
+          include Mongoid::Document
+          include Mongoid::Timestamps
 
-        store_in collection: "mongo_operation_records"
+          store_in collection: "mongo_operation_records"
 
-        field :name, type: String
-        field :params, type: Hash
-        field :result, type: Object
-        field :status, type: String
-        field :error_code, type: String
-        field :error_message, type: String
-        field :error_details, type: Hash
-        field :once_key, type: String
-        field :once_key_expires_at, type: Time
-        field :performed_at, type: Time
+          field :name, type: String
+          field :params, type: Hash
+          field :result, type: Object
+          field :status, type: String
+          field :error_code, type: String
+          field :error_message, type: String
+          field :error_details, type: Hash
+          field :once_key, type: String
+          field :once_key_expires_at, type: Time
+          field :performed_at, type: Time
 
-        index({ once_key: 1 }, { unique: true, sparse: true })
-      end)
-    end
+          index({ once_key: 1 }, { unique: true, sparse: true })
+        end)
+      end
 
-    unless defined?(MinimalMongoOperationRecord)
-      Object.const_set(:MinimalMongoOperationRecord, Class.new do
-        include Mongoid::Document
-        include Mongoid::Timestamps
+      unless defined?(MinimalMongoOperationRecord)
+        Object.const_set(:MinimalMongoOperationRecord, Class.new do
+          include Mongoid::Document
+          include Mongoid::Timestamps
 
-        store_in collection: "minimal_mongo_operation_records"
+          store_in collection: "minimal_mongo_operation_records"
 
-        field :name, type: String
-      end)
-    end
+          field :name, type: String
+        end)
+      end
 
-    unless defined?(MongoTestModel)
-      Object.const_set(:MongoTestModel, Class.new do
-        include Mongoid::Document
-        include Mongoid::Timestamps
+      unless defined?(MongoTestModel)
+        Object.const_set(:MongoTestModel, Class.new do
+          include Mongoid::Document
+          include Mongoid::Timestamps
 
-        store_in collection: "mongo_test_models"
+          store_in collection: "mongo_test_models"
 
-        field :name, type: String
-      end)
+          field :name, type: String
+        end)
+      end
     end
   end
 
   def _ensure_mongoid_query_models
     return if defined?(MongoQueryUser)
 
-    Object.const_set(:MongoQueryUser, Class.new do
-      include Mongoid::Document
-      include Mongoid::Timestamps
+    _silence_mongoid_warnings do
+      Object.const_set(:MongoQueryUser, Class.new do
+        include Mongoid::Document
+        include Mongoid::Timestamps
 
-      store_in collection: "mongo_query_users"
+        store_in collection: "mongo_query_users"
 
-      field :name, type: String
-      field :email, type: String
-      field :role, type: String
-      field :age, type: Integer
-      field :status, type: String
-    end)
+        field :name, type: String
+        field :email, type: String
+        field :role, type: String
+        field :age, type: Integer
+        field :status, type: String
+      end)
+    end
   end
 
   def _ensure_mongoid_event_models
     return if defined?(MongoEventStoreRecord)
 
-    Object.const_set(:MongoEventStoreRecord, Class.new do
-      include Mongoid::Document
-      include Mongoid::Timestamps
+    _silence_mongoid_warnings do
+      Object.const_set(:MongoEventStoreRecord, Class.new do
+        include Mongoid::Document
+        include Mongoid::Timestamps
 
-      store_in collection: "mongo_event_store_records"
+        store_in collection: "mongo_event_store_records"
 
-      field :event_type, type: String
-      field :payload, type: Hash
-      field :metadata, type: Hash
-    end)
+        field :event_type, type: String
+        field :payload, type: Hash
+        field :metadata, type: Hash
+      end)
+    end
   end
 end

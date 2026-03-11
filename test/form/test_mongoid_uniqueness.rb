@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "test_helper"
-require "mongoid"
 
 class TestFormMongoidUniqueness < Minitest::Test
   MODEL_CONST = :MongoidUniquenessUser
@@ -25,11 +24,13 @@ class TestFormMongoidUniqueness < Minitest::Test
     _configure_mongoid!
 
     Object.send(:remove_const, MODEL_CONST) if Object.const_defined?(MODEL_CONST)
-    Object.const_set(MODEL_CONST, Class.new do
-      include Mongoid::Document
+    _silence_mongoid_warnings do
+      Object.const_set(MODEL_CONST, Class.new do
+        include Mongoid::Document
 
-      field :email, type: String
-    end)
+        field :email, type: String
+      end)
+    end
   end
 
   def teardown
