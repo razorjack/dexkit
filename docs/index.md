@@ -4,7 +4,7 @@ layout: home
 
 hero:
   name: dexkit
-  text: Glorious DX for Rails
+  text: Patterns for Rails, crafted for DX
   tagline: "Typed operations, domain events, form objects, and query builders – four base classes your Rails app needs to roll with advantage."
   actions:
     - theme: brand
