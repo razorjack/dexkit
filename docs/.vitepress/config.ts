@@ -261,21 +261,27 @@ export default defineConfig({
         items: [
           { text: 'Overview', link: '/operation/' },
           { text: 'Properties & Types', link: '/operation/properties' },
-          { text: 'Ambient Context', link: '/operation/context' },
-          { text: 'Guards', link: '/operation/guards' },
           { text: 'Error Handling', link: '/operation/errors' },
           { text: 'Ok / Err', link: '/operation/safe-mode' },
           { text: 'Callbacks', link: '/operation/callbacks' },
+          { text: 'Async', link: '/operation/async' },
+          { text: 'Testing', link: '/operation/testing' }
+        ]
+      },
+      {
+        text: 'Operation (Advanced)',
+        collapsed: true,
+        items: [
+          { text: 'Ambient Context', link: '/operation/context' },
+          { text: 'Guards', link: '/operation/guards' },
           { text: 'Transactions', link: '/operation/transactions' },
           { text: 'Idempotency', link: '/operation/once' },
           { text: 'Advisory Locking', link: '/operation/advisory-lock' },
-          { text: 'Async', link: '/operation/async' },
           { text: 'Recording', link: '/operation/recording' },
           { text: 'Middleware', link: '/operation/pipeline' },
           { text: 'Contracts', link: '/operation/contracts' },
           { text: 'Explain', link: '/operation/explain' },
-          { text: 'LLM Tools', link: '/operation/llm-tools' },
-          { text: 'Testing', link: '/operation/testing' }
+          { text: 'LLM Tools', link: '/operation/llm-tools' }
         ]
       },
       {
