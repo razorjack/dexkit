@@ -40,8 +40,6 @@ module Dex
       end
     end
 
-    TRANSACTION_KNOWN_ADAPTERS = %i[active_record].freeze
-
     module ClassMethods
       def transaction(enabled_or_options = nil, **options)
         validate_options!(options, %i[adapter], :transaction)
@@ -66,11 +64,7 @@ module Dex
       def _transaction_validate_adapter!(adapter)
         return if adapter.nil?
 
-        unless TransactionWrapper::TRANSACTION_KNOWN_ADAPTERS.include?(adapter.to_sym)
-          raise ArgumentError,
-            "unknown transaction adapter: #{adapter.inspect}. " \
-            "Known: #{TransactionWrapper::TRANSACTION_KNOWN_ADAPTERS.map(&:inspect).join(", ")}"
-        end
+        Operation::TransactionAdapter.normalize_name(adapter)
       end
     end
 

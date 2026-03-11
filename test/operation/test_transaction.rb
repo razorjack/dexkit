@@ -217,6 +217,14 @@ class TestOperationTransaction < Minitest::Test
     assert_match(/unknown transaction adapter/, error.message)
   end
 
+  def test_unknown_global_adapter_raises_error_at_assignment
+    error = assert_raises(ArgumentError) do
+      Dex.configure { |c| c.transaction_adapter = :mongoid }
+    end
+
+    assert_match(/unknown transaction adapter/, error.message)
+  end
+
   # after_commit
 
   def test_after_commit_runs_after_transaction_commits

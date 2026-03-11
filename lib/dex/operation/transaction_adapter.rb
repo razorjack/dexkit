@@ -3,15 +3,30 @@
 module Dex
   class Operation
     module TransactionAdapter
+      KNOWN_ADAPTERS = %i[active_record].freeze
+
       def self.for(adapter_name)
-        case adapter_name&.to_sym
+        case normalize_name(adapter_name)
         when :active_record
           ActiveRecordAdapter
         when nil
           detect
-        else
-          raise ArgumentError, "Unknown transaction adapter: #{adapter_name}"
         end
+      end
+
+      def self.known_adapters
+        KNOWN_ADAPTERS
+      end
+
+      def self.normalize_name(adapter_name)
+        return nil if adapter_name.nil?
+
+        normalized = adapter_name.to_sym
+        return normalized if KNOWN_ADAPTERS.include?(normalized)
+
+        raise ArgumentError,
+          "unknown transaction adapter: #{adapter_name.inspect}. " \
+          "Known: #{KNOWN_ADAPTERS.map(&:inspect).join(", ")}"
       end
 
       def self.detect
