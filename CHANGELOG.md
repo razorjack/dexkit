@@ -8,6 +8,7 @@
 ### Fixed
 
 - **Mongoid-only Rails compatibility** — Dex boots and runs cleanly in Mongoid-only Rails apps without `activerecord` loaded, with prescriptive `LoadError`s for unsupported paths such as `advisory_lock` and async event dispatch without `ActiveJob`
+- **ActiveRecord transaction auto-detection is stricter** — Dex now enables the ActiveRecord transaction adapter only when an ActiveRecord connection pool actually exists. Before: merely loading `activerecord` could make Mongoid-backed operations try to open an ActiveRecord transaction and fail with `ActiveRecord::ConnectionNotDefined`. After: unconfigured ActiveRecord no longer activates transactions implicitly
 - **Mongoid async/recording serialization** — `_Ref(Model)` serializes IDs via `id.as_json`, so `BSON::ObjectId` values round-trip through async operations, async events, and recording without `ActiveJob::SerializationError`. Recording and `once` sanitize untyped Mongoid document results to JSON-safe payloads
 - **Mongoid query and form parity** — query adapter detection and scope merging normalize Mongoid association scopes to `Mongoid::Criteria`, uniqueness validation excludes persisted Mongoid records correctly and uses a case-insensitive regex path for `case_sensitive: false`, and `_Ref(lock: true)` fails fast for model classes that do not support `.lock`
 

@@ -207,6 +207,13 @@ class TestOperationTransaction < Minitest::Test
     assert_equal 0, TestModel.count
   end
 
+  def test_detect_returns_nil_without_active_record_connection_pool
+    ActiveRecord::Base.connection_handler.clear_all_connections!
+    ActiveRecord::Base.remove_connection
+
+    assert_nil Dex::Operation::TransactionAdapter.detect
+  end
+
   def test_unknown_adapter_raises_error
     error = assert_raises(ArgumentError) do
       build_operation do

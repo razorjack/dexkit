@@ -30,9 +30,17 @@ module Dex
       end
 
       def self.detect
-        if defined?(ActiveRecord::Base)
-          ActiveRecordAdapter
-        end
+        return unless defined?(ActiveRecord::Base)
+        return unless active_record_pool?
+
+        ActiveRecordAdapter
+      end
+
+      def self.active_record_pool?
+        !ActiveRecord::Base.connection_handler.retrieve_connection_pool(
+          ActiveRecord::Base.connection_specification_name,
+          strict: false
+        ).nil?
       end
 
       module ActiveRecordAdapter
