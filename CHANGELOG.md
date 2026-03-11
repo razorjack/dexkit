@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.9.0] - 2026-03-09
+
 ### Breaking
 
 - **Mongoid transaction support removed** — `transaction :mongoid` and `config.transaction_adapter = :mongoid` are no longer valid. Dex no longer ships a Mongoid transaction adapter. Before: Mongoid transactions could be enabled via configuration or per-operation DSL. After: both forms raise `ArgumentError` immediately at declaration/configuration time. Mongoid-only apps continue to work — transactions are automatically disabled (no adapter detected), and `after_commit` fires immediately after success. If you need Mongoid multi-document transactions, call `Mongoid.transaction` directly inside `perform`
