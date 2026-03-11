@@ -718,16 +718,13 @@ class TestOperationExplain < Minitest::Test
     end
   end
 
-  # Transaction reflects adapter availability
+  # Transaction reflects adapter setting
 
-  def test_transaction_disabled_without_adapter
+  def test_transaction_explicit_adapter
     op = build_operation do
-      transaction :mongoid
+      transaction :active_record
       def perform = "ok"
     end
-    # Mongoid is not loaded in the default test environment,
-    # so TransactionAdapter.for(:mongoid) returns MongoidAdapter module
-    # but it exists as a constant. This test verifies the declared setting.
     info = op.explain
     assert info[:transaction][:enabled]
   end

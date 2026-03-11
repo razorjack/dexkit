@@ -24,13 +24,6 @@ module MongoidHelpers
     _clear_mongoid_collections(MongoEventStoreRecord)
   end
 
-  def mongoid_transactions_supported?
-    hello = _silence_mongoid_warnings { Mongoid.default_client.database.command(hello: 1).first }
-    !hello.fetch("setName", "").to_s.empty?
-  rescue
-    false
-  end
-
   private
 
   def _setup_mongoid!
@@ -55,7 +48,7 @@ module MongoidHelpers
       Mongoid::Config.load_configuration(
         clients: {
           default: {
-            uri: ENV.fetch(MONGODB_URI_ENV, "mongodb://127.0.0.1:27017/dexkit_test_#{Process.pid}?replicaSet=rs0")
+            uri: ENV.fetch(MONGODB_URI_ENV, "mongodb://127.0.0.1:27017/dexkit_test_#{Process.pid}")
           }
         },
         options: { raise_not_found_error: true }

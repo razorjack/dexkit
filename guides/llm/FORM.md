@@ -224,7 +224,7 @@ validates :email, uniqueness: true
 | `model:` | Explicit model class | `uniqueness: { model: User }` |
 | `attribute:` | Column name if different | `uniqueness: { attribute: :email }` |
 | `scope:` | Scoped uniqueness | `uniqueness: { scope: :tenant_id }` |
-| `case_sensitive:` | Case-insensitive check (`LOWER()` on ActiveRecord, exact-match regex on Mongoid) | `uniqueness: { case_sensitive: false }` |
+| `case_sensitive:` | Case-insensitive check (`LOWER()` on ActiveRecord, case-insensitive regex on Mongoid) | `uniqueness: { case_sensitive: false }` |
 | `conditions:` | Extra query conditions | `uniqueness: { conditions: -> { where(active: true) } }` |
 | `message:` | Custom error message | `uniqueness: { message: "already registered" }` |
 

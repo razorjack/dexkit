@@ -40,7 +40,7 @@ module Dex
       end
     end
 
-    TRANSACTION_KNOWN_ADAPTERS = %i[active_record mongoid].freeze
+    TRANSACTION_KNOWN_ADAPTERS = %i[active_record].freeze
 
     module ClassMethods
       def transaction(enabled_or_options = nil, **options)
@@ -125,11 +125,6 @@ module Dex
       adapter = enabled && _transaction_adapter
       if adapter
         adapter.after_commit(&flush)
-      elsif Operation::TransactionAdapter.ambient_mongoid_transaction?
-        raise(
-          "after_commit cannot defer across an ambient Mongoid.transaction unless Dex manages the transaction. " \
-          "Use `transaction :mongoid` or replace after_commit with `after`."
-        )
       else
         flush.call
       end

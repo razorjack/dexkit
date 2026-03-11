@@ -157,9 +157,7 @@ class FulfillOrder < Dex::Event::Handler
 end
 ```
 
-Transactions are **disabled by default** on handlers (unlike operations). Opt in with `transaction`. The `after_commit` block defers until the transaction commits; on exception, deferred blocks are discarded.
-
-For Mongoid handlers, opt in explicitly with global `config.transaction_adapter = :mongoid` or `transaction :mongoid`. MongoDB transactions require replica set / sharded topology. `after_commit` is only supported for Dex-managed Mongoid transactions — ambient `Mongoid.transaction` blocks opened outside Dex raise instead of firing early.
+Transactions are **disabled by default** on handlers (unlike operations). Opt in with `transaction`. The `after_commit` block defers until the transaction commits; on exception, deferred blocks are discarded. Transactions are ActiveRecord-only – in Mongoid-only apps, `after_commit` fires immediately after handler success.
 
 ### Custom Pipeline
 

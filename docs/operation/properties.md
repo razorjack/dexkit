@@ -72,7 +72,7 @@ end
 
 ## Model references with `_Ref`
 
-`_Ref(Model)` is a special type for ActiveRecord/Mongoid models. It accepts either a model instance or an ID, and automatically finds the record:
+`_Ref(Model)` is a special type for model references. It accepts either a model instance or an ID, and automatically finds the record:
 
 ```ruby
 class Order::Cancel < Dex::Operation
@@ -125,7 +125,7 @@ Order::Debit.call(order: 42)
 
 This is especially useful inside transactions to prevent race conditions.
 
-`lock: true` requires a model class that responds to `.lock` (for example ActiveRecord models). Mongoid documents do not support this and raise `ArgumentError` at declaration time.
+`lock: true` requires a model class that responds to `.lock` (ActiveRecord models). Mongoid documents do not support row locks and raise `ArgumentError` at declaration time.
 
 ## Serialization
 

@@ -7,12 +7,10 @@ class TestOperationMongoidRecording < Minitest::Test
 
   def setup
     setup_mongoid_operation_database
-    Dex.configure { |c| c.transaction_adapter = :mongoid }
   end
 
   def teardown
     Dex.configure { |c| c.record_class = nil }
-    Dex.configure { |c| c.transaction_adapter = nil }
     Dex.reset_record_backend!
     clear_enqueued_jobs
     clear_performed_jobs

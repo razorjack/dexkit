@@ -4,7 +4,7 @@ description: Persist Dex::Operation runs for auditing and debugging with ActiveR
 
 # Recording
 
-Record operation executions to a database table for auditing, debugging, or analytics. Supports ActiveRecord and Mongoid.
+Record operation executions to a database table for auditing, debugging, or analytics. Works with both ActiveRecord and Mongoid recording models.
 
 ## Setup
 
@@ -181,7 +181,7 @@ Recording runs outside the operation's own transaction. Error and failure record
 
 If the operation runs inside an ambient transaction (e.g., called from another operation, or wrapped in `ActiveRecord::Base.transaction { ... }`), the record participates in that outer transaction and will be rolled back with it. This is consistent with Rails conventions – if the entire ambient transaction fails, neither the operation's effects nor its record persist. If you need recording to survive ambient rollbacks, configure your record model with a [separate database connection](https://guides.rubyonrails.org/active_record_multiple_databases.html).
 
-For Mongoid, Dex-managed transactions work the same way once you opt in with `config.transaction_adapter = :mongoid` or `transaction :mongoid`. Ambient `Mongoid.transaction` blocks opened outside Dex are not supported for Dex `after_commit` callbacks – Dex raises instead of firing those callbacks early.
+In Mongoid-only apps, where no transaction adapter is active, recording still works – records are persisted normally, and `after_commit` callbacks fire immediately after the pipeline succeeds.
 
 ## Async integration
 

@@ -16,7 +16,6 @@ class TestMongoidOnlyRuntimeWithoutActiveRecord < Minitest::Test
 
     Dex.configure do |config|
       config.record_class = MongoOperationRecord
-      config.transaction_adapter = :mongoid
     end
     Dex.reset_record_backend!
   end
@@ -112,31 +111,6 @@ class TestMongoidOnlyRuntimeWithoutActiveRecord < Minitest::Test
     assert_match(/\A[^[:space:]]+\z/, normalize_hash(record.metadata).fetch("id"))
     assert_match(/\A[^[:space:]]+\z/, normalize_hash(record.metadata).fetch("trace_id"))
     assert_match(/\A\d{4}-\d{2}-\d{2}T/, normalize_hash(record.metadata).fetch("timestamp"))
-  end
-
-  def test_sync_handler_transaction_defers_after_commit_without_active_record
-    skip "MongoDB replica set is required for Mongoid transaction tests." unless mongoid_transactions_supported?
-
-    event_class = define_event(:MongoidOnlyRuntimeEvent) do
-      prop :name, String
-    end
-
-    log = []
-
-    define_handler(:MongoidOnlyRuntimeHandler) do
-      on event_class
-      transaction
-
-      define_method(:perform) do
-        MongoTestModel.create!(name: event.name)
-        after_commit { log << :committed }
-      end
-    end
-
-    event_class.new(name: "runtime").publish(sync: true)
-
-    assert_equal [:committed], log
-    assert_equal 1, MongoTestModel.where(name: "runtime").count
   end
 
   def test_async_handler_executes_without_active_record

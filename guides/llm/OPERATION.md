@@ -95,7 +95,7 @@ prop? :note, String                       # optional (nilable, default: nil)
 
 ### _Ref(Model)
 
-Accepts model instances or IDs, coerces IDs via `Model.find(id)`. With `lock: true`, uses `Model.lock.find(id)` (SELECT FOR UPDATE) and therefore requires a model class that responds to `.lock` (Mongoid documents do not). Instances pass through without re-locking. In serialization (recording, async), stores model ID only via `id.as_json`, so Mongoid BSON::ObjectId values are safe in ActiveJob payloads too. IDs are treated as strings in JSON Schema – this supports integer PKs, UUIDs, and Mongoid BSON::ObjectId equally.
+Accepts model instances or IDs, coerces IDs via `Model.find(id)`. With `lock: true`, uses `Model.lock.find(id)` (SELECT FOR UPDATE) – requires a model that responds to `.lock` (ActiveRecord). Mongoid documents do not support row locks and raise `ArgumentError` at declaration time. Instances pass through without re-locking. In serialization (recording, async), stores model ID only via `id.as_json`, so Mongoid BSON::ObjectId values are safe in ActiveJob payloads too. IDs are treated as strings in JSON Schema – this supports integer PKs, UUIDs, and Mongoid BSON::ObjectId equally.
 
 Outside the class body (e.g., in tests), use `Dex::RefType.new(Model)` instead of `_Ref(Model)`.
 
@@ -408,11 +408,11 @@ end
 
 ## Transactions
 
-Operations run inside database transactions when Dex has an active transaction adapter. ActiveRecord is auto-detected. Mongoid transactions are available, but explicit opt-in. Mongoid-only apps do not need ActiveRecord loaded — Dex only touches ActiveRecord when that adapter is selected or auto-detected.
+Operations run inside database transactions when Dex has an active transaction adapter. ActiveRecord is auto-detected. In Mongoid-only apps, no adapter is active, so transactions are automatically disabled – but `after_commit` still works (callbacks fire immediately after success). If you need Mongoid transactions, use `Mongoid.transaction` directly inside `perform`.
 
 ```ruby
 transaction false        # disable
-transaction :mongoid     # adapter override (Mongoid is explicit opt-in)
+transaction :active_record  # explicit adapter
 ```
 
 Child classes can re-enable: `transaction true`.
@@ -433,15 +433,13 @@ end
 Callbacks are always deferred — they run after the outermost operation boundary succeeds:
 
 - **Transactional operations:** deferred until the DB transaction commits.
-- **Non-transactional operations:** queued in memory, flushed after the operation pipeline completes successfully.
+- **Non-transactional operations (including Mongoid-only):** queued in memory, flushed after the operation pipeline completes successfully.
 - **Nested operations:** callbacks queue up and flush once at the outermost successful boundary.
 - **On error (`error!` or exception):** queued callbacks are discarded.
 
 Multiple blocks run in registration order.
 
 **ActiveRecord:** requires Rails 7.2+ (`after_all_transactions_commit`).
-
-**Mongoid:** deferred across nested Dex operations. Ambient `Mongoid.transaction` blocks opened outside Dex are not supported for `after_commit` — Dex raises and tells you to use Dex-managed transactions or `after`.
 
 ---
 
@@ -596,12 +594,10 @@ Clearing is idempotent — clearing a non-existent key is a no-op. After clearin
 # config/initializers/dexkit.rb
 Dex.configure do |config|
   config.record_class = OperationRecord  # model for recording (default: nil)
-  config.transaction_adapter = nil       # auto-detect ActiveRecord only (default)
-  # config.transaction_adapter = :mongoid # explicit Mongoid opt-in
 end
 ```
 
-All DSL methods validate arguments at declaration time — typos and wrong types raise `ArgumentError` immediately (e.g., `error "string"`, `async priority: 5`, `transaction :redis`).
+All DSL methods validate arguments at declaration time — typos and wrong types raise `ArgumentError` immediately (e.g., `error "string"`, `async priority: 5`, `transaction :redis`). Only `:active_record` is a valid transaction adapter.
 
 ---
 
@@ -617,8 +613,6 @@ end
 ```
 
 Not autoloaded — stays out of production. TestLog and stubs are auto-cleared in `setup`.
-
-For Mongoid-backed operation tests, run against a MongoDB replica set or sharded cluster when you exercise Mongoid transactions.
 
 ### Subject & Execution
 

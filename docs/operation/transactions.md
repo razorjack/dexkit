@@ -1,10 +1,10 @@
 ---
-description: Dex::Operation transaction defaults, disabling or forcing transactions, after_commit behavior, and adapter configuration for ActiveRecord and Mongoid.
+description: Dex::Operation transaction defaults, disabling transactions, after_commit behavior, and ActiveRecord adapter configuration.
 ---
 
 # Transactions
 
-Operations run inside database transactions when Dex has an active transaction adapter. ActiveRecord is auto-detected. Mongoid transactions are available too, but they must be enabled explicitly.
+Operations run inside database transactions when Dex has an active transaction adapter. ActiveRecord is auto-detected – no configuration needed.
 
 ## Default behavior
 
@@ -34,29 +34,6 @@ class Order::Report < Dex::Operation
   end
 end
 ```
-
-## Transaction adapters
-
-ActiveRecord is the only auto-detected adapter. If you use Mongoid, configure it globally:
-
-```ruby
-# config/initializers/dex.rb
-Dex.configure do |config|
-  config.transaction_adapter = :mongoid
-end
-```
-
-Or override per-operation:
-
-```ruby
-class MongoidOperation < Dex::Operation
-  transaction adapter: :mongoid
-  # or shorthand:
-  transaction :mongoid
-end
-```
-
-Supported adapters: `:active_record`, `:mongoid`.
 
 ## Interaction with error! and success!
 
@@ -106,7 +83,7 @@ Multiple blocks run in registration order.
 
 **On rollback** (`error!` or exception), callbacks are discarded – they never fire.
 
-**Without a database transaction**, `after_commit` still defers until the operation pipeline succeeds, then runs the block.
+**Without a database transaction**, `after_commit` still defers until the operation pipeline succeeds, then runs the block. This includes Mongoid-only apps where no transaction adapter is active.
 
 **Nested operations** work correctly – an inner operation's `after_commit` blocks are deferred until the outermost transaction commits. If the outer transaction rolls back, inner callbacks are discarded too.
 
@@ -114,9 +91,24 @@ Multiple blocks run in registration order.
 `after_commit` uses `ActiveRecord.after_all_transactions_commit` under the hood, which was introduced in Rails 7.2. On older Rails versions, calling `after_commit` raises `LoadError`.
 :::
 
-::: info Mongoid limitation
-The Mongoid adapter only tracks transactions opened by Dex. If `after_commit` is used inside an ambient `Mongoid.transaction` opened outside Dex, Dex raises a runtime error instead of firing the callback early. Use `transaction :mongoid` (or global `config.transaction_adapter = :mongoid`) when you need Mongoid-backed `after_commit`.
-:::
+## Mongoid
+
+Dex does not manage Mongoid transactions. In Mongoid-only apps, the transaction adapter is `nil`, so transactions are automatically disabled – but `after_commit` still works (callbacks fire immediately after the pipeline succeeds).
+
+If you need multi-document transactions in a Mongoid app, call `Mongoid.transaction` directly inside `perform`:
+
+```ruby
+class Order::Place < Dex::Operation
+  transaction false
+
+  def perform
+    Mongoid.transaction do
+      order = Order.create!(total: 100)
+      LineItem.create!(order: order, product: "Widget")
+    end
+  end
+end
+```
 
 ## Inheritance
 

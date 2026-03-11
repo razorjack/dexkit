@@ -29,7 +29,7 @@ employees = Employee::Query.call(name: "ali", role: %w[admin], sort: "name")
 employees.each { |e| puts e.name }
 ```
 
-`call` returns an ActiveRecord relation (or Mongoid criteria) – lazy, chainable, ready for `.limit`, `.offset`, or your pagination gem of choice.
+`call` returns a queryable scope (ActiveRecord relation or Mongoid criteria) – lazy, chainable, ready for `.limit`, `.offset`, or your pagination gem of choice.
 
 ## Scope
 

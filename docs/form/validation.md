@@ -127,7 +127,7 @@ end
 validates :email, uniqueness: { case_sensitive: false }
 ```
 
-When the model supports Arel (ActiveRecord models do), this generates a `LOWER(column) = LOWER(value)` query. On Mongoid, dexkit uses a case-insensitive exact-match regex.
+With ActiveRecord, this generates a `LOWER(column) = LOWER(value)` query. With Mongoid, dexkit uses a case-insensitive exact-match regex.
 
 ## ValidationError
 

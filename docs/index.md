@@ -28,7 +28,7 @@ features:
     link: /form/
     linkText: Learn more
   - title: Dex::Query
-    details: Declarative filters and sorts for ActiveRecord and Mongoid – type coercion from params, scope injection, and Rails form binding.
+    details: Declarative filters and sorts for ActiveRecord and Mongoid scopes – type coercion from params, scope injection, and Rails form binding.
     link: /query/
     linkText: Learn more
   - title: Testing built in

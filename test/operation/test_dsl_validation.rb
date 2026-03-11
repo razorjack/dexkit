@@ -187,8 +187,8 @@ class TestDSLValidation < Minitest::Test
   end
 
   def test_transaction_accepts_valid_adapter
-    op = build_operation { transaction :mongoid }
-    assert_equal :mongoid, op.settings_for(:transaction)[:adapter]
+    op = build_operation { transaction :active_record }
+    assert_equal :active_record, op.settings_for(:transaction)[:adapter]
   end
 
   # --- async (runtime) ---

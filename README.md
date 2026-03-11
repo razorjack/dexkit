@@ -10,7 +10,7 @@ Rails patterns toolbelt. Equip to gain +4 DEX.
 
 Service objects with typed properties, transactions, error handling, and more.
 
-Mongoid-only Rails apps work too. Mongoid DB transactions are explicit opt-in (`config.transaction_adapter = :mongoid` or `transaction :mongoid`) and require a replica set or sharded cluster; `advisory_lock` remains ActiveRecord-only; operation/event store models can be Mongoid documents; recording models must define the fields required by the enabled recording features.
+Mongoid-only Rails apps work too – queries, recording, events, and forms all adapt automatically. Transactions are ActiveRecord-only (Mongoid users who need transactions can call `Mongoid.transaction` inside `perform`); `advisory_lock` is also ActiveRecord-only. Operation/event store models can be Mongoid documents; recording models must define the fields required by the enabled recording features.
 
 ```ruby
 class Order::Place < Dex::Operation
@@ -301,7 +301,7 @@ end
 
 ## Queries
 
-Declarative query objects for filtering and sorting ActiveRecord relations and Mongoid criteria.
+Declarative query objects for filtering and sorting ActiveRecord and Mongoid scopes.
 
 ```ruby
 class Order::Query < Dex::Query

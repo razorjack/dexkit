@@ -161,7 +161,7 @@ Rails apps accumulate the same patterns over and over – service objects, event
 
 ## Supported ORMs
 
-dexkit works with both **ActiveRecord** and **Mongoid**. Recording, queries, and model references adapt to your ORM automatically. Transactions do too once an adapter is active: ActiveRecord is auto-detected, while Mongoid transactions are explicit opt-in because MongoDB requires replica set or sharded topology.
+dexkit works with both **ActiveRecord** and **Mongoid**. Queries, recording, model references, events, and forms adapt to your ORM automatically. Transactions are ActiveRecord-only – in Mongoid-only apps, operations run without a transaction wrapper, and `after_commit` fires immediately after success. If you need Mongoid transactions, use `Mongoid.transaction` directly inside `perform`.
 
 ## Next steps
 

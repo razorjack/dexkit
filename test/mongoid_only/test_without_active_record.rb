@@ -49,26 +49,24 @@ class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
     assert_equal({ "greeting" => "hi Ada" }, result["result"])
   end
 
-  def test_explicit_mongoid_adapter_raises_load_error_when_mongoid_is_not_loaded
+  def test_mongoid_transaction_adapter_is_no_longer_supported
     result = run_probe_json(<<~'RUBY')
       require "json"
       require "dexkit"
 
-      op = Class.new(Dex::Operation) do
-        transaction :mongoid
-
-        def perform = :ok
-      end
-
       begin
-        op.new.call
-      rescue LoadError, StandardError => e
+        Class.new(Dex::Operation) do
+          transaction :mongoid
+
+          def perform = :ok
+        end
+      rescue ArgumentError => e
         puts "__RESULT__#{JSON.generate(error_class: e.class.name, error_message: e.message)}"
       end
     RUBY
 
-    assert_equal "LoadError", result["error_class"]
-    assert_match(/Mongoid is required for transactions/, result["error_message"])
+    assert_equal "ArgumentError", result["error_class"]
+    assert_match(/unknown transaction adapter/, result["error_message"])
   end
 
   def test_async_operation_and_event_stringify_mongoid_ref_ids
