@@ -251,8 +251,9 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: 'Introduction', link: '/guide/introduction' },
-          { text: 'Installation', link: '/guide/installation' },
-          { text: 'DX Meets AI', link: '/guide/philosophy' }
+          { text: 'Design Philosophy', link: '/guide/philosophy' },
+          { text: 'DX Meets AI', link: '/guide/ai' },
+          { text: 'Installation', link: '/guide/installation' }
         ]
       },
       {

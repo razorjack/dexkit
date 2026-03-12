@@ -39,12 +39,12 @@ features:
     details: Auto-tracked class registry, contract export as hashes or JSON Schema, description DSL for operations, events, and forms, and a rake task for bulk export.
     link: /tooling/registry
     linkText: See export docs
-  - title: LLM Tools
-    details: Turn operations into LLM-callable tools via ruby-llm – typed params, guards as preconditions, explain for preflight checks, and recording as audit trail.
-    link: /operation/llm-tools
-    linkText: See LLM docs
-  - title: AI agent ready
-    details: Ships LLM-optimized guides you drop into your project. Consistent structure means coding agents learn one pattern and know them all.
-    link: /guide/philosophy
-    linkText: DX meets AI
+  - title: Guards & Explain
+    details: Declare preconditions as guards, check "can this run?" from views and controllers, and run side-effect-free preflight checks with explain.
+    link: /operation/guards
+    linkText: See guards docs
+  - title: DX Meets AI
+    details: Consistent, typed patterns that coding agents understand on first read. Turn operations into LLM-callable tools via ruby-llm, and ship optimized guides with rake dex:guides.
+    link: /guide/ai
+    linkText: Learn more
 ---
