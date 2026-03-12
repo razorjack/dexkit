@@ -4,8 +4,8 @@ layout: home
 
 hero:
   name: dexkit
-  text: Patterns for Rails, crafted for DX
-  tagline: "Typed operations, domain events, form objects, and query builders – four base classes your Rails app needs to roll with advantage."
+  text: Typed patterns for Rails, crafted for DX
+  tagline: "Operations, events, forms, and queries – four base classes with contracts that enforce themselves. Equip to roll with advantage."
   actions:
     - theme: brand
       text: Get Started
