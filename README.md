@@ -324,11 +324,16 @@ Declarative query objects for filtering and sorting ActiveRecord and Mongoid sco
 
 ```ruby
 class Order::Query < Dex::Query
+  description "Search orders"
+
   scope { Order.all }
 
   prop? :status, String
   prop? :customer, _Ref(Customer)
   prop? :total_min, Integer
+  prop? :tenant, String
+
+  context tenant: :current_tenant
 
   filter :status
   filter :customer
@@ -341,6 +346,10 @@ orders = Order::Query.call(status: "pending", sort: "-total")
 ```
 
 ### What you get out of the box
+
+**Registry, description, and context** — same ecosystem as Operation, Event, and Form. `Dex::Query.registry` discovers all query classes, `description` documents intent, and `context` auto-fills props from `Dex.with_context`.
+
+**Export** — `Query.to_h`, `Query.to_json_schema`, `Dex::Query.export(format:)` for introspection and bulk export.
 
 **11 built-in filter strategies** — `:eq`, `:not_eq`, `:contains`, `:starts_with`, `:ends_with`, `:gt`, `:gte`, `:lt`, `:lte`, `:in`, `:not_in`. Custom blocks for complex logic.
 

@@ -3,6 +3,7 @@
 require "active_model"
 
 require_relative "query/backend"
+require_relative "query/export"
 require_relative "query/filtering"
 require_relative "query/sorting"
 
@@ -17,7 +18,11 @@ module Dex
     extend ActiveModel::Naming
     include ActiveModel::Conversion
 
+    extend Registry
+
     class << self
+      include ContextDSL
+
       def scope(&block)
         raise ArgumentError, "scope requires a block." unless block
 
@@ -31,6 +36,14 @@ module Dex
       end
 
       def new(scope: nil, sort: nil, **kwargs)
+        mappings = context_mappings
+        unless mappings.empty?
+          ambient = Dex.context
+          mappings.each do |prop_name, context_key|
+            next if kwargs.key?(prop_name)
+            kwargs[prop_name] = ambient[context_key] if ambient.key?(context_key)
+          end
+        end
         instance = super(**kwargs)
         instance.instance_variable_set(:@_injected_scope, scope)
         sort_str = sort&.to_s
@@ -96,6 +109,30 @@ module Dex
         subclass.instance_variable_set(:@_sort_default, _sort_default) if _sort_default
       end
 
+      # Export
+
+      def to_h
+        Export.build_hash(self)
+      end
+
+      def to_json_schema
+        Export.build_json_schema(self)
+      end
+
+      def export(format: :hash)
+        unless %i[hash json_schema].include?(format)
+          raise ArgumentError, "unknown format: #{format.inspect}. Known: :hash, :json_schema"
+        end
+
+        sorted = registry.sort_by(&:name)
+        sorted.map do |klass|
+          case format
+          when :hash then klass.to_h
+          when :json_schema then klass.to_json_schema
+          end
+        end
+      end
+
       def from_params(params, scope: nil, **overrides)
         pk = model_name.param_key
         nested = _extract_nested_params(params, pk)
@@ -138,6 +175,10 @@ module Dex
       end
 
       private
+
+      def _context_prop_declared?(name)
+        respond_to?(:literal_properties) && literal_properties.any? { |p| p.name == name }
+      end
 
       def _extract_nested_params(params, pk)
         hash = if params.respond_to?(:to_unsafe_h)

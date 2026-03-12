@@ -6,6 +6,7 @@
 - **Form registry and description** – `Dex::Form` now extends `Registry`, giving forms `description`, `Dex::Form.registry`, and `deregister` – the same ecosystem as Operation, Event, and Handler
 - **Form ambient context** – forms support the same `context` DSL as Operation and Event. `context :locale` auto-fills from `Dex.context` during initialization. Uses the same shared `ContextDSL` module with Form-specific injection
 - **Form export** – `Form.to_h` (class-level schema), `Form.to_json_schema`, and `Dex::Form.export(format:)` for bulk export. Nested forms are recursively included in both formats, and bulk export returns top-level named forms without listing nested helper classes separately
+- **Query registry, description, context, and export** – `Dex::Query` now extends `Registry` (giving `description`, `Dex::Query.registry`, `deregister`), includes `ContextSetup` (enabling `context :tenant` to auto-fill from `Dex.with_context`), and adds `Query.to_h`, `Query.to_json_schema`, `Dex::Query.export(format:)`. Query is now a full citizen alongside Operation, Event, and Form
 
 ### Changed
 

@@ -10,11 +10,16 @@ Query objects that turn filtering and sorting into a clean, declarative API. Def
 
 ```ruby
 class Employee::Query < Dex::Query
+  description "Search and filter employees"
+
   scope { Employee.all }
 
   prop? :name, String
   prop? :role, _Array(String)
   prop? :status, String
+  prop? :tenant, String
+
+  context tenant: :current_tenant
 
   filter :name, :contains
   filter :role, :in
@@ -59,6 +64,66 @@ prop? :salary_min, Integer           # optional integer
 Properties become instance methods with public readers by default.
 
 Reserved names that can't be used as props: `scope`, `sort`, `resolve`, `call`, `from_params`, `to_params`, `param_key`.
+
+## Description
+
+Document query intent with a human-readable description:
+
+```ruby
+class Employee::Query < Dex::Query
+  description "Search and filter employees"
+end
+
+Employee::Query.description  # => "Search and filter employees"
+```
+
+Descriptions are optional, inherited by subclasses, and included in export output.
+
+## Context
+
+Queries support the same `context` DSL as Operation, Event, and Form. Map props to ambient context keys so they auto-fill from `Dex.with_context`:
+
+```ruby
+class Employee::Query < Dex::Query
+  scope { Employee.all }
+
+  prop? :tenant, String
+  prop? :locale, Symbol
+  context tenant: :current_tenant
+  context :locale
+
+  filter :tenant
+end
+```
+
+```ruby
+Dex.with_context(current_tenant: "acme", locale: :en) do
+  Employee::Query.call(name: "ali")  # tenant and locale auto-filled
+end
+```
+
+Explicit keyword arguments always win over ambient context. Inheritance merges parent and child mappings. `context_mappings` returns the full mapping hash for introspection.
+
+## Registry & Export
+
+Queries extend `Registry` – the same system as Operation, Event, and Form:
+
+```ruby
+Dex::Query.registry  # => frozen Set of all named Query subclasses
+```
+
+Export individual queries or bulk-export the entire registry:
+
+```ruby
+Employee::Query.to_h
+# => { name: "Employee::Query", description: "...", props: {...}, filters: [...], sorts: [...], context: {...} }
+
+Employee::Query.to_json_schema
+# => JSON Schema (Draft 2020-12) with properties, required, additionalProperties
+
+Dex::Query.export(format: :hash)         # sorted array of all query to_h
+Dex::Query.export(format: :json_schema)  # sorted array of all query schemas
+```
 
 ## Calling queries
 

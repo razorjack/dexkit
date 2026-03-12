@@ -10,12 +10,17 @@ All examples below build on this query unless noted otherwise:
 
 ```ruby
 class UserSearch < Dex::Query
+  description "Search and filter users"
+
   scope { User.all }
 
   prop? :name,   String
   prop? :role,   _Array(String)
   prop? :age_min, Integer
   prop? :status, String
+  prop? :tenant, String
+
+  context tenant: :current_tenant
 
   filter :name,    :contains
   filter :role,    :in
@@ -70,6 +75,51 @@ prop? :age_min, Integer              # optional integer
 ```
 
 Reserved prop names: `scope`, `sort`, `resolve`, `call`, `from_params`, `to_params`, `param_key`.
+
+### Description
+
+```ruby
+class UserSearch < Dex::Query
+  description "Search and filter users"
+end
+```
+
+### Context
+
+Same `context` DSL as Operation and Event. Auto-fills props from `Dex.with_context`:
+
+```ruby
+class UserSearch < Dex::Query
+  prop? :tenant, String
+  context tenant: :current_tenant
+end
+
+# In a controller around_action:
+Dex.with_context(current_tenant: current_tenant) do
+  UserSearch.call(name: "ali")  # tenant auto-filled
+end
+```
+
+Identity shorthand: `context :locale` maps prop `:locale` to context key `:locale`.
+
+Explicit values always win over ambient context. Inheritance merges parent + child mappings.
+
+---
+
+## Registry & Export
+
+Queries extend `Registry` — same API as Operation, Event, and Form:
+
+```ruby
+Dex::Query.registry                     # => Set of all named Query subclasses
+UserSearch.description                   # => "Search and filter users"
+
+UserSearch.to_h                          # => { name:, description:, props:, filters:, sorts:, context: }
+UserSearch.to_json_schema                # => JSON Schema (Draft 2020-12)
+
+Dex::Query.export(format: :hash)         # => sorted array of all query to_h
+Dex::Query.export(format: :json_schema)  # => sorted array of all query to_json_schema
+```
 
 ---
 

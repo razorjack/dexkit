@@ -10,7 +10,7 @@ Four building blocks, each independent – use one or all:
 
 - **[Dex::Operation](/operation/)** – service objects with typed properties, structured errors, transactions, callbacks, async execution, and more
 - **[Dex::Event](/event/)** – typed immutable event objects with pub/sub, async dispatch, unified tracing, and optional persistence
-- **[Dex::Query](/query/)** – query objects with declarative filters, sorting, type coercion from params, and Rails form binding
+- **[Dex::Query](/query/)** – query objects with declarative filters, sorting, type coercion from params, ambient context, registry, export, and Rails form binding
 - **[Dex::Form](/form/)** – form objects with typed fields, normalization, validation, nested forms, ambient context, and JSON Schema export
 
 ## A quick taste

@@ -136,6 +136,7 @@ lib/
     query.rb             # Query class orchestrator (requires all parts)
     query/
       backend.rb         # Dex::Query::Backend (AR + Mongoid adapters, strategy implementations)
+      export.rb          # Dex::Query::Export (to_h, to_json_schema)
       filtering.rb       # Dex::Query::Filtering (filter DSL, registry, _apply_filters)
       sorting.rb         # Dex::Query::Sorting (sort DSL, registry, _apply_sort)
 
