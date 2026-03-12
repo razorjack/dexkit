@@ -1,5 +1,7 @@
 ## [Unreleased]
 
+## [0.10.0] - 2026-03-09
+
 ### Added
 
 - **`field` / `field?` DSL for forms** – `field :name, :string` declares a required field with auto-presence validation; unconditional explicit presence validators deduplicate with it, while scoped/conditional validators still layer on top. `field? :notes, :string` declares an optional field (nil by default). Both support `desc:` for metadata and `default:` for defaults. Raw `attribute` remains available as an escape hatch
