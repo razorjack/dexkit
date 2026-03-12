@@ -6,15 +6,60 @@ Ruby library providing base classes for service/operation, event, and form objec
 
 dexkit is pre-1.0. Backwards compatibility is not a concern. There is no migration path obligation between versions. Redundant features, mediocre APIs, and even good features should be removed without hesitation if replaced by a great feature that does the same thing better. Be bold in design decisions — backwards compatibility considerations must not slow down development while we're pre-1.0.
 
+## Design Philosophy
+
+The public API is the product. The internals are the engineering. Never sacrifice DX for implementation convenience — but never sacrifice correctness for a prettier surface. When these forces conflict, find a design that satisfies both. If forced to choose: correctness wins, then find a way to make the correct thing beautiful.
+
 ## Core Values
 
-1. Beautiful Ruby API — must read and feel good.
-2. Short over verbose, but unambiguous.
-3. Batteries included by default, opt-out possible.
-4. Tests read like examples — succinct, no bloat.
-5. Fail fast, fail loud — invalid inputs, undeclared codes, type mismatches raise immediately with prescriptive error messages. No silent failures.
-6. Declare intent, enforce mechanically — contracts are declared at the class level and enforced at runtime. Rules live in code, not in documentation.
-7. Own the mechanics, not the domain — execution structure is opinionated, what goes inside isn't.
+### API — what users see
+
+1. **Beautiful Ruby API** — must read and feel good. The DSL is the first thing users encounter and the reason they stay.
+2. **Short over verbose, but unambiguous** — naming should be compact yet clear. `Dex::Tool` not `Dex::OperationToRubyLLMMapper`. `error!` not `raise_business_error!`.
+3. **Batteries included, opt-out possible** — sensible defaults that work without configuration. Every default is overridable.
+4. **Consistency across primitives** — Operation, Event, Form, Query should feel like one library. Same concept, same word, same behavior. If Operation has `prop`, Event has `prop`.
+5. **Progressive disclosure** — the 80% use case requires zero configuration. Complex cases are possible without contortion.
+
+### Engineering — what we build
+
+6. **Fail fast, fail loud** — invalid inputs, undeclared codes, type mismatches raise immediately. No silent failures.
+7. **Prescriptive error messages** — every error tells the user what they did, why it's wrong, and what to do instead. Include the class name, the invalid value, and the valid options. `"Orders::Place declares unknown error code :not_found. Declared codes: [:out_of_stock, :payment_failed]"` — not just `"unknown error code"`.
+8. **Declare intent, enforce mechanically** — contracts are declared at the class level and enforced at runtime. Rules live in code, not in documentation.
+9. **Own the mechanics, not the domain** — Dex decides pipeline order, when callbacks fire, how transactions wrap, where recording happens. It never decides what a valid order is or how to charge a payment. `perform` is the user's territory.
+10. **Defend boundaries, trust internals** — validate at every public entry point (DSL methods, `new`, `call`). Inside the implementation, trust that validated data is correct. Deep-copy mutable state when exposing it through public readers.
+11. **Isolate state** — fiber-local storage, no global mutation, `ensure` blocks for cleanup. Every `push` has a `pop`. Every state change is reversible on error.
+
+## API Design
+
+**DSL methods are declarations, not commands.** `error :not_found` declares an error code. `transaction true` declares transactional behavior. They read as "this operation *is*" not "do this."
+
+**Kwargs over positional for 2+ arguments.** `record result: false` not `record(false, true)`. Single boolean/symbol arguments are fine positional: `transaction false`, `async :sidekiq`.
+
+**Blocks for behavior, values for configuration.** `guard :insufficient_funds, "message" do ... end` (behavior) vs `transaction true` (configuration).
+
+**One mechanism per concern.** If there are two ways to set a value (explicit kwarg + implicit context), that's acceptable — two clear mechanisms with distinct roles. Three overlapping ways is one too many. Remove the weakest.
+
+## Implementation Standards
+
+- **Validate at entry, not deep inside.** DSL methods validate arguments at declaration time. Public methods validate at the top. Internal methods trust their callers.
+- **Deep-copy mutable state on public readers.** Methods that return internal state (trace stacks, frame arrays, context hashes) return copies. Internal methods can read `_state` directly.
+- **`ensure` for cleanup.** Every `push` must have a `pop` in `ensure`. Every fiber-local write must have a restore path. No relying on happy-path cleanup.
+- **Graceful degradation for optional infrastructure.** The `safe_attributes` pattern: if a DB column or optional feature isn't available, silently omit it. Core functionality works without optional dependencies.
+- **No ambient coupling.** Don't read from fiber keys you didn't define. If module A needs data from module B, pass it explicitly or go through a shared module (like `Dex::Trace`).
+
+## Testing
+
+**Tests read like examples** — succinct, no bloat. A new user should be able to understand a feature by reading its test file.
+
+**Every DSL method gets a positive and negative test.** `error :foo` works; `error 123` raises `ArgumentError` with the expected message.
+
+**Test the error messages.** `assert_match /declared codes/, error.message` — the message *is* the DX when something breaks.
+
+**Integration over isolation for wrappers.** A wrapper is meaningless in isolation. Test it through `Operation#call`.
+
+**Edge cases are first-class.** Nil inputs, empty collections, missing columns, concurrent access patterns. Not afterthoughts.
+
+Tests are scoped per-area, each area in a separate file. Example: `test/operation/test_params.rb` for testing params.
 
 ## File Structure
 
@@ -130,8 +175,6 @@ Operation logic is split into per-module files under `lib/dex/operation/`. The o
 
 **Naming internal methods**: The `_modulename_` prefix is required only for methods that end up in `Dex::Operation`'s method table — i.e., wrapper modules mixed into Operation via `include`/`use`. This prevents collisions with user-defined methods in Operation subclasses (e.g., in `RecordWrapper` → `_record_enabled?`, `_record_save!`). Standalone classes that are never mixed into or inherited from Operation (e.g., `AsyncProxy`, `Pipeline`, `Jobs`, `Processor`) use plain method names since there is no collision risk.
 
-Tests are scoped per-area, each area in a separate file. Example: `test/operation/test_params.rb` for testing params.
-
 ## Process
 
 When you're done adding a new feature or significantly modifying existing one:
@@ -179,10 +222,6 @@ bundle exec rake test
 ```
 
 **DSL validation:** All DSL methods (`error`, `rescue_from`, `async`, `record`, `advisory_lock`, `before`/`after`/`around`, `transaction`, etc.) validate their arguments at declaration time, raising `ArgumentError` for invalid inputs. The low-level `set` method stays unvalidated — it's the extensible foundation. When adding new DSL methods, always validate arguments early.
-
-## Future Plans
-
-- Performing an operation with nonce token (as used nonce tokens need to be saved somewhere)
 
 ## Finishing Up
 
