@@ -191,6 +191,8 @@ When you're done adding a new feature or significantly modifying existing one:
 
 ## Code Quality
 
+**Clean output is mandatory.** Every check — tests, rubocop, markdown rubocop — must produce zero warnings, zero errors, and zero extraneous noise. Work is not done until the output is clean. If a check emits unexpected output (deprecation warnings, Ruby warnings, noisy gems, spurious stderr), investigate and fix the root cause. Do not ignore it, do not suppress it with redirects, do not leave it for later.
+
 **Rubocop is mandatory.** After modifying any Ruby files:
 
 ```bash
