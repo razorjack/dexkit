@@ -73,6 +73,17 @@ end
 Order::Fulfill.new(order_id: 123).async(queue: "fulfillment").call
 ```
 
+**Execution tracing** – every operation gets a prefixed ID and joins a unified trace across operations, events, and handlers:
+
+```ruby
+Dex::Trace.start(actor: { type: :user, id: current_user.id }) do
+  Order::Place.call(customer: 42, product: 7, quantity: 2)
+end
+
+Dex::Trace.trace_id   # => "tr_..."
+Dex::Trace.current    # => [{ type: :actor, ... }, { type: :operation, ... }]
+```
+
 **Idempotency** with `once` — run an operation at most once for a given key. Results are replayed on duplicates:
 
 ```ruby
@@ -210,11 +221,12 @@ Order::Placed.publish(order_id: 1, total: 99.99)
 
 **Async by default** — handlers dispatched via ActiveJob. `sync: true` for inline. If ActiveJob is not loaded, async publish raises `LoadError`.
 
-**Causality tracing** — link events in chains with shared `trace_id`:
+**Causality tracing** – events join the unified execution trace, and child events link to their cause:
 
 ```ruby
-order_placed.trace do
-  Shipment::Reserved.publish(order_id: 1)
+Dex::Trace.start(actor: { type: :user, id: 42 }) do
+  order_placed = Order::Placed.new(order_id: 1, total: 99.99)
+  Shipment::Reserved.publish(order_id: 1, caused_by: order_placed)
 end
 ```
 

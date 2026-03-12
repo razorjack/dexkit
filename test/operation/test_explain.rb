@@ -432,7 +432,7 @@ class TestOperationExplain < Minitest::Test
   def test_pipeline_steps
     op = build_operation { def perform = "ok" }
     info = op.explain
-    assert_equal %i[result guard once lock record transaction rescue callback], info[:pipeline]
+    assert_equal %i[trace result guard once lock record transaction rescue callback], info[:pipeline]
   end
 
   # Callable
@@ -791,7 +791,7 @@ class TestOperationExplain < Minitest::Test
       assert info[:transaction][:enabled]
       assert_equal({ "ArgumentError" => :bad_input }, info[:rescue_from])
       assert_equal({ before: 1, after: 1, around: 0 }, info[:callbacks])
-      assert_equal %i[result guard once lock record transaction rescue callback], info[:pipeline]
+      assert_equal %i[trace result guard once lock record transaction rescue callback], info[:pipeline]
     end
   end
 

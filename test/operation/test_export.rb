@@ -212,7 +212,7 @@ class TestOperationExport < Minitest::Test
   def test_to_h_includes_pipeline
     op = build_operation { def perform = "ok" }
     h = op.contract.to_h
-    assert_equal %i[result guard once lock record transaction rescue callback], h[:pipeline]
+    assert_equal %i[trace result guard once lock record transaction rescue callback], h[:pipeline]
   end
 
   def test_to_h_includes_settings

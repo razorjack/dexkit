@@ -110,7 +110,7 @@ Order::Place.contract.to_h
 #   errors: [:out_of_stock],
 #   guards: [{ name: :product_available, message: "Product must be in stock" }],
 #   context: { customer: :current_customer },
-#   pipeline: [:result, :guard, :once, :lock, :record, :transaction, :rescue, :callback],
+#   pipeline: [:trace, :result, :guard, :once, :lock, :record, :transaction, :rescue, :callback],
 #   settings: {
 #     record: { enabled: true, params: true, result: true },
 #     transaction: { enabled: true },
@@ -193,7 +193,7 @@ NotifyWarehouse.to_h
 #   events: ["Order::Placed"],
 #   retries: 3,
 #   transaction: false,
-#   pipeline: [:result, :transaction, :callback]
+#   pipeline: [:transaction, :callback]
 # }
 ```
 

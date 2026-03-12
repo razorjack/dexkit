@@ -264,7 +264,7 @@ info = Order::Place.explain(product: product, customer: customer, quantity: 2)
 #   transaction: { enabled: true },
 #   rescue_from: { "Stripe::CardError" => :card_declined },
 #   callbacks: { before: 1, after: 2, around: 0 },
-#   pipeline: [:result, :guard, :once, :lock, :record, :transaction, :rescue, :callback],
+#   pipeline: [:trace, :result, :guard, :once, :lock, :record, :transaction, :rescue, :callback],
 #   callable: true
 # }
 ```
@@ -481,8 +481,12 @@ Props serialize/deserialize automatically (Date, Time, BigDecimal, Symbol, `_Ref
 Record execution to database. Requires `Dex.configure { |c| c.record_class = OperationRecord }`.
 
 ```ruby
-create_table :operation_records do |t|
+create_table :operation_records, id: :string do |t|
   t.string :name, null: false  # operation class name
+  t.string :trace_id           # shared trace / correlation ID
+  t.string :actor_type         # root actor type
+  t.string :actor_id           # root actor ID
+  t.jsonb :trace               # full trace snapshot
   t.jsonb :params              # serialized props (nil = not captured)
   t.jsonb :result              # serialized return value
   t.string :status, null: false # pending/running/completed/error/failed
@@ -498,6 +502,8 @@ end
 add_index :operation_records, :name
 add_index :operation_records, :status
 add_index :operation_records, [:name, :status]
+add_index :operation_records, :trace_id
+add_index :operation_records, [:actor_type, :actor_id]
 ```
 
 Control per-operation:
@@ -518,11 +524,29 @@ Required attributes by feature:
 - Async record jobs: `params`
 - `once`: `once_key`, plus `once_key_expires_at` when `expires_in:` is used
 
+Trace columns (`id`, `trace_id`, `actor_type`, `actor_id`, `trace`) are recommended for tracing. Dex persists them when present, omits them when missing.
+
 Untyped results are sanitized to JSON-safe values before persistence: Hash keys round-trip as strings, and objects fall back to `as_json`/`to_s` under `"_dex_value"`.
 
 Status values: `pending` (async enqueued), `running` (async executing), `completed` (success), `error` (business error via `error!`), `failed` (unhandled exception).
 
 When both async and recording are enabled, dexkit automatically stores only the record ID in the job payload instead of full params.
+
+## Execution tracing
+
+Every operation call gets an `op_...` execution ID and joins a fiber-local trace shared across operations, handlers, and async jobs.
+
+```ruby
+Dex::Trace.start(actor: { type: :user, id: current_user.id }) do
+  Order::Place.call(product: product, customer: customer, quantity: 2)
+end
+
+Dex::Trace.trace_id   # => "tr_..."
+Dex::Trace.current    # => [{ type: :actor, ... }, { type: :operation, ... }]
+Dex::Trace.to_s       # => "user:42 > Order::Place(op_2nFg7K)"
+```
+
+Tracing is always on – no opt-in needed. Async operations serialize and restore the trace automatically. When recording is enabled, `trace_id`, `actor_type`, `actor_id`, and `trace` are persisted alongside the usual record fields.
 
 ---
 
@@ -577,7 +601,7 @@ ChargeOrder.clear_once!("webhook-123")    # by raw string key
 
 Clearing is idempotent — clearing a non-existent key is a no-op. After clearing, the next call executes normally.
 
-**Pipeline position:** result → **once** → lock → record → transaction → rescue → guard → callback. The once check runs before locking and recording, so duplicate calls short-circuit early.
+**Pipeline position:** trace → result → guard → **once** → lock → record → transaction → rescue → callback. The once check runs before locking and recording, so duplicate calls short-circuit early.
 
 **Requirements:**
 

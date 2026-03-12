@@ -277,6 +277,7 @@ export default defineConfig({
           { text: 'Transactions', link: '/operation/transactions' },
           { text: 'Idempotency', link: '/operation/once' },
           { text: 'Advisory Locking', link: '/operation/advisory-lock' },
+          { text: 'Tracing', link: '/operation/tracing' },
           { text: 'Recording', link: '/operation/recording' },
           { text: 'Middleware', link: '/operation/pipeline' },
           { text: 'Contracts', link: '/operation/contracts' },

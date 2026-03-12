@@ -23,7 +23,7 @@ event.publish                    # async
 event.publish(sync: true)        # sync
 ```
 
-Useful when you need the event object (e.g., for tracing).
+Useful when you need the event object first (for example, to pass it as `caused_by:`).
 
 ## Sync vs async
 
@@ -40,7 +40,7 @@ order_event = Order::Placed.new(order_id: 1, total: 99.99)
 Shipment::Reserved.publish(order_id: 1, caused_by: order_event)
 ```
 
-The child event's `caused_by_id` is set to the parent's `id`, and they share the same `trace_id`. See [Tracing](./tracing) for details.
+The child event's `caused_by_id` is set to the parent's `id`, and they share the same `trace_id`. When an event is published inside a handler, Dex sets the cause automatically from the handler's event. See [Tracing](./tracing) for details.
 
 ## Context
 
@@ -69,4 +69,5 @@ See [Ambient Context](/operation/context#events) for the full story.
 1. Check [suppression](./tracing#suppression) — skip if suppressed
 2. Persist to `event_store` if configured (failure doesn't halt)
 3. Find subscribed handlers
-4. Dispatch each handler (async or sync)
+4. Serialize the current trace for async dispatch (or restore it inline for sync)
+5. Dispatch each handler (async or sync)

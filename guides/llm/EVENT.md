@@ -30,9 +30,9 @@ class UserCreated < Dex::Event
 end
 ```
 
-Reserved names: `id`, `timestamp`, `trace_id`, `caused_by_id`, `caused_by`, `context`, `publish`, `metadata`, `sync`.
+Reserved names: `id`, `timestamp`, `trace_id`, `caused_by_id`, `caused_by`, `event_ancestry`, `context`, `publish`, `metadata`, `sync`.
 
-Events are frozen after creation. Each gets auto-generated `id` (UUID), `timestamp` (UTC), `trace_id`, and optional `caused_by_id`.
+Events are frozen after creation. Each gets auto-generated `id` (`ev_...`), `timestamp` (UTC), `trace_id` (`tr_...` by default), optional `caused_by_id`, and `event_ancestry` (ordered ancestor event IDs).
 
 ### Literal Types Cheatsheet
 
@@ -72,10 +72,11 @@ class NotifyWarehouse < Dex::Event::Handler
   def perform
     event                    # accessor — the event instance
     event.order_id           # typed props
-    event.id                 # UUID
+    event.id                 # prefixed event ID (ev_...)
     event.timestamp          # Time (UTC)
     event.caused_by_id       # parent event ID (if traced)
-    event.trace_id           # shared trace ID across causal chain
+    event.trace_id           # shared trace / correlation ID
+    event.event_ancestry     # ordered ancestor event IDs
   end
 end
 ```
@@ -179,22 +180,20 @@ Default handler pipeline: `[:transaction, :callback]`.
 
 ## Tracing (Causality)
 
-Link events in a causal chain. All events in a chain share the same `trace_id`.
+Events participate in the unified `Dex::Trace` used by operations and handlers. All events in a trace share the same `trace_id`.
 
 ```ruby
-order_placed = OrderPlaced.new(order_id: 1, total: 99.99)
-
-# Option 1: trace block
-order_placed.trace do
-  InventoryReserved.publish(order_id: 1)   # caused_by_id = order_placed.id
-  ShippingRequested.publish(order_id: 1)   # same trace_id
+# Start a trace at the request/job boundary
+Dex::Trace.start(actor: { type: :user, id: current_user.id }) do
+  OrderPlaced.publish(order_id: 1, total: 99.99)
 end
 
-# Option 2: caused_by keyword
+# Explicit event-to-event causality
+order_placed = OrderPlaced.new(order_id: 1, total: 99.99)
 InventoryReserved.publish(order_id: 1, caused_by: order_placed)
 ```
 
-Nesting works — each child gets the nearest parent's `id` as `caused_by_id`, and the root's `trace_id`.
+When an event is published inside a handler, the handler's event becomes the cause automatically. Explicit `caused_by:` sets `caused_by_id` and appends to `event_ancestry`.
 
 ---
 
@@ -218,12 +217,16 @@ Store events to database when configured:
 
 ```ruby
 Dex.configure do |c|
-  c.event_store = EventRecord   # any model with create!(event_type:, payload:, metadata:)
+  c.event_store = EventRecord   # Dex passes trace fields when the model supports them
 end
 ```
 
 ```ruby
-create_table :event_records do |t|
+create_table :event_records, id: :string do |t|
+  t.string :trace_id
+  t.string :actor_type
+  t.string :actor_id
+  t.jsonb  :trace
   t.string :event_type
   t.jsonb  :payload
   t.jsonb  :metadata
@@ -238,6 +241,11 @@ class EventRecord
   include Mongoid::Document
   include Mongoid::Timestamps
 
+  field :_id, type: String
+  field :trace_id, type: String
+  field :actor_type, type: String
+  field :actor_id, type: String
+  field :trace, type: Array
   field :event_type, type: String
   field :payload, type: Hash
   field :metadata, type: Hash
@@ -381,10 +389,7 @@ class CreateOrderTest < Minitest::Test
   def test_trace_chain
     capture_events do
       parent = OrderPlaced.new(order_id: 1, total: 99.99)
-
-      parent.trace do
-        InventoryReserved.publish(order_id: 1)
-      end
+      InventoryReserved.publish(order_id: 1, caused_by: parent)
 
       child = _dex_published_events.last
       assert_event_trace(parent, child)

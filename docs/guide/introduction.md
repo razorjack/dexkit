@@ -9,7 +9,7 @@ dexkit is a Ruby library that gives you base classes for common Rails patterns. 
 Four building blocks, each independent – use one or all:
 
 - **[Dex::Operation](/operation/)** – service objects with typed properties, structured errors, transactions, callbacks, async execution, and more
-- **[Dex::Event](/event/)** – typed immutable event objects with pub/sub, async dispatch, causality tracing, and optional persistence
+- **[Dex::Event](/event/)** – typed immutable event objects with pub/sub, async dispatch, unified tracing, and optional persistence
 - **[Dex::Form](/form/)** – form objects with typed attributes, normalization, validation, nested forms, and Rails form builder compatibility
 - **[Dex::Query](/query/)** – query objects with declarative filters, sorting, type coercion from params, and Rails form binding
 
@@ -70,7 +70,7 @@ in Err(code: :out_of_stock)
 end
 ```
 
-And there's more – [ambient context](/operation/context) for auto-filling `current_user` and friends, [guards](/operation/guards) for precondition checks, [async execution](/operation/async) via ActiveJob, [idempotency](/operation/once) with `once`, [advisory locks](/operation/advisory-lock), [DB recording](/operation/recording), [`rescue_from`](/operation/errors#rescue_from) for third-party exceptions, [callbacks](/operation/callbacks), a [customizable pipeline](/operation/pipeline), [registry & export](/tooling/registry) for contract introspection and JSON Schema generation, and [LLM tool integration](/operation/llm-tools) via ruby-llm.
+And there's more – [unified tracing](/operation/tracing) with Stripe-style IDs and actor tracking, [ambient context](/operation/context) for auto-filling `current_user` and friends, [guards](/operation/guards) for precondition checks, [async execution](/operation/async) via ActiveJob, [idempotency](/operation/once) with `once`, [advisory locks](/operation/advisory-lock), [DB recording](/operation/recording), [`rescue_from`](/operation/errors#rescue_from) for third-party exceptions, [callbacks](/operation/callbacks), a [customizable pipeline](/operation/pipeline), [registry & export](/tooling/registry) for contract introspection and JSON Schema generation, and [LLM tool integration](/operation/llm-tools) via ruby-llm.
 
 ### Events
 
@@ -94,7 +94,7 @@ end
 Order::Placed.publish(order_id: 1, total: 99.99)
 ```
 
-Handlers run via ActiveJob by default. Retries use exponential backoff. Events carry [causality tracing](/event/tracing) – link them in chains with shared trace IDs.
+Handlers run via ActiveJob by default. Retries use exponential backoff. Events carry [causality tracing](/event/tracing) and share the unified trace stack with operations – `caused_by:` links events in chains, and handler context sets causality automatically.
 
 ### Forms
 

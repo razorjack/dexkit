@@ -4,6 +4,7 @@
 require_relative "operation/result_wrapper"
 require_relative "operation/once_wrapper"
 require_relative "operation/record_wrapper"
+require_relative "operation/trace_wrapper"
 require_relative "operation/transaction_wrapper"
 require_relative "operation/lock_wrapper"
 require_relative "operation/async_wrapper"
@@ -139,6 +140,7 @@ module Dex
     include AsyncWrapper
     include SafeWrapper
 
+    use TraceWrapper, at: :outer
     use ResultWrapper
     use GuardWrapper
     use OnceWrapper

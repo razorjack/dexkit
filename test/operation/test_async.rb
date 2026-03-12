@@ -237,6 +237,41 @@ class TestOperationAsync < Minitest::Test
     assert_equal model, result
   end
 
+  def test_async_job_restores_trace_context
+    seen = nil
+
+    define_operation(:AsyncTraceChild) do
+      prop :name, String
+
+      define_method(:perform) do
+        seen = {
+          trace_id: Dex::Trace.trace_id,
+          actor: Dex::Trace.actor,
+          classes: Dex::Trace.current.map { |frame| frame[:class] }.compact
+        }
+      end
+    end
+
+    define_operation(:AsyncTraceParent) do
+      prop :name, String
+
+      def perform
+        AsyncTraceChild.new(name: name).async.call
+      end
+    end
+
+    perform_enqueued_jobs do
+      Dex::Trace.start(actor: { type: :user, id: 7 }) do
+        AsyncTraceParent.new(name: "Ada").call
+      end
+    end
+
+    assert_match(/\Atr_[1-9A-HJ-NP-Za-km-z]{20}\z/, seen[:trace_id])
+    assert_equal "user", seen[:actor][:actor_type]
+    assert_equal "7", seen[:actor][:id]
+    assert_equal %w[AsyncTraceParent AsyncTraceChild], seen[:classes]
+  end
+
   def test_async_serializes_with_as_json
     model = TestModel.create!(name: "Bob")
 

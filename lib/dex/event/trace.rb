@@ -3,52 +3,39 @@
 module Dex
   class Event
     module Trace
-      STACK_KEY = :_dex_event_trace_stack
-
       class << self
-        include ExecutionState
-
         def with_event(event, &block)
-          stack = _stack
-          stack.push(event.trace_frame)
-          yield
-        ensure
-          stack.pop
+          Dex::Trace.with_event_context(event, &block)
         end
 
         def current_event_id
-          _stack.last&.dig(:id)
+          Dex::Trace.current_event_id
         end
 
         def current_trace_id
-          _stack.last&.dig(:trace_id)
+          Dex::Trace.trace_id
         end
 
         def dump
-          frame = _stack.last
-          return nil unless frame
-
-          { id: frame[:id], trace_id: frame[:trace_id] }
+          Dex::Trace.dump
         end
 
         def restore(data, &block)
           return yield unless data
 
-          stack = _stack
-          stack.push(data)
-          yield
-        ensure
-          stack.pop if data
+          if data.is_a?(Hash) && (data.key?(:frames) || data.key?("frames"))
+            Dex::Trace.restore(data, &block)
+          else
+            Dex::Trace.restore_event_context(
+              event_id: data[:id] || data["id"],
+              trace_id: data[:trace_id] || data["trace_id"],
+              &block
+            )
+          end
         end
 
         def clear!
-          _execution_state[STACK_KEY] = []
-        end
-
-        private
-
-        def _stack
-          _execution_state[STACK_KEY] ||= []
+          Dex::Trace.clear!
         end
       end
     end

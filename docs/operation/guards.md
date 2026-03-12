@@ -231,13 +231,13 @@ end
 
 ## Pipeline position
 
-Guards run after `rescue` and before `callbacks`:
+Guards run right after `result`, before `once`, locking, recording, and transactions:
 
 ```
-result > once > lock > record > transaction > rescue > guard > callbacks > perform
+trace > result > guard > once > lock > record > transaction > rescue > callbacks > perform
 ```
 
-Guard failures are caught by `result` (normal `error!` behavior), rescued by `rescue` (if a guard block raises), and recorded by `record`. Callbacks don't fire when a guard fails – the operation was rejected, not attempted.
+Guard failures are caught by `result` (normal `error!` behavior). If a guard block itself raises, `rescue` still applies because it wraps the inner pipeline. Callbacks don't fire when a guard fails – the operation was rejected, not attempted.
 
 ## DSL validation
 

@@ -4,8 +4,16 @@
 
 ### Breaking
 
+- **Unified execution tracing replaces event-only tracing** – `Dex::Trace` is a new fiber-local trace that spans operations, events, and handlers. Operations get `op_...` execution IDs, events get `ev_...` IDs (replacing UUIDs), handlers get `hd_...` IDs, and traces are correlated with `tr_...` IDs. `event.trace { }` is removed – use `caused_by:` for explicit event causality and `Dex::Trace.start(actor:)` at request/job boundaries. `Dex::Event::Trace` remains as a thin delegation layer
+- **Operation record primary keys are now string IDs** – records use the operation's `op_...` execution ID as a string primary key instead of auto-increment integers. The recording schema adds `trace_id`, `actor_type`, `actor_id`, and `trace` columns. Existing tables need a migration to adopt the new schema
 - **Mongoid transaction support removed** — `transaction :mongoid` and `config.transaction_adapter = :mongoid` are no longer valid. Dex no longer ships a Mongoid transaction adapter. Before: Mongoid transactions could be enabled via configuration or per-operation DSL. After: both forms raise `ArgumentError` immediately at declaration/configuration time. Mongoid-only apps continue to work — transactions are automatically disabled (no adapter detected), and `after_commit` fires immediately after success. If you need Mongoid multi-document transactions, call `Mongoid.transaction` directly inside `perform`
 - **Recording backends now validate required attributes before use** — Dex no longer silently drops missing `params`, `result`, `status`, or `once` attributes from `record_class`. Before: partial ActiveRecord/Mongoid recording models could appear to work while losing status transitions, replay data, or async params. After: Dex raises `ArgumentError` naming the missing attributes required by core recording, async record jobs, or `once`. Apps using minimal recording models must add the required columns/fields or explicitly disable the features that need them
+
+### Added
+
+- **`Dex::Trace` API** – `start(actor:, trace_id:)`, `.trace_id`, `.current`, `.current_id`, `.actor`, `.to_s`, `.dump`, `.restore`. Fiber-local, auto-starts when no trace is active, serializes across async job boundaries
+- **Trace persistence** – operation records and event stores persist `id`, `trace_id`, `actor_type`, `actor_id`, and `trace` when the columns exist. Event metadata includes `event_ancestry` for materialized-path tree queries
+- **`Dex::Id`** – Stripe-style prefixed ID generation with embedded timestamps for sortability
 
 ### Fixed
 

@@ -56,9 +56,13 @@ Record operation executions to a database table for auditing, debugging, or anal
 The migration below includes columns for all recording features. Only omit columns for features you explicitly disable — dexkit validates the configured record model before use and raises if a required attribute is missing.
 
 ```ruby
-create_table :operation_records do |t|
+create_table :operation_records, id: :string do |t|
   # --- Recording (core) ---
   t.string :name, null: false        # operation class name
+  t.string :trace_id                 # shared trace / correlation ID
+  t.string :actor_type               # root actor type
+  t.string :actor_id                 # root actor ID
+  t.jsonb :trace                     # full trace snapshot
   t.jsonb :params                     # serialized props
   t.jsonb :result                     # serialized return value
   t.string :status, null: false       # pending/running/completed/error/failed
@@ -80,6 +84,8 @@ end
 add_index :operation_records, :name
 add_index :operation_records, :status
 add_index :operation_records, [:name, :status]
+add_index :operation_records, :trace_id
+add_index :operation_records, [:actor_type, :actor_id]
 # add_index :operation_records, :once_key, unique: true
 ```
 
@@ -98,7 +104,12 @@ class OperationRecord
   include Mongoid::Document
   include Mongoid::Timestamps
 
+  field :_id, type: String, default: -> { Dex::Id.generate("op_") }
   field :name, type: String
+  field :trace_id, type: String
+  field :actor_type, type: String
+  field :actor_id, type: String
+  field :trace, type: Array
   field :params, type: Hash
   field :result, type: Object
   field :status, type: String
@@ -180,11 +191,15 @@ Dex.configure do |config|
 end
 ```
 
-The store model must respond to `create!(event_type:, payload:, metadata:)`. A simple ActiveRecord model works:
+The store model must respond to `create!`. Dex passes `id`, `trace_id`, `actor_type`, `actor_id`, `trace`, `event_type`, `payload`, and `metadata` – columns that don't exist on your model are silently omitted.
 
 ```ruby
 # migration
-create_table :event_records do |t|
+create_table :event_records, id: :string do |t|
+  t.string :trace_id
+  t.string :actor_type
+  t.string :actor_id
+  t.jsonb :trace
   t.string :event_type, null: false
   t.jsonb :payload, null: false
   t.jsonb :metadata, null: false
@@ -192,6 +207,8 @@ create_table :event_records do |t|
 end
 
 add_index :event_records, :event_type
+add_index :event_records, :trace_id
+add_index :event_records, [:actor_type, :actor_id]
 ```
 
 ```ruby
@@ -207,6 +224,11 @@ class EventRecord
   include Mongoid::Document
   include Mongoid::Timestamps
 
+  field :_id, type: String
+  field :trace_id, type: String
+  field :actor_type, type: String
+  field :actor_id, type: String
+  field :trace, type: Array
   field :event_type, type: String
   field :payload, type: Hash
   field :metadata, type: Hash

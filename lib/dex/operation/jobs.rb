@@ -9,29 +9,30 @@ module Dex
       case name
       when :DirectJob
         const_set(:DirectJob, Class.new(ActiveJob::Base) do
-          def perform(class_name:, params:, once_key: nil, once_bypass: false)
+          def perform(class_name:, params:, trace: nil, once_key: nil, once_bypass: false)
             klass = class_name.constantize
             op = klass.new(**klass.send(:_coerce_serialized_hash, params))
             op.once(once_key) if once_key
             op.once(nil) if once_bypass
-            op.call
+            Dex::Trace.restore(trace) { op.call }
           end
         end)
       when :RecordJob
         const_set(:RecordJob, Class.new(ActiveJob::Base) do
-          def perform(class_name:, record_id:, once_key: nil, once_bypass: false)
+          def perform(class_name:, record_id:, trace: nil, once_key: nil, once_bypass: false)
             klass = class_name.constantize
             record = Dex.record_backend.find_record(record_id)
             params = klass.send(:_coerce_serialized_hash, record.params || {})
 
             op = klass.new(**params)
             op.instance_variable_set(:@_dex_record_id, record_id)
+            op.instance_variable_set(:@_dex_execution_id, record_id)
             op.once(once_key) if once_key
             op.once(nil) if once_bypass
 
             update_status(record_id, status: "running")
             pipeline_started = true
-            op.call
+            Dex::Trace.restore(trace) { op.call }
           rescue => e
             # RecordWrapper handles failures during op.call via its own rescue.
             # This catches pre-pipeline failures (find_record, deserialization, etc.)

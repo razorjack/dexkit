@@ -44,15 +44,16 @@ class TestEvent < Minitest::Test
     refute_nil event.id
     refute_nil event.timestamp
     refute_nil event.trace_id
+    assert_equal [], event.event_ancestry
   end
 
-  def test_id_is_uuid
+  def test_id_is_prefixed
     event_class = build_event do
       prop :name, String
     end
 
     event = event_class.new(name: "test")
-    assert_match(/\A[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/, event.id)
+    assert_match(/\Aev_[1-9A-HJ-NP-Za-km-z]{20}\z/, event.id)
   end
 
   def test_timestamp_is_utc
@@ -65,13 +66,14 @@ class TestEvent < Minitest::Test
     assert event.timestamp.utc?
   end
 
-  def test_trace_id_defaults_to_id_when_no_trace
+  def test_trace_id_defaults_to_trace_id_when_no_trace
     event_class = build_event do
       prop :name, String
     end
 
     event = event_class.new(name: "test")
-    assert_equal event.id, event.trace_id
+    assert_match(/\Atr_[1-9A-HJ-NP-Za-km-z]{20}\z/, event.trace_id)
+    refute_equal event.id, event.trace_id
   end
 
   def test_caused_by_id_nil_by_default
@@ -83,8 +85,17 @@ class TestEvent < Minitest::Test
     assert_nil event.caused_by_id
   end
 
+  def test_event_ancestry_empty_by_default
+    event_class = build_event do
+      prop :name, String
+    end
+
+    event = event_class.new(name: "test")
+    assert_equal [], event.event_ancestry
+  end
+
   def test_reserved_prop_names_raise
-    %i[id timestamp trace_id caused_by_id caused_by context publish metadata sync].each do |name|
+    %i[id timestamp trace_id caused_by_id caused_by event_ancestry context publish metadata sync].each do |name|
       assert_raises(ArgumentError) do
         build_event do
           prop name, String
@@ -114,6 +125,7 @@ class TestEvent < Minitest::Test
     assert_equal({ "order_id" => 42, "note" => "rush" }, json["payload"])
     assert_equal event.id, json["metadata"]["id"]
     assert_equal event.trace_id, json["metadata"]["trace_id"]
+    assert_equal [], json["metadata"]["event_ancestry"]
   end
 
   def test_context_from_config
@@ -159,5 +171,19 @@ class TestEvent < Minitest::Test
 
     ids = 10.times.map { event_class.new(n: 1).id }
     assert_equal 10, ids.uniq.size
+  end
+
+  def test_uses_active_trace_id_when_present
+    event_class = build_event do
+      prop :name, String
+    end
+
+    event = nil
+
+    Dex::Trace.start(actor: { type: :user, id: 7 }) do
+      trace_id = Dex::Trace.trace_id
+      event = event_class.new(name: "test")
+      assert_equal trace_id, event.trace_id
+    end
   end
 end

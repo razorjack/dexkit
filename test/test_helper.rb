@@ -45,4 +45,9 @@ class Minitest::Test
   include FormHelpers
   include QueryHelpers
   include MongoidHelpers
+
+  def before_setup
+    Dex::Trace.clear!
+    super
+  end
 end

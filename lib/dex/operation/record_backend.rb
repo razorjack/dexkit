@@ -156,7 +156,8 @@ module Dex
         end
 
         def has_field?(field_name)
-          record_class.fields.key?(field_name.to_s)
+          field_name = field_name.to_s
+          record_class.fields.key?(field_name) || (field_name == "id" && record_class.fields.key?("_id"))
         end
       end
     end

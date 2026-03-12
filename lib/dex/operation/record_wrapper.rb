@@ -88,7 +88,7 @@ module Dex
       else
         _record_success_attrs(interceptor.result)
       end
-      Dex.record_backend.update_record(@_dex_record_id, attrs)
+      Dex.record_backend.update_record(@_dex_record_id, _record_base_attrs(include_id: false).merge(attrs))
     rescue => e
       _record_handle_error(e)
     end
@@ -108,7 +108,7 @@ module Dex
       attrs[:once_key] = nil if defined?(@_once_key) || self.class.settings_for(:once).fetch(:defined, false)
 
       if _record_has_pending_record?
-        Dex.record_backend.update_record(@_dex_record_id, attrs)
+        Dex.record_backend.update_record(@_dex_record_id, _record_base_attrs(include_id: false).merge(attrs))
       else
         Dex.record_backend.create_record(_record_base_attrs.merge(attrs))
       end
@@ -116,8 +116,18 @@ module Dex
       _record_handle_error(e)
     end
 
-    def _record_base_attrs
-      attrs = { name: self.class.name }
+    def _record_base_attrs(include_id: true)
+      trace_snapshot = Dex::Trace.current
+      actor_frame = Dex::Trace.actor
+
+      attrs = {
+        name: self.class.name,
+        trace_id: Dex::Trace.trace_id,
+        trace: trace_snapshot,
+        actor_type: actor_frame&.dig(:actor_type),
+        actor_id: actor_frame&.dig(:id)&.to_s
+      }
+      attrs[:id] = @_dex_execution_id if include_id && defined?(@_dex_execution_id) && @_dex_execution_id
       attrs[:params] = _record_params? ? _record_params : nil
       attrs
     end

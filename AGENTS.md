@@ -79,11 +79,14 @@ lib/
     executable.rb        # Dex::Executable (shared skeleton: Settings, Pipeline, use DSL)
     registry.rb          # Dex::Registry (shared subclass registry for Operation, Event, Handler)
     type_serializer.rb   # Dex::TypeSerializer (type → string and type → JSON Schema)
+    id.rb                # Dex::Id (Stripe-style prefixed ID generator)
+    trace.rb             # Dex::Trace (unified fiber-local trace stack)
     match.rb             # Dex::Ok, Dex::Err aliases + Dex::Match
     tool.rb              # Dex::Tool (ruby-llm integration, lazy-loaded)
     railtie.rb           # Dex::Railtie (rake tasks, auto-loaded in Rails)
     operation.rb         # Operation class orchestrator (requires all parts)
     operation/
+      trace_wrapper.rb   # Dex::TraceWrapper
       result_wrapper.rb  # Dex::ResultWrapper
       once_wrapper.rb    # Dex::OnceWrapper
       record_wrapper.rb  # Dex::RecordWrapper

@@ -93,10 +93,7 @@ class Order::PlaceTest < Minitest::Test
   def test_causality_chain
     capture_events do
       parent = Order::Placed.new(order_id: 1, total: 99.99)
-
-      parent.trace do
-        Shipment::Reserved.publish(order_id: 1)
-      end
+      Shipment::Reserved.publish(order_id: 1, caused_by: parent)
 
       child = _dex_published_events.last
       assert_event_trace(parent, child)

@@ -37,6 +37,20 @@ class TestTestLog < Minitest::Test
     assert_kind_of Float, entry.duration
   end
 
+  def test_entry_contains_execution_id_trace_id_and_trace
+    op = build_operation { def perform = 42 }
+
+    Dex::Trace.start(actor: { type: :user, id: 1 }) do
+      op.new.call
+    end
+
+    entry = Dex::TestLog.calls.first
+    assert_match(/\Aop_[1-9A-HJ-NP-Za-km-z]{20}\z/, entry.execution_id)
+    assert_match(/\Atr_[1-9A-HJ-NP-Za-km-z]{20}\z/, entry.trace_id)
+    assert_equal :actor, entry.trace.first[:type]
+    assert_equal op.name || op.to_s, entry.trace.last[:class]
+  end
+
   def test_entry_contains_params
     op = build_operation do
       prop :name, String
@@ -137,6 +151,23 @@ class TestTestLog < Minitest::Test
 
     summary = Dex::TestLog.summary
     assert_match(/ERR\(fail\)/, summary)
+  end
+
+  def test_summary_indents_nested_operations
+    inner = define_operation(:SummaryInnerOp) do
+      def perform = nil
+    end
+
+    outer = define_operation(:SummaryOuterOp) do
+      define_method(:perform) { inner.call }
+    end
+
+    outer.call
+
+    summary = Dex::TestLog.summary
+    assert_match(/1\. SummaryOuterOp/, summary)
+    assert_match(/2\. SummaryInnerOp/, summary)
+    assert_match(/SummaryOuterOp \(op_/, summary)
   end
 
   def test_records_non_dex_exceptions_as_err

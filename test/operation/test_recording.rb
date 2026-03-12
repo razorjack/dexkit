@@ -61,6 +61,31 @@ class TestOperationRecording < Minitest::Test
     end
   end
 
+  def test_records_execution_id_trace_and_actor
+    with_recording do
+      op = define_operation(:TestTraceRecord) do
+        prop :name, String
+        def perform
+        end
+      end
+
+      Dex::Trace.start(actor: { type: :user, id: 123 }) do
+        op.new(name: "TestValue").call
+      end
+
+      record = OperationRecord.last
+      trace = record.trace.map { |frame| frame.transform_keys(&:to_s) }
+
+      assert_match(/\Aop_[1-9A-HJ-NP-Za-km-z]{20}\z/, record.id)
+      assert_match(/\Atr_[1-9A-HJ-NP-Za-km-z]{20}\z/, record.trace_id)
+      assert_equal "user", record.actor_type
+      assert_equal "123", record.actor_id
+      assert_equal "actor", trace.first["type"]
+      assert_equal "TestTraceRecord", trace.last["class"]
+      assert_equal record.id, trace.last["id"]
+    end
+  end
+
   def test_record_false_disables_for_class
     with_recording do
       op = define_operation(:TestRecordFalseOp) do
@@ -465,6 +490,30 @@ class TestOperationRecording < Minitest::Test
       assert_equal "error", outer_record.status
       assert_equal "inner_failure", outer_record.error_code
       assert_equal "from inner", outer_record.error_message
+    end
+  end
+
+  def test_nested_operation_record_contains_full_trace_chain
+    with_recording do
+      inner = define_operation(:TraceInnerRecordedOp) do
+        prop :name, String
+        def perform
+          nil
+        end
+      end
+
+      outer = define_operation(:TraceOuterRecordedOp) do
+        prop :name, String
+        define_method(:perform) { inner.call(name: name) }
+      end
+
+      outer.new(name: "Test").call
+
+      inner_record = OperationRecord.where(name: "TraceInnerRecordedOp").last
+      trace_classes = inner_record.trace.map { |frame| frame["class"] || frame[:class] }.compact
+
+      assert_equal [inner_record.trace_id], OperationRecord.all.map(&:trace_id).uniq
+      assert_equal %w[TraceOuterRecordedOp TraceInnerRecordedOp], trace_classes
     end
   end
 

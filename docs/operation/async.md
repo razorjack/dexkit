@@ -66,6 +66,12 @@ Types that survive the JSON round-trip automatically:
 
 You don't need to change your prop types for async – the same operation works for both sync and async calls.
 
+## Trace propagation
+
+Async operations serialize the current `Dex::Trace` and restore it when the job runs. The background execution keeps the same `trace_id`, actor, and parent ancestry – async is transparent to the trace.
+
+If no trace exists when the job runs, a fresh one starts automatically.
+
 ## Recording integration
 
 When [Recording](/operation/recording) is enabled with params, async automatically optimizes Redis usage. Instead of serializing the full params hash into the job payload, it stores a record ID and retrieves params from the database:

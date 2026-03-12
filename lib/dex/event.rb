@@ -9,7 +9,7 @@ require_relative "event/suppression"
 module Dex
   class Event
     RESERVED_PROP_NAMES = %i[
-      id timestamp trace_id caused_by_id caused_by
+      id timestamp trace_id caused_by_id caused_by event_ancestry
       context publish metadata sync
     ].to_set.freeze
 
@@ -67,8 +67,8 @@ module Dex
     def timestamp = metadata.timestamp
     def trace_id = metadata.trace_id
     def caused_by_id = metadata.caused_by_id
+    def event_ancestry = metadata.event_ancestry
     def context = metadata.context
-    def trace_frame = { id: id, trace_id: trace_id }
 
     # Publishing
     def publish(sync: false)
@@ -83,11 +83,6 @@ module Dex
       else
         new(**kwargs).publish(sync: sync)
       end
-    end
-
-    # Tracing
-    def trace(&block)
-      Trace.with_event(self, &block)
     end
 
     # Suppression

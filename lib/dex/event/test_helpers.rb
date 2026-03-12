@@ -65,7 +65,7 @@ module Dex
       def setup
         super
         EventTestWrapper.clear_published!
-        Dex::Event::Trace.clear!
+        Dex::Trace.clear!
         Dex::Event::Suppression.clear!
       end
 

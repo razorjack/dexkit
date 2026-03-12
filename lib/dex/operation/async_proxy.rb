@@ -21,21 +21,31 @@ module Dex
 
       def enqueue_direct_job
         job = apply_options(Operation::DirectJob)
-        payload = { class_name: operation_class_name, params: serialized_params }
+        payload = {
+          class_name: operation_class_name,
+          params: serialized_params,
+          trace: Dex::Trace.dump
+        }
         apply_once_payload!(payload)
         job.perform_later(**payload)
       end
 
       def enqueue_record_job
         @operation.send(:_record_validate_backend!, async: true)
+        execution_id = Dex::Id.generate("op_")
         record = Dex.record_backend.create_record(
+          id: execution_id,
           name: operation_class_name,
           params: serialized_params,
           status: "pending"
         )
         begin
           job = apply_options(Operation::RecordJob)
-          payload = { class_name: operation_class_name, record_id: record.id.to_s }
+          payload = {
+            class_name: operation_class_name,
+            record_id: record.id.to_s,
+            trace: Dex::Trace.dump
+          }
           apply_once_payload!(payload)
           job.perform_later(**payload)
         rescue => e

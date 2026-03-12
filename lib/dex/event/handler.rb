@@ -69,9 +69,26 @@ module Dex
       end
 
       def self._event_handle(event)
+        execution_id = Dex::Id.generate("hd_")
+        auto_started = Dex::Trace.ensure_started!(trace_id: event.trace_id)
+        pushed = false
+        Dex::Trace.push(
+          type: :handler,
+          id: execution_id,
+          class: name,
+          event_class: event.class.name,
+          event_id: event.id,
+          event_ancestry: event.metadata.event_ancestry
+        )
+        pushed = true
+
         instance = new
         instance.instance_variable_set(:@event, event)
+        instance.instance_variable_set(:@_dex_execution_id, execution_id)
         instance.send(:call)
+      ensure
+        Dex::Trace.pop if pushed
+        Dex::Trace.stop! if auto_started
       end
 
       def self._event_handle_from_payload(event_class_name, payload, metadata_hash)
@@ -96,6 +113,7 @@ module Dex
             timestamp: Time.parse(metadata_hash["timestamp"]),
             trace_id: metadata_hash["trace_id"],
             caused_by_id: metadata_hash["caused_by_id"],
+            event_ancestry: metadata_hash["event_ancestry"] || [],
             context: metadata_hash["context"]
           )
           instance.instance_variable_set(:@metadata, metadata)

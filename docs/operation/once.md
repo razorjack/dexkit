@@ -203,10 +203,10 @@ end
 
 ## Pipeline position
 
-`once` runs early in the pipeline, right after `result` and before `lock`:
+`once` runs early in the pipeline, after `guard` and before `lock`:
 
 ```
-result > once > lock > record > transaction > rescue > callbacks > perform
+trace > result > guard > once > lock > record > transaction > rescue > callbacks > perform
 ```
 
 This means the idempotency check happens before acquiring locks or opening transactions – a replayed result returns immediately with minimal overhead.

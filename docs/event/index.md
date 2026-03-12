@@ -40,9 +40,9 @@ Order::Placed.publish(order_id: 1, total: 99.99)
 
 - **Typed properties** — same `prop` / `prop?` system as `Dex::Operation`
 - **Immutability** — events are frozen on creation
-- **Auto metadata** — UUID `id`, UTC `timestamp`, `trace_id`
+- **Auto metadata** — prefixed `ev_...` IDs, UTC `timestamp`, `trace_id`, `event_ancestry`
 - **Async by default** — handlers dispatched via ActiveJob
-- **Causality tracing** — link events in chains with shared `trace_id`
+- **Causality tracing** — events share `trace_id` with the execution trace; explicit `caused_by:` links parent-child events
 - **Suppression** — block-scoped silencing for tests and migrations
 - **Ambient context** — auto-fill props from `Dex.with_context`, captured at publish time
 - **Optional persistence** — store events to DB when configured

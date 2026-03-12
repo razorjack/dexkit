@@ -31,12 +31,21 @@ class TestEventStore < Minitest::Test
 
     store = Minitest::Mock.new
     store.expect :create!, nil do |attrs|
-      attrs[:event_type] && attrs[:payload] && attrs[:metadata]
+      attrs[:id] &&
+        attrs[:trace_id] &&
+        attrs[:actor_type] == "user" &&
+        attrs[:actor_id] == "7" &&
+        attrs[:trace].is_a?(Array) &&
+        attrs[:event_type] &&
+        attrs[:payload] &&
+        attrs[:metadata]
     end
 
     Dex.configure { |c| c.event_store = store }
 
-    event_class.new(n: 42).publish(sync: true)
+    Dex::Trace.start(actor: { type: :user, id: 7 }) do
+      event_class.new(n: 42).publish(sync: true)
+    end
     assert_mock store
   ensure
     Dex.configure { |c| c.event_store = nil }

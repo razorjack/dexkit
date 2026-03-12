@@ -16,8 +16,12 @@ Create a model and table:
 
 ```ruby
 # migration
-create_table :operation_records do |t|
+create_table :operation_records, id: :string do |t|
   t.string :name, null: false        # operation class name
+  t.string :trace_id                 # shared trace / correlation ID
+  t.string :actor_type               # root actor type
+  t.string :actor_id                 # root actor ID
+  t.jsonb :trace                     # full trace snapshot
   t.jsonb :params                     # serialized props (nil = not captured)
   t.jsonb :result                     # serialized return value
   t.string :status, null: false       # pending/running/completed/error/failed
@@ -31,6 +35,8 @@ end
 add_index :operation_records, :name
 add_index :operation_records, :status
 add_index :operation_records, [:name, :status]
+add_index :operation_records, :trace_id
+add_index :operation_records, [:actor_type, :actor_id]
 ```
 
 ```ruby
@@ -48,7 +54,12 @@ class OperationRecord
   include Mongoid::Document
   include Mongoid::Timestamps
 
+  field :_id, type: String, default: -> { Dex::Id.generate("op_") }
   field :name, type: String
+  field :trace_id, type: String
+  field :actor_type, type: String
+  field :actor_id, type: String
+  field :trace, type: Array
   field :params, type: Hash
   field :result, type: Hash
   field :status, type: String
@@ -85,6 +96,8 @@ Required attributes by feature:
 - Async record jobs: `params`
 - `once`: `once_key`, plus `once_key_expires_at` when `expires_in:` is used
 
+Trace columns (`id`, `trace_id`, `actor_type`, `actor_id`, `trace`) are recommended but optional – Dex persists them when present and silently omits them when they're missing. This means you can adopt tracing incrementally: the in-memory trace works immediately, and persistence comes when you add the columns.
+
 ## What gets recorded
 
 All outcomes are recorded – success, business errors, and exceptions:
@@ -101,6 +114,11 @@ end
 
 Employee::Onboard.call(email: "alice@example.com", name: "Alice")
 # OperationRecord:
+#   id: "op_..."
+#   trace_id: "tr_..."
+#   actor_type: "user"              (when Dex::Trace.start sets an actor)
+#   actor_id: "42"
+#   trace: [{ "type" => "actor", ... }, { "type" => "operation", ... }]
 #   name: "Employee::Onboard"
 #   params: { "email" => "alice@example.com", "name" => "Alice" }
 #   result: { "id" => 1, "email" => "alice@example.com", ... }
@@ -109,6 +127,24 @@ Employee::Onboard.call(email: "alice@example.com", name: "Alice")
 ```
 
 Ref types (`_Ref(Customer)`) serialize as IDs in both params and result, keeping records clean and compact. Mongoid `BSON::ObjectId` values are serialized safely too.
+
+## Trace integration
+
+Recording uses the current `Dex::Trace` snapshot. When an actor is set, the record captures who initiated the chain:
+
+```ruby
+Dex::Trace.start(actor: { type: :user, id: 42 }) do
+  Order::Place.call(order_id: 1)
+end
+
+record = OperationRecord.last
+record.trace_id    # => "tr_..."
+record.actor_type  # => "user"
+record.actor_id    # => "42"
+record.trace       # => full actor > operation ancestry
+```
+
+The `trace` column carries the complete call stack at the time of execution – every parent frame is included. Combined with `trace_id`, this makes it straightforward to reconstruct the full call tree for any request.
 
 ## Status values
 

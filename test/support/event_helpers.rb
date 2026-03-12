@@ -7,7 +7,7 @@ module EventHelpers
     _deregister_tracked(:event, Dex::Event, Dex::Event::Handler)
     _cleanup_tracked_constants(:event)
     Dex::Event::Bus.clear!
-    Dex::Event::Trace.clear!
+    Dex::Trace.clear!
     Dex::Event::Suppression.clear!
     super
   end
@@ -30,9 +30,10 @@ module EventHelpers
 
   def build_event_metadata(overrides = {})
     {
-      "id" => SecureRandom.uuid,
+      "id" => Dex::Id.generate("ev_"),
       "timestamp" => Time.now.utc.iso8601(6),
-      "trace_id" => SecureRandom.uuid
+      "trace_id" => Dex::Id.generate("tr_"),
+      "event_ancestry" => []
     }.merge(overrides)
   end
 

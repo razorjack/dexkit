@@ -97,6 +97,12 @@ module Dex
           Dex::Operation::Ok.new(result)
         end
 
+        trace = Dex::Trace.current + [{
+          type: :operation,
+          id: @_dex_execution_id,
+          class: self.class.name || self.class.to_s
+        }]
+
         entry = Dex::TestLog::Entry.new(
           type: "Operation",
           name: self.class.name || self.class.to_s,
@@ -104,7 +110,10 @@ module Dex
           params: _test_safe_params,
           result: safe_result,
           duration: duration,
-          caller_location: caller_locations(4, 1)&.first
+          caller_location: caller_locations(4, 1)&.first,
+          execution_id: @_dex_execution_id,
+          trace_id: @_dex_trace_id,
+          trace: trace
         )
         Dex::TestLog.record(entry)
       end
@@ -120,6 +129,7 @@ module Dex
 
       def setup
         super
+        Dex::Trace.clear!
         Dex::TestLog.clear!
         Dex::Operation::TestWrapper.clear_all_stubs!
       end

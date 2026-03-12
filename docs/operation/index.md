@@ -38,7 +38,7 @@ Both forms do the same thing: instantiate with properties, then execute the pipe
 Behind the scenes, `call` doesn't just run `perform` – it runs it through a pipeline of wrapper steps. The default pipeline, from outermost to innermost:
 
 ```
-result > once > lock > record > transaction > rescue > callbacks > perform
+trace > result > guard > once > lock > record > transaction > rescue > callbacks > perform
 ```
 
 Each step wraps the next one. Transactions wrap your database calls. Callbacks hook into the lifecycle. Errors are caught and converted. You get all of this out of the box, and every step can be configured or disabled.
@@ -94,6 +94,7 @@ Settings, callbacks, error declarations, and pipeline steps all inherit from par
 - [Idempotency](/operation/once) – run-once guarantees with deduplication keys
 - [Advisory Locking](/operation/advisory-lock) – database-level concurrency control
 - [Async](/operation/async) – background execution via ActiveJob
+- [Tracing](/operation/tracing) – automatic execution IDs, trace stacks, and actor tracking
 - [Recording](/operation/recording) – persist operation runs to the database
 - [Middleware](/operation/pipeline) – customize the execution pipeline
 - [Contracts](/operation/contracts) – introspect declared props, errors, and guards

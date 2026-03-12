@@ -180,6 +180,7 @@ module Dex
           once_key: key, once_key_expires_at: expires_at)
       else
         record = Dex.record_backend.create_record(
+          id: @_dex_execution_id,
           name: self.class.name,
           once_key: key,
           once_key_expires_at: expires_at,

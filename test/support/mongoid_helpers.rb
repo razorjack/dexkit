@@ -87,7 +87,12 @@ module MongoidHelpers
 
           store_in collection: "mongo_operation_records"
 
+          field :_id, type: String, default: -> { Dex::Id.generate("op_") }
           field :name, type: String
+          field :trace_id, type: String
+          field :actor_type, type: String
+          field :actor_id, type: String
+          field :trace, type: Array
           field :params, type: Hash
           field :result, type: Object
           field :status, type: String
@@ -109,6 +114,7 @@ module MongoidHelpers
 
           store_in collection: "minimal_mongo_operation_records"
 
+          field :_id, type: String, default: -> { Dex::Id.generate("op_") }
           field :name, type: String
         end)
       end
@@ -155,6 +161,11 @@ module MongoidHelpers
 
         store_in collection: "mongo_event_store_records"
 
+        field :_id, type: String
+        field :trace_id, type: String
+        field :actor_type, type: String
+        field :actor_id, type: String
+        field :trace, type: Array
         field :event_type, type: String
         field :payload, type: Hash
         field :metadata, type: Hash

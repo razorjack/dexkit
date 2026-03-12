@@ -61,7 +61,7 @@ Order::Place.explain(product: product, customer: customer, quantity: 2)
 #
 #   callbacks: { before: 1, after: 2, around: 0 },
 #
-#   pipeline: [:result, :guard, :once, :lock, :record, :transaction, :rescue, :callback],
+#   pipeline: [:trace, :result, :guard, :once, :lock, :record, :transaction, :rescue, :callback],
 #
 #   callable: true
 # }
@@ -157,7 +157,7 @@ info[:callable]   # => false
 
 info[:record]     # => { enabled: true, params: true, result: true, status: :ready }
 info[:callbacks]  # => { before: 1, after: 2, around: 0 }
-info[:pipeline]   # => [:result, :guard, :once, ...]
+info[:pipeline]   # => [:trace, :result, :guard, :once, ...]
 ```
 
 Class-level information (record, transaction, rescue, callbacks, pipeline) is always available. Instance-dependent sections (props, guards, once key, lock key) report empty or nil values. Context mappings and source tracking still work – only resolved values require a valid instance. Static advisory lock keys (string literals) are preserved even in partial mode. Context source reports `:missing` for props that have no default and no ambient value.

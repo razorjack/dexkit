@@ -13,7 +13,7 @@ module Dex
           handler = Object.const_get(handler_class)
           retry_config = handler._event_handler_retry_config
 
-          Dex::Event::Trace.restore(trace) do
+          Dex::Trace.restore(trace) do
             handler._event_handle_from_payload(event_class, payload, metadata)
           end
         rescue => _e
