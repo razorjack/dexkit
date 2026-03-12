@@ -4,14 +4,14 @@ description: "Get started with dexkit's core building blocks for Rails – opera
 
 # Introduction
 
-dexkit is a Ruby library that gives you base classes for common Rails patterns. Equip to gain +4 DEX.
+dexkit gives your Rails app typed base classes for operations, events, forms, and queries – with contracts that enforce themselves at runtime. Equip to gain +4 DEX.
 
 Four building blocks, each independent – use one or all:
 
-- **[Dex::Operation](/operation/)** – service objects with typed properties, structured errors, transactions, callbacks, async execution, and more
-- **[Dex::Event](/event/)** – typed immutable event objects with pub/sub, async dispatch, unified tracing, and optional persistence
-- **[Dex::Query](/query/)** – query objects with declarative filters, sorting, type coercion from params, ambient context, registry, export, and Rails form binding
-- **[Dex::Form](/form/)** – form objects with typed fields, normalization, validation, nested forms, ambient context, and JSON Schema export
+- **[Dex::Operation](/operation/)** – service objects with typed props, structured errors, transactions, and async execution
+- **[Dex::Event](/event/)** – immutable domain events with pub/sub, async handlers, and causality tracing
+- **[Dex::Query](/query/)** – declarative filters and sorts for ActiveRecord and Mongoid scopes
+- **[Dex::Form](/form/)** – form objects with typed fields, nested forms, and Rails form builder compatibility
 
 ## A quick taste
 
@@ -70,7 +70,7 @@ in Err(code: :out_of_stock)
 end
 ```
 
-And there's more – [unified tracing](/operation/tracing) with Stripe-style IDs and actor tracking, [ambient context](/operation/context) for auto-filling `current_user` and friends, [guards](/operation/guards) for precondition checks, [async execution](/operation/async) via ActiveJob, [idempotency](/operation/once) with `once`, [advisory locks](/operation/advisory-lock), [DB recording](/operation/recording), [`rescue_from`](/operation/errors#rescue_from) for third-party exceptions, [callbacks](/operation/callbacks), a [customizable pipeline](/operation/pipeline), [registry & export](/tooling/registry) for contract introspection and JSON Schema generation, and [LLM tool integration](/operation/llm-tools) via ruby-llm.
+And there's more – [guards](/operation/guards) for precondition checks, [ambient context](/operation/context) for auto-filling `current_user`, [unified tracing](/operation/tracing) with Stripe-style IDs, [async execution](/operation/async), [idempotency](/operation/once), [recording](/operation/recording), and a [customizable pipeline](/operation/pipeline). See the full [Operation docs](/operation/) for everything.
 
 ### Events
 
@@ -157,7 +157,9 @@ end
 
 ## Why
 
-Rails apps accumulate the same patterns over and over – service objects, event systems, form objects – but everyone rolls their own. You end up with inconsistent interfaces, manual error handling, no type checking, and testing that's more boilerplate than assertion. dexkit gives you a solid foundation so you can focus on business logic.
+Rails apps accumulate the same patterns over and over – service objects, event systems, form objects – but everyone rolls their own. You end up with inconsistent interfaces, manual error handling, no type checking, and testing that's more boilerplate than assertion. dexkit replaces all of that with typed, explicit patterns that the framework enforces for you.
+
+Read more about the thinking behind these choices in the [Design Philosophy](/guide/philosophy).
 
 ## Supported ORMs
 
@@ -165,6 +167,7 @@ dexkit works with both **ActiveRecord** and **Mongoid**. Queries, recording, mod
 
 ## Next steps
 
+- [Design Philosophy](/guide/philosophy) – why explicit, typed, and mechanically enforced
 - [Installation](/guide/installation) – add the gem and configure your app
 - [Operation Overview](/operation/) – typed service objects
 - [Event Overview](/event/) – domain events and handlers
