@@ -72,6 +72,20 @@ form.valid?          # => true (description not required)
 form.valid?(:launch) # => false (description required for launch)
 ```
 
+For required fields declared with `field`, Dex keeps the base requirement in place even if you add a scoped presence validator:
+
+```ruby
+class Product::Form < Dex::Form
+  field :title, :string
+  validates :title, presence: true, on: :publish
+end
+
+Product::Form.new.valid?          # => false
+Product::Form.new.valid?(:publish) # => false
+```
+
+If you want a field to be optional until a specific context, declare it with `field?` and add the scoped validator yourself.
+
 ## Uniqueness
 
 `Dex::Form` ships a `UniquenessValidator` that checks values against the database:

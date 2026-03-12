@@ -72,7 +72,8 @@ lib/
     ref_type.rb          # Dex::RefType (Literal::Type for model references)
     type_coercion.rb     # Dex::TypeCoercion (shared serialization/coercion for Operation + Event)
     props_setup.rb       # Dex::PropsSetup (shared prop/prop?/_Ref DSL for Operation + Event)
-    context_setup.rb     # Dex::ContextSetup (shared context DSL for Operation + Event)
+    context_dsl.rb       # Dex::ContextDSL (shared context DSL base module)
+    context_setup.rb     # Dex::ContextSetup (context DSL + injection for Operation + Event)
     error.rb             # Dex::Error
     settings.rb          # Dex::Settings (set, settings_for, validate_options!)
     pipeline.rb          # Dex::Pipeline (shared execution pipeline)
@@ -128,6 +129,8 @@ lib/
         assertions.rb    # assert_event_published, refute_event_published, etc.
     form.rb              # Form class orchestrator (requires all parts)
     form/
+      context.rb         # Dex::Form::Context (context DSL + ActiveModel attribute check)
+      export.rb          # Dex::Form::Export (to_h, to_json_schema)
       nesting.rb         # Dex::Form::Nesting (nested_one, nested_many DSL)
       uniqueness_validator.rb # Dex::Form::UniquenessValidator (validates :x, uniqueness: true)
     query.rb             # Query class orchestrator (requires all parts)

@@ -1,24 +1,42 @@
 ---
-description: Define Dex::Form attributes with ActiveModel types, defaults, coercion, and input normalization.
+description: Define Dex::Form fields with ActiveModel types, defaults, auto-presence validation, coercion, and input normalization.
 ---
 
-# Attributes & Normalization
+# Fields & Normalization
 
-## Declaring attributes
+## Declaring fields
 
-Attributes are declared with `attribute`, using ActiveModel's type system:
+Fields are declared with `field` (required) and `field?` (optional):
 
 ```ruby
 class Employee::Form < Dex::Form
-  attribute :name, :string
-  attribute :age, :integer
-  attribute :bio, :string
-  attribute :active, :boolean, default: true
-  attribute :born_on, :date
+  field :name, :string
+  field :email, :string, desc: "Work email"
+  field :department, :string, default: "Engineering"
+  field? :bio, :string
+  field? :priority, :integer, default: 0
 end
 ```
 
-Values are type-cast on assignment – `"30"` becomes `30` for an integer attribute, `"1"` becomes `true` for a boolean.
+`field` declares a required field – it auto-adds presence validation. `field?` declares an optional field that defaults to `nil` (unless overridden). Both delegate to ActiveModel's `attribute` under the hood, so values are type-cast on assignment – `"30"` becomes `30` for an integer field, `"1"` becomes `true` for a boolean.
+
+### `field` vs `field?`
+
+| | `field` | `field?` |
+|---|---|---|
+| **Auto-presence** | Yes – blank values are invalid | No |
+| **Default** | None (unless `default:` given) | `nil` (unless `default:` given) |
+| **In JSON Schema** | Listed in `required` | Not required |
+| **Mirrors** | `prop` in Operation/Event | `prop?` in Operation/Event |
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `desc:` | Human-readable description (for introspection and JSON Schema export) |
+| `default:` | Default value (passed through to ActiveModel) |
+
+All other options are forwarded to ActiveModel's `attribute`.
 
 ### Available types
 
@@ -33,11 +51,26 @@ Values are type-cast on assignment – `"30"` becomes `30` for an integer attrib
 | `:datetime` | `DateTime` | ISO 8601 strings |
 | `:time` | `Time` | ISO 8601 strings |
 
-### Defaults
+### Auto-presence validation
+
+Required fields (`field`) automatically validate presence. If the user also writes `validates :name, presence: true`, no duplicate error is generated – the auto-presence check detects existing presence validators and skips fields already covered.
+
+For boolean fields, `field :active, :boolean` checks for `nil` rather than `blank?` – so `false` is a valid value.
+
+For contextual requirements, use `field?` with an explicit validator:
 
 ```ruby
-attribute :role, :string, default: "member"
-attribute :tags, :string   # defaults to nil
+field? :published_at, :datetime
+validates :published_at, presence: true, on: :publish
+```
+
+### Raw `attribute` escape hatch
+
+`attribute` remains available for edge cases where you need raw ActiveModel behavior without Dex metadata tracking:
+
+```ruby
+field :name, :string       # tracked, auto-presence, in export
+attribute :temp, :string   # raw ActiveModel, not in field registry
 ```
 
 ## Normalization
@@ -46,8 +79,8 @@ attribute :tags, :string   # defaults to nil
 
 ```ruby
 class Employee::Form < Dex::Form
-  attribute :email, :string
-  attribute :phone, :string
+  field :email, :string
+  field :phone, :string
 
   normalizes :email, with: -> { _1&.strip&.downcase.presence }
   normalizes :phone, with: -> { _1&.gsub(/\D/, "").presence }
@@ -84,17 +117,37 @@ form.bio  # => nil
 `normalizes` requires Rails 7.1+. On older Rails versions, the method won't be available.
 :::
 
+## Ambient context
+
+Forms support the same `context` DSL as Operation and Event – auto-fill fields from `Dex.context`:
+
+```ruby
+class Order::Form < Dex::Form
+  field :locale, :string
+  field :currency, :string
+
+  context :locale
+  context currency: :default_currency
+end
+
+Dex.with_context(locale: "en", default_currency: "USD") do
+  form = Order::Form.new(note: "Rush order")
+  form.locale    # => "en"
+  form.currency  # => "USD"
+end
+```
+
+Explicit values always win over ambient context. Context references must point to declared fields (or attributes).
+
 ## Reading and writing
 
 ```ruby
-form = Employee::Form.new(name: "Alice", age: 30)
+form = Employee::Form.new(name: "Alice", department: "Engineering")
 
 form.name               # => "Alice"
-form.age                # => 30
+form.department         # => "Engineering"
 form.name = "Bob"       # direct setter
-form.assign_attributes(age: 31)  # bulk update
-
-form.attribute_names    # => ["name", "age", "bio", "active", "born_on"]
+form.assign_attributes(department: "Product")  # bulk update
 ```
 
 ## String keys
@@ -102,7 +155,6 @@ form.attribute_names    # => ["name", "age", "bio", "active", "born_on"]
 Forms accept both symbol and string keys – handy when working with ActionController params:
 
 ```ruby
-form = Employee::Form.new("name" => "Alice", "age" => "30")
+form = Employee::Form.new("name" => "Alice", "department" => "Engineering")
 form.name  # => "Alice"
-form.age   # => 30
 ```

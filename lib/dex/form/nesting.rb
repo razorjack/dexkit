@@ -70,6 +70,8 @@ module Dex
 
         def _build_nested_class(name, class_name, &block)
           klass = Class.new(Dex::Form, &block)
+          klass.instance_variable_set(:@_dex_nested_form, true)
+          Dex::Form.deregister(klass)
           const_name = class_name || name.to_s.singularize.camelize
           const_set(const_name, klass)
           klass

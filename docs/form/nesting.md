@@ -182,6 +182,27 @@ form.to_h
 # }
 ```
 
+The class-level export APIs recurse too:
+
+```ruby
+Order::Form.to_h
+# => {
+#   fields: { ... },
+#   nested: {
+#     shipping_address: {
+#       type: :one,
+#       fields: { ... },
+#       nested: { ... }
+#     }
+#   }
+# }
+
+Dex::Form.export(format: :hash)
+# => [{ name: "Order::Form", fields: { ... }, nested: { ... } }]
+```
+
+`Dex::Form.export` includes top-level named forms only. Nested helper classes stay inside the parent form's export.
+
 ## Inheritance
 
 Nested definitions are safely inherited. Adding nested forms to a child class doesn't affect the parent:

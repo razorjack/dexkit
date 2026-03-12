@@ -1,5 +1,16 @@
 ## [Unreleased]
 
+### Added
+
+- **`field` / `field?` DSL for forms** – `field :name, :string` declares a required field with auto-presence validation; unconditional explicit presence validators deduplicate with it, while scoped/conditional validators still layer on top. `field? :notes, :string` declares an optional field (nil by default). Both support `desc:` for metadata and `default:` for defaults. Raw `attribute` remains available as an escape hatch
+- **Form registry and description** – `Dex::Form` now extends `Registry`, giving forms `description`, `Dex::Form.registry`, and `deregister` – the same ecosystem as Operation, Event, and Handler
+- **Form ambient context** – forms support the same `context` DSL as Operation and Event. `context :locale` auto-fills from `Dex.context` during initialization. Uses the same shared `ContextDSL` module with Form-specific injection
+- **Form export** – `Form.to_h` (class-level schema), `Form.to_json_schema`, and `Dex::Form.export(format:)` for bulk export. Nested forms are recursively included in both formats, and bulk export returns top-level named forms without listing nested helper classes separately
+
+### Changed
+
+- **Shared context DSL** – extracted `Dex::ContextDSL` as a shared module used by both `ContextSetup` (Operation/Event) and `Form::Context`. No behavior change for Operation or Event
+
 ## [0.9.0] - 2026-03-09
 
 ### Breaking

@@ -253,25 +253,29 @@ end
 
 ## Forms
 
-Form objects with typed attributes, normalization, nested forms, and Rails form builder compatibility.
+Form objects with typed fields, normalization, nested forms, ambient context, JSON Schema export, and Rails form builder compatibility.
 
 ```ruby
 class Employee::Form < Dex::Form
+  description "Employee onboarding form"
   model Employee
 
-  attribute :first_name, :string
-  attribute :last_name, :string
-  attribute :email, :string
+  field :first_name, :string
+  field :last_name, :string
+  field :email, :string
+  field :locale, :string
+  field? :notes, :string
+
+  context :locale
 
   normalizes :email, with: -> { _1&.strip&.downcase.presence }
 
-  validates :email, presence: true, uniqueness: true
-  validates :first_name, :last_name, presence: true
+  validates :email, uniqueness: true
 
   nested_one :address do
-    attribute :street, :string
-    attribute :city, :string
-    validates :street, :city, presence: true
+    field :street, :string
+    field :city, :string
+    field? :apartment, :string
   end
 end
 
@@ -282,17 +286,20 @@ form.valid?
 
 ### What you get out of the box
 
-**ActiveModel attributes** with type casting, normalization, and full Rails validation DSL.
+**`field` / `field?`** — required and optional fields with auto-presence validation, `desc:` metadata, and defaults. Backed by ActiveModel attributes with type casting and normalization. Unconditional `validates :attr, presence: true` deduplicates with `field`; scoped validations still layer on top.
 
 **Nested forms** — `nested_one` and `nested_many` with automatic Hash coercion, `_destroy` support, and error propagation:
 
 ```ruby
 nested_many :emergency_contacts do
-  attribute :name, :string
-  attribute :phone, :string
-  validates :name, :phone, presence: true
+  field :name, :string
+  field :phone, :string
 end
 ```
+
+**Ambient context** — auto-fill fields from `Dex.context`, same DSL as Operation and Event.
+
+**Registry & Export** — `description`, `to_json_schema`, class-level `to_h`, and `Dex::Form.export` for schema introspection. Nested form schemas recurse in both export formats, and bulk export includes only top-level named forms.
 
 **Rails form compatibility** — works with `form_with`, `fields_for`, and nested attributes out of the box.
 

@@ -10,8 +10,8 @@ Four building blocks, each independent – use one or all:
 
 - **[Dex::Operation](/operation/)** – service objects with typed properties, structured errors, transactions, callbacks, async execution, and more
 - **[Dex::Event](/event/)** – typed immutable event objects with pub/sub, async dispatch, unified tracing, and optional persistence
-- **[Dex::Form](/form/)** – form objects with typed attributes, normalization, validation, nested forms, and Rails form builder compatibility
 - **[Dex::Query](/query/)** – query objects with declarative filters, sorting, type coercion from params, and Rails form binding
+- **[Dex::Form](/form/)** – form objects with typed fields, normalization, validation, nested forms, ambient context, and JSON Schema export
 
 ## A quick taste
 
@@ -96,26 +96,6 @@ Order::Placed.publish(order_id: 1, total: 99.99)
 
 Handlers run via ActiveJob by default. Retries use exponential backoff. Events carry [causality tracing](/event/tracing) and share the unified trace stack with operations – `caused_by:` links events in chains, and handler context sets causality automatically.
 
-### Forms
-
-User-facing input handling with nested forms and Rails integration:
-
-```ruby
-class Order::Form < Dex::Form
-  attribute :note, :string
-
-  nested_many :line_items do
-    attribute :product_id, :integer
-    attribute :quantity, :integer, default: 1
-    validates :product_id, :quantity, presence: true
-  end
-end
-
-form = Order::Form.new(params.require(:order))
-```
-
-Type casting, validation, `_destroy` support, and `form_with` / `fields_for` compatibility – no `accepts_nested_attributes_for` needed.
-
 ### Queries
 
 Declarative filtering and sorting for ActiveRecord (and Mongoid) scopes:
@@ -135,6 +115,26 @@ end
 
 orders = Order::Query.call(status: "pending", sort: "-total")
 ```
+
+### Forms
+
+User-facing input handling with typed fields, nested forms, and Rails integration:
+
+```ruby
+class Order::Form < Dex::Form
+  field :customer_email, :string
+  field? :note, :string
+
+  nested_many :line_items do
+    field :product_id, :integer
+    field :quantity, :integer, default: 1
+  end
+end
+
+form = Order::Form.new(params.require(:order))
+```
+
+`field` declares required fields with auto-presence validation. `field?` declares optional ones. Type casting, `_destroy` support, and `form_with` / `fields_for` compatibility – no `accepts_nested_attributes_for` needed.
 
 ### Testing
 
@@ -168,5 +168,5 @@ dexkit works with both **ActiveRecord** and **Mongoid**. Queries, recording, mod
 - [Installation](/guide/installation) – add the gem and configure your app
 - [Operation Overview](/operation/) – typed service objects
 - [Event Overview](/event/) – domain events and handlers
-- [Form Overview](/form/) – form objects and nested forms
 - [Query Overview](/query/) – declarative filtering and sorting
+- [Form Overview](/form/) – form objects with typed fields

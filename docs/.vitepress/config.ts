@@ -241,9 +241,9 @@ export default defineConfig({
     nav: [
       { text: 'Guide', link: '/guide/introduction' },
       { text: 'Operation', link: '/operation/' },
-      { text: 'Form', link: '/form/' },
       { text: 'Event', link: '/event/' },
-      { text: 'Query', link: '/query/' }
+      { text: 'Query', link: '/query/' },
+      { text: 'Form', link: '/form/' }
     ],
     sidebar: [
       {
@@ -286,18 +286,6 @@ export default defineConfig({
         ]
       },
       {
-        text: 'Form',
-        collapsed: true,
-        items: [
-          { text: 'Overview', link: '/form/' },
-          { text: 'Attributes & Normalization', link: '/form/attributes' },
-          { text: 'Validation', link: '/form/validation' },
-          { text: 'Nested Forms', link: '/form/nesting' },
-          { text: 'Rails Integration', link: '/form/rails' },
-          { text: 'Conventions', link: '/form/conventions' }
-        ]
-      },
-      {
         text: 'Event',
         collapsed: true,
         items: [
@@ -317,6 +305,18 @@ export default defineConfig({
           { text: 'Sorting', link: '/query/sorting' },
           { text: 'Rails Integration', link: '/query/rails' },
           { text: 'Testing', link: '/query/testing' }
+        ]
+      },
+      {
+        text: 'Form',
+        collapsed: true,
+        items: [
+          { text: 'Overview', link: '/form/' },
+          { text: 'Fields & Normalization', link: '/form/attributes' },
+          { text: 'Validation', link: '/form/validation' },
+          { text: 'Nested Forms', link: '/form/nesting' },
+          { text: 'Rails Integration', link: '/form/rails' },
+          { text: 'Conventions', link: '/form/conventions' }
         ]
       },
       {

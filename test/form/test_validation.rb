@@ -90,6 +90,18 @@ class TestFormValidation < Minitest::Test
     assert form.invalid?(:publish)
   end
 
+  def test_required_field_stays_required_with_scoped_presence_validator
+    form_class = build_form do
+      field :name, :string
+      validates :name, presence: true, on: :publish
+    end
+
+    form = form_class.new
+    assert form.invalid?
+    assert_includes form.errors[:name], "can't be blank"
+    assert form.invalid?(:publish)
+  end
+
   def test_custom_validation_method
     form_class = build_form do
       attribute :start_date, :date

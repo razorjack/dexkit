@@ -10,57 +10,79 @@ All examples below build on this form unless noted otherwise:
 
 ```ruby
 class OnboardingForm < Dex::Form
+  description "Employee onboarding"
   model User
 
-  attribute :first_name, :string
-  attribute :last_name, :string
-  attribute :email, :string
-  attribute :department, :string
-  attribute :start_date, :date
+  field :first_name, :string
+  field :last_name, :string
+  field :email, :string
+  field :department, :string
+  field :start_date, :date
+  field :locale, :string
+  field? :notes, :string
+
+  context :locale
 
   normalizes :email, with: -> { _1&.strip&.downcase.presence }
 
-  validates :email, presence: true, uniqueness: true
-  validates :first_name, :last_name, :department, presence: true
-  validates :start_date, presence: true
+  validates :email, uniqueness: true
 
   nested_one :address do
-    attribute :street, :string
-    attribute :city, :string
-    attribute :postal_code, :string
-    attribute :country, :string
-
-    validates :street, :city, :country, presence: true
+    field :street, :string
+    field :city, :string
+    field :postal_code, :string
+    field :country, :string
+    field? :apartment, :string
   end
 
   nested_many :documents do
-    attribute :document_type, :string
-    attribute :document_number, :string
-
-    validates :document_type, :document_number, presence: true
+    field :document_type, :string
+    field :document_number, :string
   end
 end
 ```
 
 ---
 
-## Defining Forms
+## Declaring Fields
 
-Forms use ActiveModel under the hood. Attributes are declared with `attribute` (same as ActiveModel::Attributes).
+### `field` — required
+
+Declares a required field. Auto-adds presence validation. Unconditional `validates :attr, presence: true` deduplicates with it; scoped or conditional presence validators do not make the field optional outside those cases.
 
 ```ruby
-class ProfileForm < Dex::Form
-  attribute :name, :string
-  attribute :age, :integer
-  attribute :bio, :string
-  attribute :active, :boolean, default: true
-  attribute :born_on, :date
-end
+field :name, :string
+field :email, :string, desc: "Work email"
+field :currency, :string, default: "USD"
 ```
+
+### `field?` — optional
+
+Declares an optional field. Defaults to `nil` unless overridden.
+
+```ruby
+field? :notes, :string
+field? :priority, :integer, default: 0
+```
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `desc:` | Human-readable description (for introspection and JSON Schema) |
+| `default:` | Default value (forwarded to ActiveModel) |
 
 ### Available types
 
 `:string`, `:integer`, `:float`, `:decimal`, `:boolean`, `:date`, `:datetime`, `:time`.
+
+### `attribute` escape hatch
+
+Raw ActiveModel `attribute` is still available. Not tracked in field registry, no auto-presence, not in exports.
+
+### Boolean fields
+
+`field :active, :boolean` checks for `nil` (not `blank?`), so `false` is valid.
 
 ### `model(klass)`
 
@@ -93,11 +115,11 @@ normalizes :name, :email, with: -> { _1&.strip.presence }   # multiple attrs
 
 ## Validation
 
-Full ActiveModel validation DSL:
+Full ActiveModel validation DSL. Required fields auto-validate presence — no need to add `validates :name, presence: true` when using `field :name, :string`.
 
 ```ruby
-validates :email, presence: true, format: { with: URI::MailTo::EMAIL_REGEXP }
-validates :name, presence: true, length: { minimum: 2, maximum: 100 }
+validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }
+validates :name, length: { minimum: 2, maximum: 100 }
 validates :role, inclusion: { in: %w[admin user] }
 validates :email, uniqueness: true                    # checks database
 validate :custom_validation_method
@@ -111,6 +133,15 @@ form.errors[:email]      # => ["can't be blank"]
 form.errors.full_messages # => ["Email can't be blank"]
 ```
 
+### Contextual requirements
+
+Use `field?` with an explicit validation context:
+
+```ruby
+field? :published_at, :datetime
+validates :published_at, presence: true, on: :publish
+```
+
 ### ValidationError
 
 ```ruby
@@ -118,6 +149,94 @@ error = Dex::Form::ValidationError.new(form)
 error.message  # => "Validation failed: Email can't be blank, Name can't be blank"
 error.form     # => the form instance
 ```
+
+---
+
+## Ambient Context
+
+Auto-fill fields from `Dex.context` – same DSL as Operation and Event:
+
+```ruby
+class Order::Form < Dex::Form
+  field :locale, :string
+  field :currency, :string
+
+  context :locale                       # shorthand: field name = context key
+  context currency: :default_currency   # explicit: field name → context key
+end
+
+Dex.with_context(locale: "en", default_currency: "USD") do
+  form = Order::Form.new
+  form.locale    # => "en"
+  form.currency  # => "USD"
+end
+```
+
+Explicit values always win. Context references must point to declared fields or attributes.
+
+---
+
+## Registry & Export
+
+### Description
+
+```ruby
+class OnboardingForm < Dex::Form
+  description "Employee onboarding"
+end
+
+OnboardingForm.description  # => "Employee onboarding"
+```
+
+### Registry
+
+```ruby
+Dex::Form.registry  # => #<Set: {OnboardingForm, ...}>
+```
+
+### Class-level `to_h`
+
+```ruby
+OnboardingForm.to_h
+# => {
+#   name: "OnboardingForm",
+#   description: "Employee onboarding",
+#   fields: {
+#     first_name: { type: :string, required: true },
+#     email: { type: :string, required: true },
+#     notes: { type: :string, required: false },
+#     ...
+#   },
+#   nested: {
+#     address: { type: :one, fields: { ... }, nested: { ... } },
+#     documents: { type: :many, fields: { ... } }
+#   }
+# }
+```
+
+### `to_json_schema`
+
+```ruby
+OnboardingForm.to_json_schema
+# => {
+#   "$schema": "https://json-schema.org/draft/2020-12/schema",
+#   type: "object",
+#   title: "OnboardingForm",
+#   description: "Employee onboarding",
+#   properties: { email: { type: "string" }, ... },
+#   required: ["first_name", "last_name", "email", ...],
+#   additionalProperties: false
+# }
+```
+
+### Global export
+
+```ruby
+Dex::Form.export(format: :json_schema)
+# => [{ ... OnboardingForm schema ... }, ...]
+```
+
+Bulk export returns top-level named forms only. Nested helper classes generated by `nested_one` and `nested_many` stay embedded in their parent export instead of appearing as separate entries.
 
 ---
 
@@ -129,9 +248,9 @@ One-to-one nested form. Automatically coerces Hash input.
 
 ```ruby
 nested_one :address do
-  attribute :street, :string
-  attribute :city, :string
-  validates :street, :city, presence: true
+  field :street, :string
+  field :city, :string
+  field? :apartment, :string
 end
 ```
 
@@ -152,9 +271,8 @@ One-to-many nested form. Handles Array, Rails numbered Hash, and `_destroy`.
 
 ```ruby
 nested_many :documents do
-  attribute :document_type, :string
-  attribute :document_number, :string
-  validates :document_type, :document_number, presence: true
+  field :document_type, :string
+  field :document_number, :string
 end
 ```
 
@@ -190,7 +308,7 @@ Override the auto-generated constant name:
 
 ```ruby
 nested_one :address, class_name: "HomeAddress" do
-  attribute :street, :string
+  field :street, :string
 end
 # Creates MyForm::HomeAddress instead of MyForm::Address
 ```
@@ -306,7 +424,7 @@ form.to_hash  # alias for to_h
 
 ### Controller pattern
 
-Strong parameters (`permit`) are not required — the form's attribute declarations are the whitelist. Just `require` the top-level key:
+Strong parameters (`permit`) are not required — the form's field declarations are the whitelist. Just `require` the top-level key:
 
 ```ruby
 class OnboardingController < ApplicationController
@@ -405,33 +523,34 @@ A form spanning User, Employee, and Address — the core reason form objects exi
 
 ```ruby
 class OnboardingForm < Dex::Form
-  attribute :first_name, :string
-  attribute :last_name, :string
-  attribute :email, :string
-  attribute :department, :string
-  attribute :position, :string
-  attribute :start_date, :date
+  description "Employee onboarding"
+
+  field :first_name, :string
+  field :last_name, :string
+  field :email, :string
+  field :department, :string
+  field :position, :string
+  field :start_date, :date
+  field :locale, :string
+  field? :notes, :string
+
+  context :locale
 
   normalizes :email, with: -> { _1&.strip&.downcase.presence }
 
-  validates :email, presence: true, uniqueness: { model: User }
-  validates :first_name, :last_name, :department, :position, presence: true
-  validates :start_date, presence: true
+  validates :email, uniqueness: { model: User }
 
   nested_one :address do
-    attribute :street, :string
-    attribute :city, :string
-    attribute :postal_code, :string
-    attribute :country, :string
-
-    validates :street, :city, :country, presence: true
+    field :street, :string
+    field :city, :string
+    field :postal_code, :string
+    field :country, :string
+    field? :apartment, :string
   end
 
   nested_many :documents do
-    attribute :document_type, :string
-    attribute :document_number, :string
-
-    validates :document_type, :document_number, presence: true
+    field :document_type, :string
+    field :document_number, :string
   end
 
   def self.for(user)
@@ -484,11 +603,21 @@ Forms are standard ActiveModel objects. Test them with plain Minitest — no spe
 
 ```ruby
 class OnboardingFormTest < Minitest::Test
-  def test_validates_required_fields
+  def test_required_fields_validated
     form = OnboardingForm.new
     assert form.invalid?
     assert form.errors[:email].any?
     assert form.errors[:first_name].any?
+  end
+
+  def test_optional_fields_allowed_blank
+    form = OnboardingForm.new(
+      first_name: "Alice", last_name: "Smith",
+      email: "alice@example.com", department: "Eng",
+      position: "Dev", start_date: Date.today, locale: "en"
+    )
+    assert form.valid?
+    assert_nil form.notes
   end
 
   def test_normalizes_email
@@ -496,11 +625,16 @@ class OnboardingFormTest < Minitest::Test
     assert_equal "alice@example.com", form.email
   end
 
+  def test_context_fills_locale
+    form = Dex.with_context(locale: "en") { OnboardingForm.new }
+    assert_equal "en", form.locale
+  end
+
   def test_nested_validation_propagation
     form = OnboardingForm.new(
       first_name: "Alice", last_name: "Smith",
       email: "alice@example.com", department: "Eng",
-      position: "Developer", start_date: Date.today,
+      position: "Developer", start_date: Date.today, locale: "en",
       address: { street: "", city: "", country: "" }
     )
     assert form.invalid?
@@ -515,6 +649,13 @@ class OnboardingFormTest < Minitest::Test
     h = form.to_h
     assert_equal "Alice", h[:first_name]
     assert_equal "123 Main", h[:address][:street]
+  end
+
+  def test_json_schema_export
+    schema = OnboardingForm.to_json_schema
+    assert_equal "object", schema[:type]
+    assert_includes schema[:required], "first_name"
+    refute_includes schema[:required], "notes"
   end
 end
 ```
