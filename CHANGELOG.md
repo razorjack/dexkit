@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Added
+
+- **`Dex::Id.parse`** – parse a Stripe-style ID back into prefix, timestamp, and random components. Returns `Dex::Id::Parsed` (a `Data.define` value object)
+- **`Dex::Id.generate` now validates prefix format** – prefix must match `/\A[a-z][a-z0-9_]*_\z/` (lowercase alphanumeric with internal underscores, ending in underscore). Internal prefixes (`op_`, `ev_`, `tr_`, `hd_`) already comply
+- **`Dex::Id.generate` accepts `random:` width option** – controls the number of random suffix characters (default 12, minimum 8). `Dex::Id.generate("ord_", random: 16)` produces a longer ID with more collision resistance
+
 ## [0.10.0] - 2026-03-09
 
 ### Added

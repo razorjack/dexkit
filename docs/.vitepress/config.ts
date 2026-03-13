@@ -13,7 +13,8 @@ const SECTION_TITLES: Record<string, string> = {
   form: 'Dex::Form',
   event: 'Dex::Event',
   query: 'Dex::Query',
-  tooling: 'Tooling'
+  tooling: 'Tooling',
+  utilities: 'Utilities'
 }
 
 const SECTION_ENTRY_PATHS: Record<string, string> = {
@@ -22,7 +23,8 @@ const SECTION_ENTRY_PATHS: Record<string, string> = {
   form: '/form/',
   event: '/event/',
   query: '/query/',
-  tooling: '/tooling/registry.html'
+  tooling: '/tooling/registry.html',
+  utilities: '/utilities/prefixed-ids.html'
 }
 
 function sectionFor(relativePath: string): string | null {
@@ -326,6 +328,13 @@ export default defineConfig({
         items: [
           { text: 'Registry & Export', link: '/tooling/registry' },
           { text: 'LLM Guides', link: '/tooling/llm-guides' }
+        ]
+      },
+      {
+        text: 'Utilities',
+        collapsed: true,
+        items: [
+          { text: 'Stripe-Style IDs', link: '/utilities/prefixed-ids' }
         ]
       }
     ],
