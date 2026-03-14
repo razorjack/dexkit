@@ -166,30 +166,6 @@ module Dex
           "Expected no operations to be enqueued, but #{after_count - before_count} were"
       end
 
-      # --- Trace assertions ---
-
-      def assert_trace_includes(operation_class, msg: nil)
-        expected = operation_class.is_a?(Class) ? operation_class.name : operation_class.to_s
-        trace_classes = Dex::Trace.current.map { |frame| frame[:class] }.compact
-
-        assert_includes trace_classes, expected,
-          msg || "Expected trace to include #{expected.inspect}, got #{trace_classes.inspect}"
-      end
-
-      def assert_trace_actor(type:, id: :_not_given, msg: nil)
-        actor = Dex::Trace.actor
-        refute_nil actor, msg || "Expected a trace actor, but no actor is set"
-        assert_equal type.to_s, actor[:actor_type], msg || "Trace actor type mismatch"
-        assert_equal id.to_s, actor[:id], msg || "Trace actor id mismatch" unless id == :_not_given
-        actor
-      end
-
-      def assert_trace_depth(expected, msg: nil)
-        actual = Dex::Trace.current.size
-        assert_equal expected, actual,
-          msg || "Expected trace depth #{expected}, got #{actual}.\nTrace: #{Dex::Trace.current.inspect}"
-      end
-
       # --- Transaction assertions ---
 
       def assert_rolls_back(model_class, &block)

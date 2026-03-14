@@ -6,6 +6,7 @@
 - **`assert_all_succeed` / `assert_all_fail` removed from test helpers** — use a simple loop with `assert_ok` / `assert_err` instead
 - **`dex/event_test_helpers` shim removed** — use `require "dex/event/test_helpers"` directly
 - **`assert_operation` / `assert_operation_error` removed from test helpers** — use `call_operation` + `assert_ok` / `assert_err` instead, which are more composable
+- **`assert_trace_includes` / `assert_trace_actor` / `assert_trace_depth` removed from test helpers** — use `Dex::Trace.current`, `Dex::Trace.actor` directly with standard Minitest assertions
 
 ### Added
 
