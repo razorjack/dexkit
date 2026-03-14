@@ -32,7 +32,8 @@ form.invalid?  # => true
 
 form.errors[:email]         # => ["can't be blank", "is invalid"]
 form.errors[:name]          # => ["is too short (minimum is 2 characters)"]
-form.errors.full_messages   # => ["Email can't be blank", "Email is invalid", ...]
+form.errors.full_messages
+# => ["Email can't be blank", "Email is invalid", ...]
 ```
 
 ## Custom validators

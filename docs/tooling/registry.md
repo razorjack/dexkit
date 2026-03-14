@@ -101,16 +101,34 @@ Order::Place.contract.to_h
 #   name: "Order::Place",
 #   description: "Place a new order for a customer",
 #   params: {
-#     customer: { type: "Ref(Customer)", required: true, desc: "The customer placing the order" },
-#     product:  { type: "Ref(Product)", required: true, desc: "Product to order" },
-#     quantity: { type: "Integer(1..)", required: true, desc: "Number of units (minimum 1)" },
-#     note:     { type: "Nilable(String)", required: false, desc: "Optional note for the warehouse" }
+#     customer: {
+#       type: "Ref(Customer)", required: true,
+#       desc: "The customer placing the order"
+#     },
+#     product: {
+#       type: "Ref(Product)", required: true,
+#       desc: "Product to order"
+#     },
+#     quantity: {
+#       type: "Integer(1..)", required: true,
+#       desc: "Number of units (minimum 1)"
+#     },
+#     note: {
+#       type: "Nilable(String)", required: false,
+#       desc: "Optional note for the warehouse"
+#     }
 #   },
 #   success: "Ref(Order)",
 #   errors: [:out_of_stock],
-#   guards: [{ name: :product_available, message: "Product must be in stock" }],
+#   guards: [
+#     { name: :product_available,
+#       message: "Product must be in stock" }
+#   ],
 #   context: { customer: :current_customer },
-#   pipeline: [:trace, :result, :guard, :once, :lock, :record, :transaction, :rescue, :callback],
+#   pipeline: [
+#     :trace, :result, :guard, :once, :lock,
+#     :record, :transaction, :rescue, :callback
+#   ],
 #   settings: {
 #     record: { enabled: true, params: true, result: true },
 #     transaction: { enabled: true },
@@ -131,10 +149,20 @@ Order::Place.contract.to_json_schema(section: :params)
 #   title: "Order::Place",
 #   description: "Place a new order for a customer",
 #   properties: {
-#     "customer" => { type: "string", description: "Customer ID" },
-#     "product"  => { type: "string", description: "Product ID" },
-#     "quantity" => { type: "integer", minimum: 1, description: "Number of units (minimum 1)" },
-#     "note"     => { oneOf: [{ type: "string" }, { type: "null" }], description: "Optional note..." }
+#     "customer" => {
+#       type: "string", description: "Customer ID"
+#     },
+#     "product" => {
+#       type: "string", description: "Product ID"
+#     },
+#     "quantity" => {
+#       type: "integer", minimum: 1,
+#       description: "Number of units (minimum 1)"
+#     },
+#     "note" => {
+#       oneOf: [{ type: "string" }, { type: "null" }],
+#       description: "Optional note..."
+#     }
 #   },
 #   required: ["customer", "product", "quantity"],
 #   additionalProperties: false

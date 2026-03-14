@@ -81,11 +81,16 @@ end
 Check whether guards pass without actually running the operation:
 
 ```ruby
-Order::Place.callable?(customer: customer, product: product, quantity: 2)
+Order::Place.callable?(
+  customer: customer, product: product, quantity: 2
+)
 # => true or false
 
 # Check a specific guard
-Order::Place.callable?(:out_of_stock, product: product, customer: customer, quantity: 2)
+Order::Place.callable?(
+  :out_of_stock,
+  product: product, customer: customer, quantity: 2
+)
 # => true (this guard passes) or false (this guard fires)
 ```
 
@@ -94,15 +99,20 @@ Order::Place.callable?(:out_of_stock, product: product, customer: customer, quan
 Returns an `Ok` or `Err` with all failure details:
 
 ```ruby
-result = Order::Place.callable(customer: customer, product: product, quantity: 2)
+result = Order::Place.callable(
+  customer: customer, product: product, quantity: 2
+)
 
 result.ok?      # => false
 result.code     # => :out_of_stock (first failure)
 result.message  # => "Product must be in stock"
-result.details  # => [
-                #   { guard: :out_of_stock, message: "Product must be in stock" },
-                #   { guard: :credit_exceeded, message: "Customer has exceeded credit limit" }
-                # ]
+result.details
+# => [
+#   { guard: :out_of_stock,
+#     message: "Product must be in stock" },
+#   { guard: :credit_exceeded,
+#     message: "Customer has exceeded credit limit" }
+# ]
 ```
 
 `callable` bypasses the pipeline entirely – no locks, no transactions, no recording, no callbacks. It's cheap and side-effect-free.
@@ -148,13 +158,24 @@ For a richer report that includes guards plus context, idempotency, lock keys, a
 
 ```ruby
 def create
-  check = Order::Place.callable(customer: @customer, product: @product, quantity: params[:quantity])
+  check = Order::Place.callable(
+    customer: @customer,
+    product: @product,
+    quantity: params[:quantity]
+  )
 
   unless check.ok?
-    return render json: { error: check.code, message: check.message }, status: :unprocessable_entity
+    return render(
+      json: { error: check.code, message: check.message },
+      status: :unprocessable_entity
+    )
   end
 
-  result = Order::Place.call(customer: @customer, product: @product, quantity: params[:quantity])
+  result = Order::Place.call(
+    customer: @customer,
+    product: @product,
+    quantity: params[:quantity]
+  )
   render json: result
 end
 ```
@@ -203,10 +224,15 @@ Guard codes appear in both `contract.errors` and `contract.guards`:
 contract = Order::Place.contract
 
 contract.errors  # => [:out_of_stock, :credit_exceeded]
-contract.guards  # => [
-                 #   { name: :out_of_stock, message: "Product must be in stock", requires: [] },
-                 #   { name: :credit_exceeded, message: "...", requires: [] }
-                 # ]
+contract.guards
+# => [
+#   { name: :out_of_stock,
+#     message: "Product must be in stock",
+#     requires: [] },
+#   { name: :credit_exceeded,
+#     message: "...",
+#     requires: [] }
+# ]
 ```
 
 ## Inheritance

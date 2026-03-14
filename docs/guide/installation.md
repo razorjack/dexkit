@@ -53,18 +53,18 @@ The migration below includes columns for all recording features. Only omit colum
 ```ruby
 create_table :operation_records, id: :string do |t|
   # --- Recording (core) ---
-  t.string :name, null: false        # operation class name
-  t.string :trace_id                 # shared trace / correlation ID
-  t.string :actor_type               # root actor type
-  t.string :actor_id                 # root actor ID
-  t.jsonb :trace                     # full trace snapshot
-  t.jsonb :params                     # serialized props
-  t.jsonb :result                     # serialized return value
-  t.string :status, null: false       # pending/running/completed/error/failed
-  t.string :error_code                # Dex::Error code or exception class
-  t.string :error_message             # human-readable message
-  t.jsonb :error_details              # structured details hash
-  t.datetime :performed_at            # execution completion timestamp
+  t.string :name, null: false     # operation class name
+  t.string :trace_id              # shared trace / correlation ID
+  t.string :actor_type            # root actor type
+  t.string :actor_id              # root actor ID
+  t.jsonb :trace                  # full trace snapshot
+  t.jsonb :params                 # serialized props
+  t.jsonb :result                 # serialized return value
+  t.string :status, null: false   # completed/error/failed/pending/running
+  t.string :error_code            # Dex::Error code or exception class
+  t.string :error_message         # human-readable message
+  t.jsonb :error_details          # structured details hash
+  t.datetime :performed_at        # execution completion timestamp
 
   # --- Idempotency (once) ---
   # Uncomment if you use the `once` DSL for idempotent operations.
@@ -166,7 +166,8 @@ In Rails with Zeitwerk, add an initializer:
 # config/initializers/events.rb
 Rails.application.config.to_prepare do
   Dex::Event::Bus.clear!
-  Dir.glob(Rails.root.join("app/event_handlers/**/*.rb")).each { |e| require(e) }
+  handlers = Rails.root.join("app/event_handlers/**/*.rb")
+  Dir.glob(handlers).each { |e| require(e) }
 end
 ```
 

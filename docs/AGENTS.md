@@ -63,6 +63,10 @@
 
 ### Code Examples
 
+- **78-character max width** – the VitePress layout allows 78 characters per line in code snippets before a horizontal scrollbar appears. Wrap lines that exceed 78 characters. Exceptions where longer lines are preferred: single-expression blocks (`after_commit { ... }`), trailing-`if` one-liners (`error!(...) if condition`), output comments (`# => { ... }`), pipeline diagrams, ERB conditionals, and assertion calls. If breaking a line makes idiomatic Ruby look awkward, keep it on one line.
+- **Use `Ok` / `Err`, not `Dex::Ok` / `Dex::Err`** – on each page that uses pattern matching outside of an operation class body, mention `include Dex::Match` before the first code example, then use plain `Ok` / `Err` throughout. Shorter and more readable.
+- **Use `it` not `_1`** – code samples target modern Ruby. Prefer `it` (Ruby 3.4+) over `_1` in single-argument lambdas and blocks. Example: `-> { it&.strip&.downcase.presence }` not `-> { _1&.strip&.downcase.presence }`.
+- **Align inline comments** – when several consecutive lines have trailing `#` comments, align all `#` signs to the same column.
 - Examples should be realistic – use the established example domains (see below), not `Foo`/`Bar`
 - Show the calling code, not just the class definition
 - Keep examples short. If an example needs more than ~15 lines, it's probably demonstrating too many things at once

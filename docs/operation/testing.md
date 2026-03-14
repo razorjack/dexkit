@@ -145,7 +145,8 @@ Replace an operation entirely within a block:
 ```ruby
 stub_operation(Order::SendConfirmation, returns: true) do
   result = call_operation!(name: "Alice")
-  # Order::SendConfirmation.call inside Employee::Onboard returns true without executing perform
+  # Stubs Order::SendConfirmation.call to return true
+  # without executing perform
 end
 
 stub_operation(Order::Charge, error: :timeout) do
@@ -215,12 +216,12 @@ end
 All operation calls are recorded to `Dex::TestLog` during tests. The log is cleared automatically between tests.
 
 ```ruby
-Dex::TestLog.calls                     # => [Entry, ...]
-Dex::TestLog.size                      # => Integer
-Dex::TestLog.empty?                    # => true/false
-Dex::TestLog.find(Employee::Onboard)          # => entries for Employee::Onboard
-Dex::TestLog.find(Employee::Onboard, name: "Alice")  # filter by params
-Dex::TestLog.summary                   # human-readable summary
+Dex::TestLog.calls                                    # => [Entry, ...]
+Dex::TestLog.size                                     # => Integer
+Dex::TestLog.empty?                                   # => true/false
+Dex::TestLog.find(Employee::Onboard)                  # => entries
+Dex::TestLog.find(Employee::Onboard, name: "Alice")   # filter by params
+Dex::TestLog.summary                                  # human-readable
 ```
 
 Each entry is a `Data.define` with:

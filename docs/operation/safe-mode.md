@@ -21,7 +21,7 @@ in Err(code:, message:)
 end
 ```
 
-`Ok` and `Err` are available without prefix inside operations and forms. In other contexts (controllers, POROs), use `Dex::Ok`/`Dex::Err` or `include Dex::Match`.
+`Ok` and `Err` are available without prefix inside operations and forms. In other contexts (controllers, POROs), `include Dex::Match` to get the short names.
 
 Two deconstruct forms are supported:
 
@@ -30,9 +30,9 @@ Two deconstruct forms are supported:
 
 ```ruby
 case result
-in Dex::Ok(order_id:, total:)   # hash – destructure into the value
+in Ok(order_id:, total:)   # hash – destructure into the value
   redirect_to order_path(order_id)
-in Dex::Ok[value]               # array – grab the whole thing
+in Ok[value]               # array – grab the whole thing
   render json: value
 end
 ```
@@ -78,17 +78,26 @@ result.details  # => nil or Hash
 
 ## In controllers
 
-```ruby
-def create
-  result = Order::Place.new(customer: current_user.id, product: params[:product_id],
-                            quantity: params[:quantity]).safe.call
+`include Dex::Match` in your controller (or `ApplicationController`) to use `Ok` / `Err` without prefix:
 
-  case result
-  in Dex::Ok
-    redirect_to order_path(result.id)
-  in Dex::Err(code: :out_of_stock)
-    flash[:error] = result.message
-    render :new
+```ruby
+class OrdersController < ApplicationController
+  include Dex::Match
+
+  def create
+    op = Order::Place.new(
+      customer: current_user.id,
+      product: params[:product_id],
+      quantity: params[:quantity]
+    )
+
+    case op.safe.call
+    in Ok
+      redirect_to order_path(result.id)
+    in Err(code: :out_of_stock)
+      flash[:error] = result.message
+      render :new
+    end
   end
 end
 ```
@@ -96,7 +105,12 @@ end
 ## Composing operations
 
 ```ruby
-order_result = Order::Place.new(customer: customer_id, product: product_id, quantity: 1).safe.call
+op = Order::Place.new(
+  customer: customer_id,
+  product: product_id,
+  quantity: 1
+)
+order_result = op.safe.call
 return if order_result.error?
 
 Order::SendConfirmation.call(order_id: order_result.value.id)

@@ -116,7 +116,10 @@ Export individual queries or bulk-export the entire registry:
 
 ```ruby
 Employee::Query.to_h
-# => { name: "Employee::Query", description: "...", props: {...}, filters: [...], sorts: [...], context: {...} }
+# => { name: "Employee::Query",
+#      description: "...", props: {...},
+#      filters: [...], sorts: [...],
+#      context: {...} }
 
 Employee::Query.to_json_schema
 # => JSON Schema (Draft 2020-12) with properties, required, additionalProperties

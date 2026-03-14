@@ -13,8 +13,14 @@ Queries need a database-backed scope. In tests, an in-memory SQLite database wor
 ```ruby
 class EmployeeQueryTest < Minitest::Test
   def setup
-    Employee.create!(name: "Alice", role: "admin", salary: 90_000, status: "active")
-    Employee.create!(name: "Bob", role: "user", salary: 75_000, status: "inactive")
+    Employee.create!(
+      name: "Alice", role: "admin",
+      salary: 90_000, status: "active"
+    )
+    Employee.create!(
+      name: "Bob", role: "user",
+      salary: 75_000, status: "inactive"
+    )
   end
 end
 ```

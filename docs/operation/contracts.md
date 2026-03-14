@@ -101,7 +101,12 @@ errors   # => [:email_taken, :invalid_email]
 guards   # => []
 
 Employee::Onboard.contract.to_h
-# => { params: { email: String }, success: nil, errors: [:email_taken, :invalid_email], guards: [] }
+# => {
+#   params: { email: String },
+#   success: nil,
+#   errors: [:email_taken, :invalid_email],
+#   guards: []
+# }
 ```
 
 ## Inheritance

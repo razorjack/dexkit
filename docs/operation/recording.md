@@ -17,18 +17,18 @@ Create a model and table:
 ```ruby
 # migration
 create_table :operation_records, id: :string do |t|
-  t.string :name, null: false        # operation class name
-  t.string :trace_id                 # shared trace / correlation ID
-  t.string :actor_type               # root actor type
-  t.string :actor_id                 # root actor ID
-  t.jsonb :trace                     # full trace snapshot
-  t.jsonb :params                     # serialized props (nil = not captured)
-  t.jsonb :result                     # serialized return value
-  t.string :status, null: false       # pending/running/completed/error/failed
-  t.string :error_code                # Dex::Error code or exception class
-  t.string :error_message             # human-readable message
-  t.jsonb :error_details              # structured details hash
-  t.datetime :performed_at            # execution completion timestamp
+  t.string :name, null: false     # operation class name
+  t.string :trace_id              # shared trace / correlation ID
+  t.string :actor_type            # root actor type
+  t.string :actor_id              # root actor ID
+  t.jsonb :trace                  # full trace snapshot
+  t.jsonb :params                 # serialized props (nil = not captured)
+  t.jsonb :result                 # serialized return value
+  t.string :status, null: false   # completed/error/failed/pending/running
+  t.string :error_code            # Dex::Error code or exception class
+  t.string :error_message         # human-readable message
+  t.jsonb :error_details          # structured details hash
+  t.datetime :performed_at        # execution completion timestamp
   t.timestamps
 end
 

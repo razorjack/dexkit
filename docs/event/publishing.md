@@ -9,8 +9,8 @@ description: Dex::Event publishing — dispatch events synchronously or asynchro
 The most common way to publish:
 
 ```ruby
-Order::Placed.publish(order_id: 1, total: 99.99)              # async (default)
-Order::Placed.publish(order_id: 1, total: 99.99, sync: true)   # sync
+Order::Placed.publish(order_id: 1, total: 99.99)             # async (default)
+Order::Placed.publish(order_id: 1, total: 99.99, sync: true) # sync
 ```
 
 ## Instance-level publish

@@ -82,8 +82,13 @@ class ProcessOrderPayment < Dex::Event::Handler
 
   private
 
-  def log_start = Rails.logger.info("Processing payment for order #{event.order_id}")
-  def log_end = Rails.logger.info("Payment processed for order #{event.order_id}")
+  def log_start
+    Rails.logger.info("Payment processing: #{event.order_id}")
+  end
+
+  def log_end
+    Rails.logger.info("Payment processed: #{event.order_id}")
+  end
 end
 ```
 
@@ -144,7 +149,8 @@ Handlers must be loaded for `on` to register subscriptions. In Rails with Zeitwe
 # config/initializers/events.rb
 Rails.application.config.to_prepare do
   Dex::Event::Bus.clear!
-  Dir.glob(Rails.root.join("app/event_handlers/**/*.rb")).each { |e| require(e) }
+  handlers = Rails.root.join("app/event_handlers/**/*.rb")
+  Dir.glob(handlers).each { |e| require(e) }
 end
 ```
 

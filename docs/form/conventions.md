@@ -42,7 +42,7 @@ class Employee::OnboardingForm < Dex::Form
   attribute :position, :string
   attribute :start_date, :date
 
-  normalizes :email, with: -> { _1&.strip&.downcase.presence }
+  normalizes :email, with: -> { it&.strip&.downcase.presence }
 
   validates :email, presence: true, uniqueness: { model: Employee }
   validates :first_name, :last_name, :department, :position, presence: true
@@ -132,7 +132,11 @@ class Employee::Onboard < Dex::Operation
     emp.update!(first_name:, last_name:, email:)
 
     dept = Department.find_or_create_by!(name: department)
-    emp.update!(department: dept, position: Position.find_by!(title: position), start_date:)
+    emp.update!(
+      department: dept,
+      position: Position.find_by!(title: position),
+      start_date:
+    )
 
     sync_emergency_contacts(emp)
 
@@ -179,7 +183,8 @@ class EmployeesController < ApplicationController
   end
 
   def update
-    @form = Employee::OnboardingForm.new(params.require(:employee)).with_record(@employee)
+    @form = Employee::OnboardingForm.new(params.require(:employee))
+      .with_record(@employee)
 
     if @form.save
       redirect_to dashboard_path

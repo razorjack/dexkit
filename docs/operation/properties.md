@@ -19,7 +19,10 @@ class Order::SendConfirmation < Dex::Operation
   end
 end
 
-Order::SendConfirmation.call(to: "alice@example.com", subject: "Hi", body: "Hello!")
+Order::SendConfirmation.call(
+  to: "alice@example.com", subject: "Hi",
+  body: "Hello!"
+)
 ```
 
 Missing or wrongly-typed properties raise `Literal::TypeError` immediately – you never enter `perform` with bad inputs.

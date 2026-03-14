@@ -28,7 +28,9 @@ Every operation has a `perform` method that contains the business logic. Propert
 employee = Employee::Onboard.call(name: "Alice", email: "alice@example.com")
 
 # Two-step form (needed for .safe and .async)
-employee = Employee::Onboard.new(name: "Alice", email: "alice@example.com").call
+employee = Employee::Onboard
+  .new(name: "Alice", email: "alice@example.com")
+  .call
 ```
 
 Both forms do the same thing: instantiate with properties, then execute the pipeline. The two-step form is required when chaining modifiers like `.safe.call` or `.async.call`.

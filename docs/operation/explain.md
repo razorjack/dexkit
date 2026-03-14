@@ -17,11 +17,17 @@ Returns a frozen Hash. The operation is instantiated (context resolved, types va
 ## Return shape
 
 ```ruby
-Order::Place.explain(product: product, customer: customer, quantity: 2)
+Order::Place.explain(
+  product: product, customer: customer, quantity: 2
+)
 # => {
 #   operation: "Order::Place",
 #
-#   props: { product: #<Product id=7>, customer: #<Customer id=1>, quantity: 2 },
+#   props: {
+#     product: #<Product id=7>,
+#     customer: #<Customer id=1>,
+#     quantity: 2
+#   },
 #
 #   context: {
 #     resolved: { customer: #<Customer id=1> },
@@ -50,7 +56,9 @@ Order::Place.explain(product: product, customer: customer, quantity: 2)
 #     timeout: nil
 #   },
 #
-#   record: { enabled: true, params: true, result: true },
+#   record: {
+#     enabled: true, params: true, result: true
+#   },
 #
 #   transaction: { enabled: true },
 #
@@ -61,7 +69,10 @@ Order::Place.explain(product: product, customer: customer, quantity: 2)
 #
 #   callbacks: { before: 1, after: 2, around: 0 },
 #
-#   pipeline: [:trace, :result, :guard, :once, :lock, :record, :transaction, :rescue, :callback],
+#   pipeline: [
+#     :trace, :result, :guard, :once, :lock,
+#     :record, :transaction, :rescue, :callback
+#   ],
 #
 #   callable: true
 # }
@@ -192,8 +203,10 @@ The explain system calls `_name_explain(instance, info)` for each pipeline step 
 ```ruby
 info = Order::Place.explain(product: product, quantity: 2)
 info[:once]
-# => { active: true, key: "Order::Place/product_id=7/quantity=2", status: :exists, ... }
-# Aha – there's an existing record with this key. That's why it's replaying.
+# => { active: true,
+#      key: "Order::Place/product_id=7/quantity=2",
+#      status: :exists, ... }
+# Aha – there's an existing record with this key.
 ```
 
 ### Admin tooling
@@ -212,10 +225,13 @@ end
 ### LLM agent preflight
 
 ```ruby
-info = Order::Place.explain(product: product, customer: customer, quantity: requested)
+info = Order::Place.explain(
+  product: product, customer: customer, quantity: requested
+)
 
 unless info[:callable]
-  blockers = info[:guards][:results].reject { |g| g[:passed] }.map { |g| g[:name] }
+  failed = info[:guards][:results].reject { |g| g[:passed] }
+  blockers = failed.map { |g| g[:name] }
   agent.report_infeasible(blockers)
 end
 ```

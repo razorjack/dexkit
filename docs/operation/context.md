@@ -17,7 +17,10 @@ class ApplicationController < ActionController::Base
   private
 
   def set_dex_context(&block)
-    Dex.with_context(current_customer: current_customer, locale: I18n.locale, &block)
+    Dex.with_context(
+      current_customer: current_customer,
+      locale: I18n.locale, &block
+    )
   end
 end
 ```

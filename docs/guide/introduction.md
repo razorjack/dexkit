@@ -32,7 +32,10 @@ class Order::Place < Dex::Operation
   def perform
     error!(:out_of_stock) unless product.in_stock?
 
-    order = Order.create!(customer: customer, product: product, quantity: quantity, note: note)
+    order = Order.create!(
+      customer: customer, product: product,
+      quantity: quantity, note: note
+    )
 
     after_commit { Order::Placed.publish(order_id: order.id, total: order.total) }
 
@@ -145,7 +148,10 @@ class PlaceOrderTest < Minitest::Test
   testing Order::Place
 
   def test_places_order
-    result = call_operation(customer: customer.id, product: product.id, quantity: 2)
+    result = call_operation(
+      customer: customer.id, product: product.id,
+      quantity: 2
+    )
     assert_ok result
   end
 

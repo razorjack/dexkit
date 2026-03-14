@@ -86,16 +86,26 @@ Events support `to_h` and `to_json_schema` at the class level:
 Order::Placed.to_h
 # => {
 #   name: "Order::Placed",
-#   description: "Fired when an order is successfully placed",
+#   description: "Fired when an order is ...",
 #   props: {
-#     order_id: { type: "Integer", required: true, desc: "The placed order's ID" },
-#     total:    { type: "BigDecimal", required: true, desc: "Order total in base currency" },
-#     coupon_code: { type: "Nilable(String)", required: false, desc: "Applied coupon code, if any" }
+#     order_id: {
+#       type: "Integer", required: true,
+#       desc: "The placed order's ID"
+#     },
+#     total: {
+#       type: "BigDecimal", required: true,
+#       desc: "Order total in base currency"
+#     },
+#     coupon_code: {
+#       type: "Nilable(String)", required: false,
+#       desc: "Applied coupon code, if any"
+#     }
 #   }
 # }
 
 Order::Placed.to_json_schema
-# => { "$schema": "https://json-schema.org/draft/2020-12/schema", type: "object", title: "Order::Placed", ... }
+# => { "$schema": "...", type: "object",
+#      title: "Order::Placed", ... }
 ```
 
 Bulk export across all registered events:
@@ -109,7 +119,10 @@ Handlers also support `to_h` and bulk export:
 
 ```ruby
 NotifyWarehouse.to_h
-# => { name: "NotifyWarehouse", events: ["Order::Placed"], retries: 3, transaction: false, pipeline: [...] }
+# => { name: "NotifyWarehouse",
+#      events: ["Order::Placed"],
+#      retries: 3, transaction: false,
+#      pipeline: [...] }
 
 Dex::Event::Handler.export(format: :hash)
 ```
@@ -126,7 +139,8 @@ Handlers must be loaded so `on` can register subscriptions. With Zeitwerk, add a
 # config/initializers/events.rb
 Rails.application.config.to_prepare do
   Dex::Event::Bus.clear!
-  Dir.glob(Rails.root.join("app/event_handlers/**/*.rb")).each { |e| require(e) }
+  handlers = Rails.root.join("app/event_handlers/**/*.rb")
+  Dir.glob(handlers).each { |e| require(e) }
 end
 ```
 

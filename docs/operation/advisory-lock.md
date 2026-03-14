@@ -59,9 +59,11 @@ end
 On timeout, a `Dex::Error` with code `:lock_timeout` is raised. This integrates naturally with `.safe`:
 
 ```ruby
+include Dex::Match
+
 result = Product::Import.new.safe.call
 case result
-in Dex::Err(code: :lock_timeout)
+in Err(code: :lock_timeout)
   puts "Import already in progress"
 end
 ```

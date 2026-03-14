@@ -42,10 +42,10 @@ Outside `capture_events`, events dispatch synchronously (test safety).
 ### Published events
 
 ```ruby
-assert_event_published(Order::Placed)                    # at least one
-assert_event_published(Order::Placed, order_id: 1)       # with matching props
-refute_event_published                                  # nothing published at all
-refute_event_published(Order::Cancelled)                  # specific class not published
+assert_event_published(Order::Placed)              # at least one
+assert_event_published(Order::Placed, order_id: 1) # with matching props
+refute_event_published                              # nothing at all
+refute_event_published(Order::Cancelled)            # specific class
 ```
 
 ### Count

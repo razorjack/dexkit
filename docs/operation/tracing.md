@@ -78,7 +78,9 @@ class Order::Place < Dex::Operation
     Dex::Trace.trace_id     # => "tr_..." or external ID
     Dex::Trace.current_id   # => "op_..." (this operation's ID)
     Dex::Trace.current      # => [actor_frame, parent_op_frame, this_op_frame]
-    Dex::Trace.to_s         # => "user:123 > Order::Validate(op_2nFg7K) > Order::Place(op_3kPm8N)"
+    Dex::Trace.to_s
+    # => "user:123 > Order::Validate(op_2nFg7K)
+    #     > Order::Place(op_3kPm8N)"
 
     Dex.actor               # => { type: "user", id: "123" } or nil
   end
@@ -122,10 +124,10 @@ When recording is enabled, trace data is automatically included in operation rec
 # In your migration
 create_table :operation_records, id: :string do |t|
   # ... other columns ...
-  t.string :trace_id, limit: 40                              # tr_... or external
+  t.string :trace_id, limit: 40   # tr_... or external
   t.string :actor_type, limit: 50
   t.string :actor_id, limit: 100
-  t.jsonb :trace                                             # full trace array
+  t.jsonb :trace                  # full trace array
 end
 
 add_index :operation_records, :trace_id
@@ -165,7 +167,8 @@ class Order::Place < Dex::Operation
 end
 
 # When the job runs (possibly minutes later, different process):
-# Order::SendConfirmation's trace includes the original actor and Order::Place frame.
+# Order::SendConfirmation's trace includes the
+# original actor and Order::Place frame.
 # Same trace_id, same actor.
 ```
 
@@ -179,14 +182,22 @@ Who is the actor – the admin or the impersonated user? It depends on what your
 
 ```ruby
 # "Which admin actions should we review?" – admin is actor
-Dex::Trace.start(actor: { type: :admin, id: admin.id, on_behalf_of: customer.id }) do
+actor = {
+  type: :admin, id: admin.id,
+  on_behalf_of: customer.id
+}
+Dex::Trace.start(actor: actor) do
   Dex.with_context(current_customer: customer) do
     Order::Place.call(product: product, customer: customer, quantity: 1)
   end
 end
 
 # "What happened on my account?" – user is actor
-Dex::Trace.start(actor: { type: :user, id: customer.id, impersonated_by: admin.id }) do
+actor = {
+  type: :user, id: customer.id,
+  impersonated_by: admin.id
+}
+Dex::Trace.start(actor: actor) do
   Order::Place.call(product: product, customer: customer, quantity: 1)
 end
 ```

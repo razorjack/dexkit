@@ -106,7 +106,7 @@ Query tools let LLMs search and filter your data using the same `Dex::Query` cla
 ```ruby
 tool = Dex::Tool.from(Order::Query,
   scope: -> { Current.user.orders },
-  serialize: ->(record) { record.as_json(only: %i[id status total created_at]) })
+  serialize: ->(r) { r.as_json(only: %i[id status total created_at]) })
 ```
 
 Both `scope:` and `serialize:` are required. The query class must also have a `scope { ... }` block defined.

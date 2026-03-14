@@ -82,11 +82,14 @@ class Employee::Form < Dex::Form
   field :email, :string
   field :phone, :string
 
-  normalizes :email, with: -> { _1&.strip&.downcase.presence }
-  normalizes :phone, with: -> { _1&.gsub(/\D/, "").presence }
+  normalizes :email, with: -> { it&.strip&.downcase.presence }
+  normalizes :phone, with: -> { it&.gsub(/\D/, "").presence }
 end
 
-form = Employee::Form.new(email: "  ALICE@EXAMPLE.COM  ", phone: "(555) 123-4567")
+form = Employee::Form.new(
+  email: "  ALICE@EXAMPLE.COM  ",
+  phone: "(555) 123-4567"
+)
 form.email  # => "alice@example.com"
 form.phone  # => "5551234567"
 
@@ -99,7 +102,7 @@ form.email  # => "bob@test.com"
 Apply the same normalizer to several attributes at once:
 
 ```ruby
-normalizes :first_name, :last_name, with: -> { _1&.strip.presence }
+normalizes :first_name, :last_name, with: -> { it&.strip.presence }
 ```
 
 ### Nil handling
@@ -107,7 +110,7 @@ normalizes :first_name, :last_name, with: -> { _1&.strip.presence }
 If your normalizer returns `nil`, the attribute becomes `nil`. This is useful with `.presence` to convert blank strings:
 
 ```ruby
-normalizes :bio, with: -> { _1&.strip.presence }
+normalizes :bio, with: -> { it&.strip.presence }
 
 form = Employee::Form.new(bio: "   ")
 form.bio  # => nil

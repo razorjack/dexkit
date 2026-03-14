@@ -32,7 +32,8 @@ error!(code, message = nil, details: nil)
 - **details** (Hash) – optional structured data about the error
 
 ```ruby
-error!(:validation_failed, "Invalid input", details: { field: "email", reason: "bad format" })
+error!(:validation_failed, "Invalid input",
+  details: { field: "email", reason: "bad format" })
 ```
 
 The caller receives a `Dex::Error` with `.code`, `.message`, and `.details`:
@@ -103,7 +104,8 @@ Maps third-party exceptions to structured `Dex::Error` codes. No more boilerplat
 class Order::Charge < Dex::Operation
   rescue_from Stripe::CardError, as: :card_declined
   rescue_from Stripe::RateLimitError, as: :rate_limited
-  rescue_from Stripe::APIError, as: :provider_error, message: "Stripe is unavailable"
+  rescue_from Stripe::APIError,
+    as: :provider_error, message: "Stripe is unavailable"
 
   def perform
     Stripe::Charge.create(amount: amount, source: token)
@@ -133,11 +135,13 @@ rescue_from Net::OpenTimeout, Net::ReadTimeout, as: :timeout
 - Handlers inherit from parent classes; later declarations take priority
 
 ```ruby
+include Dex::Match
+
 result = Order::Charge.new(amount: 100).safe.call
 case result
-in Dex::Err(code: :card_declined)
+in Err(code: :card_declined)
   notify_user(result.message)
-in Dex::Err(code: :provider_error)
+in Err(code: :provider_error)
   retry_later
 end
 ```

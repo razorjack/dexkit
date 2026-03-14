@@ -20,7 +20,7 @@ class Employee::Form < Dex::Form
 
   context :locale
 
-  normalizes :email, with: -> { _1&.strip&.downcase.presence }
+  normalizes :email, with: -> { it&.strip&.downcase.presence }
 
   nested_one :address do
     field :street, :string
@@ -42,10 +42,11 @@ Dex.with_context(locale: "en") do
   form.email        # => "alice@example.com" (normalized)
   form.locale       # => "en" (from ambient context)
   form.valid?       # => true (required fields auto-validated)
-  form.to_h         # => { email: "alice@example.com", first_name: "Alice", ... }
+  form.to_h      # => { email: "alice@example.com", first_name: "Alice", ... }
 end
 
-Employee::Form.to_json_schema  # => { type: "object", properties: { ... }, required: [...] }
+Employee::Form.to_json_schema
+# => { type: "object", properties: { ... }, required: [...] }
 ```
 
 ## Why `field`, not `prop`?

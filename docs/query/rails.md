@@ -24,7 +24,11 @@ end
 ```ruby
 Employee::Query.from_params(params)
 Employee::Query.from_params(params, scope: current_department.employees)
-Employee::Query.from_params(params, scope: current_department.employees, department: current_department)
+Employee::Query.from_params(
+  params,
+  scope: current_department.employees,
+  department: current_department
+)
 ```
 
 Here's what it does, in order:

@@ -96,7 +96,8 @@ Order::SendReport.new(order_id: 123).async.call
 # → job runs → status: "running"
 # → success  → status: "completed"
 # → error!   → status: "error", error_code: "code", error_message: "..."
-# → exception → status: "failed", error_code: "RuntimeError", error_message: "..."
+# → crash → status: "failed",
+#   error_code: "RuntimeError"
 ```
 
 Dex validates the configured record model before enqueueing a `RecordJob`. Missing required attributes (for example `params`, `status`, or `performed_at`) raise immediately instead of being silently skipped.
@@ -151,7 +152,12 @@ Ready-made JSON for polling endpoints:
 
 ```ruby
 render json: ticket
-# => { "id": "op_01J5...", "name": "Order::Fulfill", "status": "completed", "result": { ... } }
+# => {
+#   "id": "op_01J5...",
+#   "name": "Order::Fulfill",
+#   "status": "completed",
+#   "result": { ... }
+# }
 ```
 
 `failed` records are intentionally redacted – exception details stay in logs, not API responses.
@@ -168,15 +174,17 @@ ticket.outcome  # => Ok or Err
 
 ## Outcome reconstruction
 
-`ticket.outcome` reconstructs `Ok` or `Err` from the record's business result – the same types as `.safe.call`:
+`ticket.outcome` reconstructs `Ok` or `Err` from the record's business result – the same types as `.safe.call`. Use `include Dex::Match` for the short names:
 
 ```ruby
+include Dex::Match
+
 ticket.reload
 
 case ticket.outcome
-in Dex::Ok(url:)
+in Ok(url:)
   redirect_to url
-in Dex::Err(code:, message:)
+in Err(code:, message:)
   flash[:error] = message
   redirect_to order_path(@order)
 else
@@ -204,9 +212,9 @@ Enqueue an async operation, then wait briefly to see if it finishes. If it compl
 ticket = Order::SendReport.new(order_id: 123).async.call
 
 case ticket.wait(3.seconds)
-in Dex::Ok(url:)
+in Ok(url:)
   redirect_to url
-in Dex::Err(code:, message:)
+in Err(code:, message:)
   flash[:error] = message
   redirect_to order_path(@order)
 else
