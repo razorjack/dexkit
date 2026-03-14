@@ -1,5 +1,5 @@
 ---
-description: Integrate Dex::Query with Rails controllers and forms using from_params, model_name, and query persistence helpers.
+description: Dex::Query in Rails — parse controller params with from_params, bind to search forms, and persist filter state across requests.
 ---
 
 # Rails Integration

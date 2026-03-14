@@ -1,5 +1,5 @@
 ---
-description: Serialize concurrent operations with advisory_lock in Dex::Operation using database-backed mutual exclusion.
+description: Dex::Operation advisory locking — serialize concurrent calls with database-backed locks, no external dependencies required.
 ---
 
 # Advisory Locking

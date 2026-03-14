@@ -1,5 +1,5 @@
 ---
-description: Run Dex::Operation classes through ActiveJob – async execution, queue selection, scheduling, and recording integration.
+description: Dex::Operation async execution — run operations in the background via ActiveJob with queue selection, scheduling, and trace propagation.
 ---
 
 # Async

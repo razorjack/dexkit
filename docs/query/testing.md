@@ -1,5 +1,5 @@
 ---
-description: Test Dex::Query objects with plain Minitest and database-backed assertions on filtered and sorted scopes.
+description: Dex::Query testing — test filters and sorts with plain Minitest against a real database. No special helpers needed.
 ---
 
 # Testing

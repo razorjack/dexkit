@@ -1,5 +1,5 @@
 ---
-description: Configure Dex::Query sorts with column ordering, custom strategies, defaults, and descending syntax.
+description: Dex::Query sorting — declare sortable columns, set defaults, and handle user-facing sort params with validated direction toggling.
 ---
 
 # Sorting

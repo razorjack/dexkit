@@ -1,5 +1,5 @@
 ---
-description: Bridge Dex::Operation and Dex::Query to LLM tool calling with Dex::Tool and ruby-llm – typed params, security boundaries, and structured results.
+description: Dex::Tool — turn operations and queries into LLM-callable tools via ruby-llm, with typed params, security boundaries, and structured results.
 ---
 
 # Tool

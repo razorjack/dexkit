@@ -1,5 +1,5 @@
 ---
-description: Dex::Operation transaction defaults, disabling transactions, after_commit behavior, and ActiveRecord adapter configuration.
+description: Dex::Operation transactions — enabled by default, with automatic rollback on errors, after_commit hooks, and per-operation configuration.
 ---
 
 # Transactions

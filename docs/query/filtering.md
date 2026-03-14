@@ -1,5 +1,5 @@
 ---
-description: Use Dex::Query filters with built-in strategies and custom blocks for ActiveRecord and Mongoid search behavior.
+description: Dex::Query filtering — built-in strategies for common patterns like equals, contains, and range, plus custom filter blocks.
 ---
 
 # Filtering

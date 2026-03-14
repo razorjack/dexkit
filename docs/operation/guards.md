@@ -1,5 +1,5 @@
 ---
-description: Declare precondition checks on Dex::Operation with guards – inline, named, introspectable, and separate from perform.
+description: Dex::Operation guards — declare named preconditions that run before perform, with introspection for views and controllers.
 ---
 
 # Guards

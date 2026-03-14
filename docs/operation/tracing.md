@@ -1,5 +1,5 @@
 ---
-description: Automatic execution tracing for Dex::Operation – Stripe-style IDs, fiber-local trace stacks, actor tracking, and async propagation.
+description: Dex::Operation tracing — automatic trace IDs, operation IDs, parent chains, actor tracking, and propagation across async boundaries.
 ---
 
 # Tracing

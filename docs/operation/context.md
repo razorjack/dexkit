@@ -1,5 +1,5 @@
 ---
-description: Wire operation props to ambient context with Dex.with_context – auto-fill current_user, tenant, locale without passing them explicitly every time.
+description: Dex::Operation ambient context — wire props to Dex.with_context so current_user, tenant, and locale are filled in automatically.
 ---
 
 # Ambient Context

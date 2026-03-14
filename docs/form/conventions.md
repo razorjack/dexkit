@@ -1,5 +1,5 @@
 ---
-description: Recommended Dex::Form conventions – .for loaders, with_record binding, save methods, and operation-backed persistence.
+description: Dex::Form conventions — patterns for loading forms from records, saving through operations, and keeping controllers thin.
 ---
 
 # Conventions

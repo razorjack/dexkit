@@ -1,5 +1,5 @@
 ---
-description: Validate Dex::Form inputs with ActiveModel validators, custom rules, contexts, and database-backed uniqueness checks.
+description: Dex::Form validation — ActiveModel validators, custom rules, validation contexts, and database-backed uniqueness checks.
 ---
 
 # Validation

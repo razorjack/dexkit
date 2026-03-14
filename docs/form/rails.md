@@ -1,5 +1,5 @@
 ---
-description: Use Dex::Form with Rails controllers, form_with, fields_for, strong params, and record-backed edit flows.
+description: Dex::Form in Rails — use with form_with, fields_for, and controllers. No strong params needed, the field declarations are the whitelist.
 ---
 
 # Rails Integration

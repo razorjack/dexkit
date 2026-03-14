@@ -1,5 +1,5 @@
 ---
-description: "Install dexkit in a Rails app – gem setup, configuration, recording, events, async, advisory locking, LLM tools, and test helpers."
+description: "Add dexkit to a Rails app — gem setup, configuration options, and enabling features like recording, async, and test helpers."
 ---
 
 # Installation

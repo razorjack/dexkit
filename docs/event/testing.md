@@ -1,5 +1,5 @@
 ---
-description: Test event publication and handler behavior with Dex::Event::TestHelpers and captured event assertions.
+description: Dex::Event test helpers — capture published events, assert on payloads, and test handlers in isolation with a fake bus.
 ---
 
 # Testing Events

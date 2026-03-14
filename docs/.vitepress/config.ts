@@ -5,7 +5,7 @@ import { defineConfig, type HeadConfig, type PageData } from 'vitepress'
 const SITE_URL = 'https://dex.razorjack.net/'
 const SITE_NAME = 'dexkit'
 const SITE_DESCRIPTION =
-  'Documentation for dexkit, a Ruby toolkit for operations, events, forms, and queries in Rails applications.'
+  'Documentation for dexkit — a Ruby toolkit for structuring Rails business logic into typed operations, events, forms, and queries.'
 
 const SECTION_TITLES: Record<string, string> = {
   guide: 'Guide',

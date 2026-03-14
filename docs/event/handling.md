@@ -1,5 +1,5 @@
 ---
-description: Write Dex::Event::Handler classes with subscriptions, retries, callbacks, transactions, and handler configuration.
+description: Dex::Event::Handler — subscribe to events with handler classes that support retries, callbacks, transactions, and async dispatch.
 ---
 
 # Handling Events

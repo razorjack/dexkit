@@ -1,5 +1,5 @@
 ---
-description: "Generate Stripe-style prefixed IDs with Dex::Id – k-sortable, human-readable, and collision-resistant identifiers for Rails models."
+description: "Dex::Id — generate Stripe-style prefixed IDs that are k-sortable, human-readable, and collision-resistant."
 ---
 
 # Stripe-Style IDs

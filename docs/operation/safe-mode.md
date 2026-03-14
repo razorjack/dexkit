@@ -1,5 +1,5 @@
 ---
-description: Use Dex::Operation.safe.call to get Ok and Err results for Ruby pattern matching instead of raised exceptions.
+description: Dex::Operation safe mode — call operations and get Ok or Err results for pattern matching instead of raised exceptions.
 ---
 
 # Ok / Err

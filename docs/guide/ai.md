@@ -1,5 +1,5 @@
 ---
-description: "Why dexkit's explicit Ruby APIs, consistent conventions, and prescriptive errors make it a natural fit for AI coding agents and LLM tool integration."
+description: "How dexkit's explicit APIs and consistent conventions make it a natural fit for AI coding agents and LLM tool integration."
 ---
 
 # DX Meets AI

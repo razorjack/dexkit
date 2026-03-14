@@ -1,5 +1,5 @@
 ---
-description: Inspect the full runtime state of a Dex::Operation before executing it – context resolution, guards, idempotency, locks, and pipeline settings in one call.
+description: Dex::Operation explain — run a side-effect-free preflight check that shows resolved context, guard status, lock keys, and pipeline settings.
 ---
 
 # Explain

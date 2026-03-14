@@ -1,5 +1,5 @@
 ---
-description: Inspect and customize the Dex::Operation middleware pipeline – wrapper ordering, custom execution steps, and the use DSL.
+description: Dex::Operation middleware — inspect the execution pipeline, understand wrapper ordering, and add custom steps with the use DSL.
 ---
 
 # Middleware

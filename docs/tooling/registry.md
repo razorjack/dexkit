@@ -1,5 +1,5 @@
 ---
-description: Browse the class registry, add descriptions, and export contracts as hashes or JSON Schema across all dexkit patterns.
+description: dexkit registry — browse all registered operations, events, forms, and queries, add descriptions, and export contracts as JSON Schema.
 ---
 
 # Registry & Export

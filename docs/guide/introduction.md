@@ -1,5 +1,5 @@
 ---
-description: "Get started with dexkit's core building blocks for Rails – operations, events, forms, and queries – with examples and integration patterns."
+description: "An overview of dexkit's four building blocks — operations, events, forms, and queries — and how they work together in a Rails app."
 ---
 
 # Introduction

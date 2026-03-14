@@ -1,5 +1,5 @@
 ---
-description: Publish Dex::Event instances synchronously or asynchronously, pass metadata, and control dispatch behavior.
+description: Dex::Event publishing — dispatch events synchronously or asynchronously, with automatic metadata, tracing, and context capture.
 ---
 
 # Publishing Events

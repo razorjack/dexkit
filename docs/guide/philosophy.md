@@ -1,5 +1,5 @@
 ---
-description: "dexkit's design principles – explicit declarations, typed contracts, prescriptive errors, and mechanical enforcement for Rails patterns."
+description: "The design principles behind dexkit — why it favors explicit declarations, typed contracts, and prescriptive errors over convention and magic."
 ---
 
 # Design Philosophy

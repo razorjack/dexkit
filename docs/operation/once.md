@@ -1,5 +1,5 @@
 ---
-description: Make Dex::Operation calls idempotent with the once DSL – duplicate calls replay stored results instead of re-executing.
+description: Dex::Operation idempotency — the once DSL ensures duplicate calls return the stored result instead of re-executing.
 ---
 
 # Idempotency

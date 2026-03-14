@@ -1,5 +1,5 @@
 ---
-description: Install LLM-optimized reference docs as AGENTS.md files so AI coding agents get the right dexkit context automatically.
+description: Ship LLM-optimized reference docs as AGENTS.md files so AI coding agents get accurate dexkit context automatically.
 ---
 
 # LLM Guides

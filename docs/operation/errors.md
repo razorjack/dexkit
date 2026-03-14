@@ -1,5 +1,5 @@
 ---
-description: Handle errors in Dex::Operation with error!, success!, and rescue_from – including transaction rollback and safe result wrapping.
+description: Dex::Operation error handling — declare error codes, halt with error!, rescue exceptions, and let transactions roll back automatically.
 ---
 
 # Error Handling

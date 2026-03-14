@@ -1,5 +1,5 @@
 ---
-description: Build Rails form objects with Dex::Form – typed fields, normalization, validations, nested forms, ambient context, JSON Schema export, and form builder compatibility.
+description: Dex::Form — form objects with typed fields, validation, nested forms, and normalization that work with Rails form builders and export to JSON Schema.
 ---
 
 # Dex::Form

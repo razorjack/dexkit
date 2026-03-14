@@ -1,5 +1,5 @@
 ---
-description: Model nested_one and nested_many form data in Dex::Form with coercion, validation, _destroy support, and serialized output.
+description: Dex::Form nested forms — nested_one and nested_many with automatic coercion, validation propagation, and _destroy support.
 ---
 
 # Nested Forms

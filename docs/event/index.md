@@ -1,5 +1,5 @@
 ---
-description: Define typed immutable events with Dex::Event and connect them to handlers, async dispatch, tracing, suppression, and persistence.
+description: Dex::Event — typed, immutable domain events with pub/sub handlers, async dispatch, causality tracing, and optional persistence.
 ---
 
 # Dex::Event

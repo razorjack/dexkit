@@ -1,5 +1,5 @@
 ---
-description: Build Dex::Query objects for Rails and Mongoid with declarative filters, sorting, scope composition, and params coercion.
+description: Dex::Query — declarative query objects for ActiveRecord and Mongoid with typed filters, sorting, scope composition, and params coercion.
 ---
 
 # Dex::Query

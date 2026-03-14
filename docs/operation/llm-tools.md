@@ -1,5 +1,5 @@
 ---
-description: Turn Dex primitives into LLM-callable tools with Dex::Tool and ruby-llm.
+description: Turn Dex::Operation and Dex::Query into LLM-callable tools with Dex::Tool and ruby-llm.
 ---
 
 # LLM Tools

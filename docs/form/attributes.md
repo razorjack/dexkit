@@ -1,5 +1,5 @@
 ---
-description: Define Dex::Form fields with ActiveModel types, defaults, auto-presence validation, coercion, and input normalization.
+description: Dex::Form fields — define typed fields with defaults, auto-presence validation, ActiveModel coercion, and input normalization.
 ---
 
 # Fields & Normalization

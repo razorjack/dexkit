@@ -1,5 +1,5 @@
 ---
-description: Trace event causality with caused_by and event_ancestry, and suppress event publication selectively with Dex::Event tools.
+description: Dex::Event tracing and suppression — track event causality with caused_by and event_ancestry, and suppress publication selectively.
 ---
 
 # Tracing & Suppression

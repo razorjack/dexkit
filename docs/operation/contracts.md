@@ -1,5 +1,5 @@
 ---
-description: Declare and introspect Dex::Operation input, success, and error contracts for runtime validation and testing.
+description: Dex::Operation contracts — introspect declared inputs, success types, error codes, and guards programmatically or as JSON Schema.
 ---
 
 # Contracts

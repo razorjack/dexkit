@@ -1,5 +1,5 @@
 ---
-description: "dexkit documentation – Rails operations, events, forms, and queries with typed APIs, structured errors, async jobs, and testing helpers."
+description: "A Ruby toolkit for structuring Rails business logic — typed operations, domain events, form objects, and query builders with contracts that enforce themselves."
 layout: home
 
 hero:
@@ -16,35 +16,35 @@ hero:
 
 features:
   - title: Dex::Operation
-    details: Service objects with typed props, structured errors, transactions, callbacks, async execution, advisory locks, and database recording.
+    details: Encapsulate a business action with typed inputs and structured errors. Transactions, callbacks, async, and tracing are built into the pipeline.
     link: /operation/
     linkText: Learn more
   - title: Dex::Event
-    details: Immutable domain events with pub/sub, async handlers via ActiveJob, retries with backoff, causality tracing, and optional persistence.
+    details: Publish typed, immutable domain events and react with handler classes. Async dispatch, retries, causality tracing, and persistence are built in.
     link: /event/
     linkText: Learn more
   - title: Dex::Query
-    details: Declarative filters and sorts for ActiveRecord and Mongoid scopes – type coercion from params, scope injection, and Rails form binding.
+    details: Declare filters and sorts for ActiveRecord and Mongoid scopes. Params coercion, scope composition, and Rails form binding included.
     link: /query/
     linkText: Learn more
   - title: Dex::Form
-    details: Form objects with typed fields, normalization, validation, nested forms, ambient context, JSON Schema export, and full Rails form builder compatibility.
+    details: Define form objects with typed fields, validation, and nested forms. Works with Rails form builders and exports to JSON Schema.
     link: /form/
     linkText: Learn more
   - title: Testing built in
-    details: Minitest helpers for operations and events – execution, assertions, stubs, spies, contract verification, and a global activity log.
+    details: Minitest helpers for operations and events — assertions, stubs, spies, and a global activity log for verifying what ran and why.
     link: /operation/testing
     linkText: See testing docs
   - title: Registry & Export
-    details: Auto-tracked class registry, contract export as hashes or JSON Schema, description DSL for operations, events, and forms, and a rake task for bulk export.
+    details: Every operation, event, form, and query is auto-tracked in a registry. Export contracts as hashes or JSON Schema with a single rake task.
     link: /tooling/registry
     linkText: See export docs
   - title: Guards & Explain
-    details: Declare preconditions as guards, check "can this run?" from views and controllers, and run side-effect-free preflight checks with explain.
+    details: Declare preconditions as named guards and check "can this run?" from views and controllers. Explain runs a full preflight check with no side effects.
     link: /operation/guards
     linkText: See guards docs
   - title: DX Meets AI
-    details: Consistent, typed patterns that coding agents understand on first read. Turn operations into LLM-callable tools via ruby-llm, and ship optimized guides with rake dex:guides.
+    details: Typed, consistent patterns that AI coding agents understand on first read. Turn operations into LLM-callable tools via ruby-llm.
     link: /guide/ai
     linkText: Learn more
 ---

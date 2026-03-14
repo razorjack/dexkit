@@ -1,5 +1,5 @@
 ---
-description: Hook into Dex::Operation with before, after, around, and after_commit callbacks inside the execution pipeline.
+description: Dex::Operation callbacks — before, after, around, and after_commit hooks that run inside the execution pipeline.
 ---
 
 # Callbacks

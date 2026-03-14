@@ -1,5 +1,5 @@
 ---
-description: Declare typed operation props – required, optional, arrays, unions, enums, and model references – using Literal types in Dex::Operation.
+description: Dex::Operation properties — declare typed inputs as required, optional, arrays, unions, or model references using Literal's type system.
 ---
 
 # Properties & Types
