@@ -607,7 +607,12 @@ end
 Dex::Trace.trace_id   # => "tr_..."
 Dex::Trace.current    # => [{ type: :actor, ... }, { type: :operation, ... }]
 Dex::Trace.to_s       # => "user:42 > Order::Place(op_2nFg7K)"
+Dex.actor             # => { type: "user", id: "123" } or nil
 ```
+
+`Dex.actor` returns the actor hash (reconstituted to the shape you passed in), or `nil`. Use it in `perform` when you need to write actor info into domain models.
+
+`Dex.system(name = nil)` is a convenience for background jobs: `Dex::Trace.start(actor: Dex.system("payroll")) { ... }`.
 
 Tracing is always on – no opt-in needed. Async operations serialize and restore the trace automatically. When recording is enabled, `trace_id`, `actor_type`, `actor_id`, and `trace` are persisted alongside the usual record fields.
 

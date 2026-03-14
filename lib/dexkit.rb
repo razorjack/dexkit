@@ -80,6 +80,22 @@ module Dex
       configuration.transaction_adapter = adapter
     end
 
+    def actor
+      frame = Dex::Trace.actor
+      return nil unless frame
+
+      payload = frame.dup
+      payload.delete(:type)
+      payload[:type] = payload.delete(:actor_type) if payload.key?(:actor_type)
+      payload
+    end
+
+    def system(name = nil)
+      h = { type: :system }
+      h[:name] = name.to_s if name
+      h.freeze
+    end
+
     CONTEXT_KEY = :_dex_context
     EMPTY_CONTEXT = {}.freeze
 

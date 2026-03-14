@@ -40,17 +40,28 @@ end
 
 Everything inside the block shares the same `trace_id`. Operations push `:operation` frames, handlers push `:handler` frames, and events capture the current `trace_id` in their metadata.
 
-The `actor` hash requires a `type` key – Dex doesn't interpret the contents beyond that.
+The `actor` hash requires a `type` key – Dex doesn't interpret the contents beyond that. Common actor types:
+
+| Type | Who | Example |
+|---|---|---|
+| `:user` | Authenticated human | `{ type: :user, id: 42 }` |
+| `:admin` | Privileged human | `{ type: :admin, id: 5 }` |
+| `:agent` | AI / LLM agent | `{ type: :agent, name: "support-bot" }` |
+| `:api_key` | External API consumer | `{ type: :api_key, id: "key_live_abc" }` |
+| `:webhook` | Inbound webhook | `{ type: :webhook, source: "stripe" }` |
+| `:system` | Background / cron | `{ type: :system, name: "nightly_cleanup" }` |
+
+These are conventions, not enforced types. Use whatever makes sense for your app.
+
+`Dex.system` is a convenience helper for background jobs and cron:
 
 ```ruby
-# User
-Dex::Trace.start(actor: { type: :user, id: 123 })
+Dex::Trace.start(actor: Dex.system("nightly_cleanup")) do
+  Order::Cleanup.call
+end
 
-# API key
-Dex::Trace.start(actor: { type: :api_key, id: "key_live_abc" })
-
-# System / cron
-Dex::Trace.start(actor: { type: :system, name: "nightly_cleanup" })
+Dex.system               # => { type: :system }
+Dex.system("payroll")    # => { type: :system, name: "payroll" }
 ```
 
 If an operation runs outside a `Dex::Trace.start` block, a trace starts automatically with no actor. Tracing works even without explicit setup – it just lacks an actor root.
@@ -66,9 +77,26 @@ class Order::Place < Dex::Operation
   def perform
     Dex::Trace.trace_id     # => "tr_..." or external ID
     Dex::Trace.current_id   # => "op_..." (this operation's ID)
-    Dex::Trace.actor        # => { type: :actor, actor_type: "user", id: "123" }
     Dex::Trace.current      # => [actor_frame, parent_op_frame, this_op_frame]
     Dex::Trace.to_s         # => "user:123 > Order::Validate(op_2nFg7K) > Order::Place(op_3kPm8N)"
+
+    Dex.actor               # => { type: "user", id: "123" } or nil
+  end
+end
+```
+
+`Dex.actor` returns the actor hash in the same shape you passed in (with string values), or `nil` when no actor was set. It's the complement to `Dex.context` – same level of abstraction, no need to know about `Dex::Trace`.
+
+Most operations won't need this – actor is captured automatically by recording. Use `Dex.actor` when you need to write actor info into your own domain models:
+
+```ruby
+class Order::Place < Dex::Operation
+  def perform
+    Order.create!(
+      product: product,
+      placed_by_type: Dex.actor&.dig(:type),
+      placed_by_id: Dex.actor&.dig(:id)
+    )
   end
 end
 ```
@@ -139,6 +167,68 @@ end
 # When the job runs (possibly minutes later, different process):
 # Order::SendConfirmation's trace includes the original actor and Order::Place frame.
 # Same trace_id, same actor.
+```
+
+## Actor patterns
+
+The actor hash is opaque – Dex stores what you pass. These patterns cover the most common scenarios:
+
+### Admin impersonation
+
+Who is the actor – the admin or the impersonated user? It depends on what your audit trail needs to answer:
+
+```ruby
+# "Which admin actions should we review?" – admin is actor
+Dex::Trace.start(actor: { type: :admin, id: admin.id, on_behalf_of: customer.id }) do
+  Dex.with_context(current_customer: customer) do
+    Order::Place.call(product: product, customer: customer, quantity: 1)
+  end
+end
+
+# "What happened on my account?" – user is actor
+Dex::Trace.start(actor: { type: :user, id: customer.id, impersonated_by: admin.id }) do
+  Order::Place.call(product: product, customer: customer, quantity: 1)
+end
+```
+
+Neither is universally correct. Pick one and be consistent.
+
+### AI agents
+
+When a user asks a chatbot to perform an action, the user is still the actor – the agent is the channel:
+
+```ruby
+# User-initiated, agent-assisted
+Dex::Trace.start(actor: { type: :user, id: user.id, via: "support-bot" }) do
+  Order::Place.call(product: product)
+end
+```
+
+`via` captures how the action happened – works for any mechanism, not just AI:
+
+```ruby
+{ type: :user, id: 42 }                          # web (direct)
+{ type: :user, id: 42, via: "support-bot" }       # chatbot
+{ type: :user, id: 42, via: "zapier" }            # integration
+{ type: :user, id: 42, via: "ios" }               # mobile app
+```
+
+Use `:agent` when there's no human in the loop – autonomous agents acting on policy:
+
+```ruby
+Dex::Trace.start(actor: { type: :agent, name: "content-writer" }) do
+  Content::Generate.call(topic: topic)
+end
+```
+
+### Background jobs
+
+```ruby
+class ApplicationJob < ActiveJob::Base
+  around_perform do |job, block|
+    Dex::Trace.start(actor: Dex.system(job.class.name), &block)
+  end
+end
 ```
 
 ## PaperTrail integration
