@@ -12,35 +12,17 @@ class TestContractAssertions < Minitest::Test
     setup_test_database
   end
 
-  # assert_params — exhaustive name check
-
-  def test_assert_params_passes_with_correct_names
+  def test_assert_params
     op = build_operation do
       prop :name, String
       prop :email, String
       def perform = nil
     end
+
     assert_params(op, :name, :email)
-  end
-
-  def test_assert_params_fails_with_missing_name
-    op = build_operation do
-      prop :name, String
-      prop :email, String
-      def perform = nil
-    end
     assert_raises(Minitest::Assertion) { assert_params(op, :name) }
+    assert_raises(Minitest::Assertion) { assert_params(op, :name, :email, :phone) }
   end
-
-  def test_assert_params_fails_with_extra_name
-    op = build_operation do
-      prop :name, String
-      def perform = nil
-    end
-    assert_raises(Minitest::Assertion) { assert_params(op, :name, :email) }
-  end
-
-  # assert_params — with types
 
   def test_assert_params_with_types
     op = build_operation do
@@ -59,23 +41,15 @@ class TestContractAssertions < Minitest::Test
     assert_raises(Minitest::Assertion) { assert_params(op, name: Integer) }
   end
 
-  # assert_accepts_param
-
-  def test_assert_accepts_param_passes
+  def test_assert_accepts_param
     op = build_operation do
       prop :name, String
       prop :email, String
       def perform = nil
     end
-    assert_accepts_param(op, :name)
-  end
 
-  def test_assert_accepts_param_fails_for_missing
-    op = build_operation do
-      prop :name, String
-      def perform = nil
-    end
-    assert_raises(Minitest::Assertion) { assert_accepts_param(op, :email) }
+    assert_accepts_param(op, :name)
+    assert_raises(Minitest::Assertion) { assert_accepts_param(op, :phone) }
   end
 
   # assert_success_type
@@ -104,13 +78,6 @@ class TestContractAssertions < Minitest::Test
       def perform = nil
     end
     assert_error_codes(op, :not_found, :invalid)
-  end
-
-  def test_assert_error_codes_order_independent
-    op = build_operation do
-      error :not_found, :invalid
-      def perform = nil
-    end
     assert_error_codes(op, :invalid, :not_found)
   end
 

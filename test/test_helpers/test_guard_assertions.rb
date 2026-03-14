@@ -12,22 +12,18 @@ class TestGuardAssertions < Minitest::Test
     setup_test_database
   end
 
-  # assert_callable
-
-  def test_assert_callable_passes_when_all_guards_pass
-    op = build_operation do
+  def test_assert_callable
+    passing_op = build_operation do
       guard(:check) { false }
       def perform = "ok"
     end
-    assert_callable(op)
-  end
+    assert_callable(passing_op)
 
-  def test_assert_callable_fails_when_guard_fails
-    op = build_operation do
+    failing_op = build_operation do
       guard(:check) { true }
       def perform = "ok"
     end
-    assert_raises(Minitest::Assertion) { assert_callable(op) }
+    assert_raises(Minitest::Assertion) { assert_callable(failing_op) }
   end
 
   def test_assert_callable_with_params
@@ -46,22 +42,18 @@ class TestGuardAssertions < Minitest::Test
     assert_callable(op)
   end
 
-  # refute_callable
-
-  def test_refute_callable_passes_when_guard_fails
-    op = build_operation do
+  def test_refute_callable
+    failing_op = build_operation do
       guard(:denied) { true }
       def perform = "ok"
     end
-    refute_callable(op)
-  end
+    refute_callable(failing_op)
 
-  def test_refute_callable_fails_when_all_guards_pass
-    op = build_operation do
+    passing_op = build_operation do
       guard(:check) { false }
       def perform = "ok"
     end
-    assert_raises(Minitest::Assertion) { refute_callable(op) }
+    assert_raises(Minitest::Assertion) { refute_callable(passing_op) }
   end
 
   def test_refute_callable_with_specific_guard
@@ -71,14 +63,6 @@ class TestGuardAssertions < Minitest::Test
       def perform = "ok"
     end
     refute_callable(op, :first)
-  end
-
-  def test_refute_callable_with_wrong_guard_fails
-    op = build_operation do
-      guard(:first) { true }
-      guard(:second) { false }
-      def perform = "ok"
-    end
     assert_raises(Minitest::Assertion) { refute_callable(op, :second) }
   end
 

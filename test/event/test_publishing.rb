@@ -3,10 +3,8 @@
 require "test_helper"
 
 class TestEventPublishing < Minitest::Test
-  def test_instance_publish_sync
-    event_class = build_event do
-      prop :order_id, Integer
-    end
+  def test_instance_and_class_publish_sync
+    event_class = build_event { prop :order_id, Integer }
 
     received = []
     build_handler do
@@ -14,28 +12,15 @@ class TestEventPublishing < Minitest::Test
       define_method(:perform) { received << event }
     end
 
-    event = event_class.new(order_id: 1)
-    event.publish(sync: true)
-
+    # Instance publish
+    event_class.new(order_id: 1).publish(sync: true)
     assert_equal 1, received.size
     assert_equal 1, received.first.order_id
-  end
 
-  def test_class_publish_sync
-    define_event(:TestClassPubEvent) do
-      prop :order_id, Integer
-    end
-
-    received = []
-    define_handler(:TestClassPubHandler) do
-      on TestClassPubEvent
-      define_method(:perform) { received << event }
-    end
-
-    TestClassPubEvent.publish(order_id: 1, sync: true)
-
-    assert_equal 1, received.size
-    assert_equal 1, received.first.order_id
+    # Class publish
+    event_class.publish(order_id: 2, sync: true)
+    assert_equal 2, received.size
+    assert_equal 2, received.last.order_id
   end
 
   def test_class_publish_with_caused_by
@@ -91,52 +76,84 @@ class TestEventPublishing < Minitest::Test
     assert_equal %i[first second], calls
   end
 
-  def test_async_reconstruction_coerces_ref_type
+  def test_async_processor_type_coercion
     setup_test_database
+
+    # Ref type
     model = TestModel.create!(name: "Alice")
-
-    define_event(:TestRefCoerceEvent) do
-      prop :model, _Ref(TestModel)
-    end
-
+    define_event(:TestRefCoerceEvent) { prop :model, _Ref(TestModel) }
     received = []
     define_handler(:TestRefCoerceHandler) do
       on TestRefCoerceEvent
       define_method(:perform) { received << event }
     end
-
     Dex::Event::Processor.new.perform(
       handler_class: "TestRefCoerceHandler",
       event_class: "TestRefCoerceEvent",
       payload: { "model" => model.id },
       metadata: build_event_metadata
     )
+    assert_instance_of TestModel, received.last.model
+    assert_equal model.id, received.last.model.id
 
-    assert_equal 1, received.size
-    assert_instance_of TestModel, received.first.model
-    assert_equal model.id, received.first.model.id
-  end
-
-  def test_async_reconstruction_coerces_date
-    define_event(:TestDateCoerceEvent) do
-      prop :due, Date
-    end
-
-    received = []
+    # Date coercion
+    define_event(:TestDateCoerceEvent) { prop :due, Date }
     define_handler(:TestDateCoerceHandler) do
       on TestDateCoerceEvent
       define_method(:perform) { received << event }
     end
-
     Dex::Event::Processor.new.perform(
       handler_class: "TestDateCoerceHandler",
       event_class: "TestDateCoerceEvent",
       payload: { "due" => "2025-06-15" },
       metadata: build_event_metadata
     )
+    assert_equal Date.new(2025, 6, 15), received.last.due
 
-    assert_equal 1, received.size
-    assert_equal Date.new(2025, 6, 15), received.first.due
+    # Array ref coercion
+    m1 = TestModel.create!(name: "Bob")
+    m2 = TestModel.create!(name: "Carol")
+    define_event(:TestArrayRefEvent) { prop :models, _Array(_Ref(TestModel)) }
+    define_handler(:TestArrayRefHandler) do
+      on TestArrayRefEvent
+      define_method(:perform) { received << event }
+    end
+    Dex::Event::Processor.new.perform(
+      handler_class: "TestArrayRefHandler",
+      event_class: "TestArrayRefEvent",
+      payload: { "models" => [m1.id, m2.id] },
+      metadata: build_event_metadata
+    )
+    assert_equal [m1.id, m2.id], received.last.models.map(&:id)
+
+    # Symbol coercion
+    define_event(:TestSymCoerceEvent) { prop :status, Symbol }
+    define_handler(:TestSymCoerceHandler) do
+      on TestSymCoerceEvent
+      define_method(:perform) { received << event }
+    end
+    Dex::Event::Processor.new.perform(
+      handler_class: "TestSymCoerceHandler",
+      event_class: "TestSymCoerceEvent",
+      payload: { "status" => "active" },
+      metadata: build_event_metadata
+    )
+    assert_equal :active, received.last.status
+  end
+
+  def test_array_ref_serialization
+    setup_test_database
+    m1 = TestModel.create!(name: "Alice")
+    m2 = TestModel.create!(name: "Bob")
+
+    event_class = build_event do
+      prop :models, _Array(_Ref(TestModel))
+    end
+
+    event = event_class.new(models: [m1, m2])
+    json = event._props_as_json
+
+    assert_equal [m1.id, m2.id], json["models"]
   end
 
   include ActiveJob::TestHelper
@@ -158,68 +175,5 @@ class TestEventPublishing < Minitest::Test
     assert_enqueued_with(job: Dex::Event::Processor) do
       Dex::Event::Bus.send(:enqueue, TestAsyncEnqueueHandler, event, trace_data)
     end
-  end
-
-  def test_async_reconstruction_coerces_array_ref
-    setup_test_database
-    m1 = TestModel.create!(name: "Alice")
-    m2 = TestModel.create!(name: "Bob")
-
-    define_event(:TestArrayRefEvent) do
-      prop :models, _Array(_Ref(TestModel))
-    end
-
-    received = []
-    define_handler(:TestArrayRefHandler) do
-      on TestArrayRefEvent
-      define_method(:perform) { received << event }
-    end
-
-    Dex::Event::Processor.new.perform(
-      handler_class: "TestArrayRefHandler",
-      event_class: "TestArrayRefEvent",
-      payload: { "models" => [m1.id, m2.id] },
-      metadata: build_event_metadata
-    )
-
-    assert_equal 1, received.size
-    assert_equal [m1.id, m2.id], received.first.models.map(&:id)
-  end
-
-  def test_array_ref_serialization
-    setup_test_database
-    m1 = TestModel.create!(name: "Alice")
-    m2 = TestModel.create!(name: "Bob")
-
-    event_class = build_event do
-      prop :models, _Array(_Ref(TestModel))
-    end
-
-    event = event_class.new(models: [m1, m2])
-    json = event._props_as_json
-
-    assert_equal [m1.id, m2.id], json["models"]
-  end
-
-  def test_async_reconstruction_coerces_symbol
-    define_event(:TestSymCoerceEvent) do
-      prop :status, Symbol
-    end
-
-    received = []
-    define_handler(:TestSymCoerceHandler) do
-      on TestSymCoerceEvent
-      define_method(:perform) { received << event }
-    end
-
-    Dex::Event::Processor.new.perform(
-      handler_class: "TestSymCoerceHandler",
-      event_class: "TestSymCoerceEvent",
-      payload: { "status" => "active" },
-      metadata: build_event_metadata
-    )
-
-    assert_equal 1, received.size
-    assert_equal :active, received.first.status
   end
 end

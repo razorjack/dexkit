@@ -9,42 +9,36 @@ class TestOperationGuards < Minitest::Test
 
   # Basic guard behavior
 
-  def test_guard_blocks_execution_when_threat_detected
+  def test_guard_blocks_and_allows_execution
     op = build_operation do
       prop :blocked, Literal::Types::BooleanType.new
       guard(:denied) { blocked }
       def perform = "ok"
     end
+
     err = assert_raises(Dex::Error) { op.call(blocked: true) }
     assert_equal :denied, err.code
-  end
 
-  def test_guard_allows_execution_when_no_threat
-    op = build_operation do
-      prop :blocked, Literal::Types::BooleanType.new
-      guard(:denied) { blocked }
-      def perform = "ok"
-    end
     assert_equal "ok", op.call(blocked: false)
   end
 
-  def test_guard_with_message
-    op = build_operation do
+  def test_guard_message_behavior
+    # With explicit message
+    op1 = build_operation do
       guard(:denied, "Access denied") { true }
       def perform = "ok"
     end
-    err = assert_raises(Dex::Error) { op.new.call }
-    assert_equal :denied, err.code
-    assert_equal "Access denied", err.message
-  end
+    err1 = assert_raises(Dex::Error) { op1.new.call }
+    assert_equal :denied, err1.code
+    assert_equal "Access denied", err1.message
 
-  def test_guard_without_message_uses_code_as_string
-    op = build_operation do
+    # Without message uses code as string
+    op2 = build_operation do
       guard(:denied) { true }
       def perform = "ok"
     end
-    err = assert_raises(Dex::Error) { op.new.call }
-    assert_equal "denied", err.message
+    err2 = assert_raises(Dex::Error) { op2.new.call }
+    assert_equal "denied", err2.message
   end
 
   def test_multiple_guards_all_failures_collected
@@ -83,48 +77,49 @@ class TestOperationGuards < Minitest::Test
 
   # Guard dependencies
 
-  def test_dependent_guard_skipped_when_dependency_fails
+  def test_guard_dependency_skips_and_runs
     op = build_operation do
       guard(:missing) { true }
       guard(:invalid, requires: :missing) { true }
       def perform = "ok"
     end
+
+    # Dependent guard skipped when dependency fails
     err = assert_raises(Dex::Error) { op.new.call }
     assert_equal 1, err.details.size
     assert_equal :missing, err.details[0][:guard]
-  end
 
-  def test_dependent_guard_runs_when_dependency_passes
-    op = build_operation do
+    # Dependent guard runs when dependency passes
+    op2 = build_operation do
       guard(:missing) { false }
       guard(:invalid, requires: :missing) { true }
       def perform = "ok"
     end
-    err = assert_raises(Dex::Error) { op.new.call }
-    assert_equal :invalid, err.code
+    err2 = assert_raises(Dex::Error) { op2.new.call }
+    assert_equal :invalid, err2.code
   end
 
-  def test_multiple_dependencies
-    op = build_operation do
+  def test_multiple_and_chained_dependencies
+    # Multiple dependencies
+    op1 = build_operation do
       guard(:missing_a) { true }
       guard(:missing_b) { false }
       guard(:combined, requires: [:missing_a, :missing_b]) { true }
       def perform = "ok"
     end
-    err = assert_raises(Dex::Error) { op.new.call }
-    assert_equal 1, err.details.size
-    assert_equal :missing_a, err.details[0][:guard]
-  end
+    err1 = assert_raises(Dex::Error) { op1.new.call }
+    assert_equal 1, err1.details.size
+    assert_equal :missing_a, err1.details[0][:guard]
 
-  def test_chain_of_dependencies
-    op = build_operation do
+    # Chain of dependencies
+    op2 = build_operation do
       guard(:level_1) { true }
       guard(:level_2, requires: :level_1) { true }
       def perform = "ok"
     end
-    err = assert_raises(Dex::Error) { op.new.call }
-    assert_equal 1, err.details.size
-    assert_equal :level_1, err.details[0][:guard]
+    err2 = assert_raises(Dex::Error) { op2.new.call }
+    assert_equal 1, err2.details.size
+    assert_equal :level_1, err2.details[0][:guard]
   end
 
   # Guards auto-declare errors
@@ -196,92 +191,93 @@ class TestOperationGuards < Minitest::Test
 
   # callable / callable?
 
-  def test_callable_returns_ok_when_all_guards_pass
-    op = build_operation do
+  def test_callable
+    # Returns Ok when all guards pass
+    op1 = build_operation do
       guard(:check) { false }
       def perform = "ok"
     end
-    result = op.callable
-    assert result.ok?
-  end
+    result1 = op1.callable
+    assert result1.ok?
 
-  def test_callable_returns_err_when_guard_fails
-    op = build_operation do
+    # Returns Err when guard fails
+    op2 = build_operation do
       guard(:denied, "Not allowed") { true }
       def perform = "ok"
     end
-    result = op.callable
-    assert result.error?
-    assert_equal :denied, result.code
-    assert_equal "Not allowed", result.message
-  end
+    result2 = op2.callable
+    assert result2.error?
+    assert_equal :denied, result2.code
+    assert_equal "Not allowed", result2.message
 
-  def test_callable_does_not_run_perform
-    performed = false
-    op = build_operation do
-      define_method(:perform) { performed = true }
-    end
-    op.callable
-    refute performed
-  end
-
-  def test_callable_does_not_trigger_callbacks
-    called = false
-    op = build_operation do
-      before { called = true }
-      guard(:check) { false }
-      def perform = "ok"
-    end
-    op.callable
-    refute called
-  end
-
-  def test_callable_returns_all_failures_in_details
-    op = build_operation do
+    # Returns all failures in details
+    op3 = build_operation do
       guard(:first, "First problem") { true }
       guard(:second, "Second problem") { true }
       def perform = "ok"
     end
-    result = op.callable
-    assert_equal 2, result.details.size
-    assert_equal :first, result.details[0][:guard]
-    assert_equal :second, result.details[1][:guard]
+    result3 = op3.callable
+    assert_equal 2, result3.details.size
+    assert_equal :first, result3.details[0][:guard]
+    assert_equal :second, result3.details[1][:guard]
   end
 
-  def test_callable_bool_returns_true_when_callable
-    op = build_operation do
+  def test_callable_predicate
+    # Returns true when callable
+    op1 = build_operation do
       guard(:check) { false }
       def perform = "ok"
     end
-    assert op.callable?
-  end
+    assert op1.callable?
 
-  def test_callable_bool_returns_false_when_not_callable
-    op = build_operation do
+    # Returns false when not callable
+    op2 = build_operation do
       guard(:check) { true }
       def perform = "ok"
     end
-    refute op.callable?
-  end
+    refute op2.callable?
 
-  def test_callable_bool_with_specific_guard
-    op = build_operation do
+    # With specific guard
+    op3 = build_operation do
       guard(:first) { true }
       guard(:second) { false }
       def perform = "ok"
     end
-    refute op.callable?(:first)
-    assert op.callable?(:second)
+    refute op3.callable?(:first)
+    assert op3.callable?(:second)
   end
 
-  def test_callable_with_props
-    op = build_operation do
+  def test_callable_with_props_and_without_guards
+    # With props
+    op1 = build_operation do
       prop :allowed, Literal::Types::BooleanType.new
       guard(:denied) { !allowed }
       def perform = "ok"
     end
-    assert op.callable?(allowed: true)
-    refute op.callable?(allowed: false)
+    assert op1.callable?(allowed: true)
+    refute op1.callable?(allowed: false)
+
+    # On operation without guards
+    op2 = build_operation do
+      def perform = "ok"
+    end
+    assert op2.callable?
+    result = op2.callable
+    assert result.ok?
+  end
+
+  def test_callable_does_not_run_perform_or_callbacks
+    performed = false
+    called = false
+
+    op = build_operation do
+      before { called = true }
+      guard(:check) { false }
+      define_method(:perform) { performed = true }
+    end
+    op.callable
+    refute performed
+    refute called
   end
 
   def test_callable_bool_with_undeclared_guard_raises
@@ -294,18 +290,9 @@ class TestOperationGuards < Minitest::Test
     end
   end
 
-  def test_callable_on_operation_without_guards
-    op = build_operation do
-      def perform = "ok"
-    end
-    assert op.callable?
-    result = op.callable
-    assert result.ok?
-  end
-
   # Pipeline integration
 
-  def test_guards_run_before_callbacks
+  def test_guards_run_before_callbacks_and_failure_prevents_them
     log = []
     op = build_operation do
       before { log << :before }
@@ -317,46 +304,35 @@ class TestOperationGuards < Minitest::Test
     end
     op.new.call
     assert_equal [:guard, :before], log
-  end
 
-  def test_guard_failure_prevents_callbacks
-    log = []
-    op = build_operation do
+    log.clear
+    op2 = build_operation do
       before { log << :before }
       after { log << :after }
       guard(:check) { true }
       def perform = "ok"
     end
-    assert_raises(Dex::Error) { op.new.call }
+    assert_raises(Dex::Error) { op2.new.call }
     assert_empty log
   end
 
-  def test_guard_failure_caught_by_rescue_wrapper
-    op = build_operation do
+  def test_guard_failure_and_exception_in_pipeline
+    # Guard failure caught by safe
+    op1 = build_operation do
       guard(:denied) { true }
       def perform = "ok"
     end
-    result = op.new.safe.call
+    result = op1.new.safe.call
     assert result.error?
     assert_equal :denied, result.code
-  end
 
-  def test_guard_exception_propagates_through_pipeline
-    op = build_operation do
-      guard(:boom) { raise "guard exploded" }
-      def perform = "ok"
-    end
-    err = assert_raises(RuntimeError) { op.new.call }
-    assert_equal "guard exploded", err.message
-  end
-
-  def test_guard_exception_not_caught_by_rescue_from
-    op = build_operation do
+    # Guard exception propagates (not caught by rescue_from)
+    op2 = build_operation do
       rescue_from RuntimeError, as: :guard_error
       guard(:boom) { raise "guard exploded" }
       def perform = "ok"
     end
-    err = assert_raises(RuntimeError) { op.new.safe.call }
+    err = assert_raises(RuntimeError) { op2.new.safe.call }
     assert_equal "guard exploded", err.message
   end
 
@@ -407,54 +383,40 @@ class TestOperationGuards < Minitest::Test
 
   # DSL validation
 
-  def test_guard_code_must_be_symbol
+  def test_guard_dsl_validation_basic
     assert_raises(ArgumentError, /must be a Symbol/) do
-      build_operation do
-        guard("string_code") { true }
-      end
+      build_operation { guard("string_code") { true } }
     end
-  end
 
-  def test_guard_requires_block
     assert_raises(ArgumentError, /requires a block/) do
-      build_operation do
-        guard(:code)
-      end
+      build_operation { guard(:code) }
     end
-  end
 
-  def test_duplicate_guard_name_raises
     assert_raises(ArgumentError, /duplicate/) do
-      build_operation do
+      build_operation {
         guard(:same) { true }
         guard(:same) { true }
-      end
+      }
     end
   end
 
-  def test_requires_must_reference_existing_guard
+  def test_guard_dsl_validation_requires
     assert_raises(ArgumentError, /no guard with that name/) do
-      build_operation do
-        guard(:dependent, requires: :nonexistent) { true }
-      end
+      build_operation { guard(:dependent, requires: :nonexistent) { true } }
     end
-  end
 
-  def test_requires_must_be_symbols
     assert_raises(ArgumentError, /must be Symbol/) do
-      build_operation do
+      build_operation {
         guard(:first) { true }
         guard(:second, requires: "first") { true }
-      end
+      }
     end
-  end
 
-  def test_forward_reference_raises
     assert_raises(ArgumentError, /no guard with that name/) do
-      build_operation do
+      build_operation {
         guard(:first, requires: :second) { true }
         guard(:second) { true }
-      end
+      }
     end
   end
 end

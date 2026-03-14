@@ -9,124 +9,88 @@ class TestOperationOnce < Minitest::Test
 
   # --- DSL validation ---
 
-  def test_once_raises_when_record_disabled
+  def test_once_dsl_validation
     assert_raises(ArgumentError, /once requires record to be enabled/) do
-      define_operation(:TestOnceRecordDisabled) do
+      define_operation(:TestOnceRecordDisabled) {
         record false
         once
-      end
+      }
     end
-  end
 
-  def test_once_raises_on_unknown_props
     assert_raises(ArgumentError, /unknown prop/) do
-      define_operation(:TestOnceUnknownProp) do
+      define_operation(:TestOnceUnknownProp) {
         prop :order_id, Integer
         once :bogus
-      end
+      }
     end
-  end
 
-  def test_once_raises_on_duplicate_declaration
     assert_raises(ArgumentError, /once can only be declared once/) do
-      define_operation(:TestOnceDuplicate) do
+      define_operation(:TestOnceDuplicate) {
         prop :order_id, Integer
         once :order_id
         once :order_id
-      end
+      }
     end
-  end
 
-  def test_once_raises_with_props_and_block
     assert_raises(ArgumentError, /either prop names or a block/) do
-      define_operation(:TestOncePropsAndBlock) do
+      define_operation(:TestOncePropsAndBlock) {
         prop :order_id, Integer
         once(:order_id) { "key" }
-      end
+      }
     end
-  end
 
-  def test_once_raises_with_invalid_expires_in
     assert_raises(ArgumentError, /expires_in must be a duration/) do
-      define_operation(:TestOnceInvalidExpiry) do
+      define_operation(:TestOnceInvalidExpiry) {
         prop :order_id, Integer
         once :order_id, expires_in: "bad"
-      end
+      }
     end
-  end
 
-  def test_once_raises_with_record_result_false
     assert_raises(ArgumentError, /once requires result recording/) do
-      define_operation(:TestOnceResultFalse) do
+      define_operation(:TestOnceResultFalse) {
         prop :order_id, Integer
         record result: false
         once :order_id
-      end
+      }
     end
   end
 
   # --- Key derivation ---
 
-  def test_once_scoped_key_from_single_prop
-    op = define_operation(:TestOnceKey) do
+  def test_once_key_derivation
+    # Single prop
+    op1 = define_operation(:TestOnceKey) do
       prop :order_id, Integer
       once :order_id
     end
-    assert_equal "TestOnceKey/order_id=123", op._once_build_scoped_key(order_id: 123)
-  end
+    assert_equal "TestOnceKey/order_id=123", op1._once_build_scoped_key(order_id: 123)
 
-  def test_once_composite_key_sorted_alphabetically
-    op = define_operation(:TestOnceComposite) do
+    # Composite key sorted alphabetically
+    op2 = define_operation(:TestOnceComposite) do
       prop :merchant_id, Integer
       prop :plan_id, Integer
       once :merchant_id, :plan_id
     end
     assert_equal "TestOnceComposite/merchant_id=456/plan_id=789",
-      op._once_build_scoped_key(merchant_id: 456, plan_id: 789)
-  end
+      op2._once_build_scoped_key(merchant_id: 456, plan_id: 789)
 
-  def test_once_key_escapes_special_characters
-    op = define_operation(:TestOnceEscape) do
+    # Escapes special characters (different inputs produce different keys)
+    op3 = define_operation(:TestOnceEscape) do
       prop :a, String
       prop :b, String
       once :a, :b
     end
-
-    key1 = op._once_build_scoped_key(a: "1", b: "2/b=3")
-    key2 = op._once_build_scoped_key(a: "1/b=2", b: "3")
-
+    key1 = op3._once_build_scoped_key(a: "1", b: "2/b=3")
+    key2 = op3._once_build_scoped_key(a: "1/b=2", b: "3")
     refute_equal key1, key2
   end
 
   # --- Basic idempotency ---
 
-  def test_first_call_executes_and_records
+  def test_once_idempotency
     with_recording do
       counter = []
-      op = define_operation(:TestOnceFirstCall) do
-        prop :order_id, Integer
-        once :order_id
-        define_method(:perform) do
-          counter << 1
-          "done"
-        end
-      end
-
-      result = op.call(order_id: 1)
-
-      assert_equal "done", result
-      assert_equal [1], counter
-      assert_equal 1, OperationRecord.count
-      record = OperationRecord.last
-      assert_equal "TestOnceFirstCall/order_id=1", record.once_key
-      assert_equal "completed", record.status
-    end
-  end
-
-  def test_second_call_replays_stored_result
-    with_recording do
-      counter = []
-      op = define_operation(:TestOnceReplay) do
+      op = define_operation(:TestOnceIdempotent) do
         prop :order_id, Integer
         once :order_id
         define_method(:perform) do
@@ -136,9 +100,15 @@ class TestOperationOnce < Minitest::Test
       end
 
       result1 = op.call(order_id: 1)
-      result2 = op.call(order_id: 1)
-
       assert_equal "done", result1
+      assert_equal [1], counter
+      assert_equal 1, OperationRecord.count
+      record = OperationRecord.last
+      assert_equal "TestOnceIdempotent/order_id=1", record.once_key
+      assert_equal "completed", record.status
+
+      # Second call replays stored result
+      result2 = op.call(order_id: 1)
       assert_equal "done", result2
       assert_equal [1], counter
       assert_equal 1, OperationRecord.count
@@ -406,61 +376,41 @@ class TestOperationOnce < Minitest::Test
 
   # --- clear_once! ---
 
-  def test_clear_once_with_props
+  def test_clear_once_with_various_key_types
     with_recording do
-      op = define_operation(:TestOnceClear) do
+      # Props-based key
+      op1 = define_operation(:TestOnceClear) do
         prop :order_id, Integer
         once :order_id
         define_method(:perform) { "done" }
       end
 
-      op.call(order_id: 1)
+      op1.call(order_id: 1)
       assert_equal 1, OperationRecord.where.not(once_key: nil).count
 
-      op.clear_once!(order_id: 1)
-
+      op1.clear_once!(order_id: 1)
       record = OperationRecord.last
       assert_nil record.once_key
       assert_equal "completed", record.status
-    end
-  end
 
-  def test_clear_once_with_string_key
-    with_recording do
-      op = define_operation(:TestOnceClearString) do
+      # Re-execution after clear
+      op1.call(order_id: 1)
+      assert_equal 2, OperationRecord.count
+
+      # String-based key
+      op2 = define_operation(:TestOnceClearString) do
         prop :payload, String
         define_method(:perform) { "processed" }
       end
 
-      op.new(payload: "data").once("webhook-123").call
-      op.clear_once!("webhook-123")
-
-      assert_nil OperationRecord.last.once_key
+      op2.new(payload: "data").once("webhook-123").call
+      op2.clear_once!("webhook-123")
+      assert_nil OperationRecord.where(name: "TestOnceClearString").last.once_key
     end
   end
 
-  def test_clear_once_allows_re_execution
-    with_recording do
-      counter = []
-      op = define_operation(:TestOnceClearReexecute) do
-        prop :order_id, Integer
-        once :order_id
-        define_method(:perform) do
-          counter << 1
-          "done"
-        end
-      end
-
-      op.call(order_id: 1)
-      op.clear_once!(order_id: 1)
-      op.call(order_id: 1)
-
-      assert_equal [1, 1], counter
-      assert_equal 2, OperationRecord.count
-    end
-  end
-
-  def test_clear_once_raises_without_arguments
+  def test_clear_once_validation_and_idempotency
+    # Raises without arguments
     op = define_operation(:TestOnceClearNoArgs) do
       prop :order_id, Integer
       once :order_id
@@ -469,179 +419,146 @@ class TestOperationOnce < Minitest::Test
     assert_raises(ArgumentError, /pass a String key/) do
       op.clear_once!
     end
-  end
 
-  def test_clear_once_is_idempotent
+    # Clearing a non-existent key is a no-op
     with_recording do
-      op = define_operation(:TestOnceClearIdempotent) do
+      op2 = define_operation(:TestOnceClearIdempotent) do
         prop :order_id, Integer
         once :order_id
         define_method(:perform) { "done" }
       end
-
-      # Clearing a non-existent key is a no-op
-      op.clear_once!(order_id: 999)
+      op2.clear_once!(order_id: 999)
     end
   end
 
   # --- Typed result replay ---
 
-  def test_typed_result_replay
+  def test_result_replay_various_types
     with_recording do
+      # BigDecimal
       require "bigdecimal"
-      op = define_operation(:TestOnceTypedReplay) do
+      op1 = define_operation(:TestOnceTypedReplay) do
         prop :order_id, Integer
         success BigDecimal
         once :order_id
         define_method(:perform) { BigDecimal("99.99") }
       end
-
-      r1 = op.call(order_id: 1)
-      r2 = op.call(order_id: 1)
-
+      r1 = op1.call(order_id: 1)
+      r2 = op1.call(order_id: 1)
       assert_instance_of BigDecimal, r1
       assert_instance_of BigDecimal, r2
       assert_equal BigDecimal("99.99"), r2
-    end
-  end
 
-  def test_hash_result_replay
-    with_recording do
-      op = define_operation(:TestOnceHashReplay) do
+      # Hash
+      op2 = define_operation(:TestOnceHashReplay) do
         prop :order_id, Integer
         once :order_id
         define_method(:perform) { { status: "charged", amount: 42 } }
       end
+      op2.call(order_id: 1)
+      r3 = op2.call(order_id: 1)
+      assert_equal({ "status" => "charged", "amount" => 42 }, r3)
 
-      op.call(order_id: 1)
-      r2 = op.call(order_id: 1)
-
-      assert_equal({ "status" => "charged", "amount" => 42 }, r2)
-    end
-  end
-
-  def test_hash_with_value_key_preserved_on_replay
-    with_recording do
-      op = define_operation(:TestOnceValueKeyHash) do
+      # Hash with :value key preserved
+      op3 = define_operation(:TestOnceValueKeyHash) do
         prop :order_id, Integer
         once :order_id
         define_method(:perform) { { value: 7 } }
       end
+      r4 = op3.call(order_id: 1)
+      r5 = op3.call(order_id: 1)
+      assert_equal({ value: 7 }, r4)
+      assert_equal({ "value" => 7 }, r5)
 
-      r1 = op.call(order_id: 1)
-      r2 = op.call(order_id: 1)
-
-      assert_equal({ value: 7 }, r1)
-      assert_equal({ "value" => 7 }, r2)
-    end
-  end
-
-  def test_primitive_result_replay
-    with_recording do
-      op = define_operation(:TestOncePrimitiveReplay) do
+      # Primitive
+      op4 = define_operation(:TestOncePrimitiveReplay) do
         prop :order_id, Integer
         once :order_id
         define_method(:perform) { 42 }
       end
+      r6 = op4.call(order_id: 1)
+      r7 = op4.call(order_id: 1)
+      assert_equal 42, r6
+      assert_equal 42, r7
 
-      r1 = op.call(order_id: 1)
-      r2 = op.call(order_id: 1)
-
-      assert_equal 42, r1
-      assert_equal 42, r2
-    end
-  end
-
-  def test_nil_result_replay
-    with_recording do
-      op = define_operation(:TestOnceNilReplay) do
+      # Nil
+      op5 = define_operation(:TestOnceNilReplay) do
         prop :order_id, Integer
         once :order_id
         define_method(:perform) { nil }
       end
-
-      r1 = op.call(order_id: 1)
-      r2 = op.call(order_id: 1)
-
-      assert_nil r1
-      assert_nil r2
-      assert_equal 1, OperationRecord.count
+      r8 = op5.call(order_id: 1)
+      r9 = op5.call(order_id: 1)
+      assert_nil r8
+      assert_nil r9
     end
   end
 
   # --- Safe proxy interaction ---
 
-  def test_safe_call_replays_ok
+  def test_safe_call_replays_ok_and_err
     with_recording do
-      op = define_operation(:TestOnceSafeOk) do
+      # Ok replay
+      op1 = define_operation(:TestOnceSafeOk) do
         prop :order_id, Integer
         once :order_id
         define_method(:perform) { "done" }
       end
 
-      r1 = op.new(order_id: 1).safe.call
-      r2 = op.new(order_id: 1).safe.call
-
+      r1 = op1.new(order_id: 1).safe.call
+      r2 = op1.new(order_id: 1).safe.call
       assert_instance_of Dex::Ok, r1
       assert_instance_of Dex::Ok, r2
       assert_equal "done", r2.value
-    end
-  end
 
-  def test_safe_call_replays_err
-    with_recording do
-      op = define_operation(:TestOnceSafeErr) do
+      # Err replay
+      op2 = define_operation(:TestOnceSafeErr) do
         prop :order_id, Integer
         once :order_id
         define_method(:perform) { error!(:denied, "nope") }
       end
 
-      r1 = op.new(order_id: 1).safe.call
-      r2 = op.new(order_id: 1).safe.call
-
-      assert_instance_of Dex::Err, r1
-      assert_instance_of Dex::Err, r2
-      assert_equal :denied, r2.error.code
+      r3 = op2.new(order_id: 1).safe.call
+      r4 = op2.new(order_id: 1).safe.call
+      assert_instance_of Dex::Err, r3
+      assert_instance_of Dex::Err, r4
+      assert_equal :denied, r4.error.code
     end
   end
 
   # --- Backend validation ---
 
-  def test_once_raises_without_record_backend
-    op = define_operation(:TestOnceNoBackend) do
+  def test_once_backend_validation
+    # No backend configured
+    op1 = define_operation(:TestOnceNoBackend) do
       prop :order_id, Integer
       once :order_id
       define_method(:perform) { "done" }
     end
-
     assert_raises(RuntimeError, /once requires a record backend/) do
-      op.call(order_id: 1)
+      op1.call(order_id: 1)
     end
-  end
 
-  def test_once_raises_without_once_key_column
+    # Missing once_key column
     with_recording(record_class: MinimalOperationRecord) do
-      op = define_operation(:TestOnceNoColumn) do
+      op2 = define_operation(:TestOnceNoColumn) do
         prop :order_id, Integer
         once :order_id
         define_method(:perform) { "done" }
       end
-
-      error = assert_raises(ArgumentError) { op.call(order_id: 1) }
+      error = assert_raises(ArgumentError) { op2.call(order_id: 1) }
       assert_match(/missing required attributes/, error.message)
       assert_match(/once_key/, error.message)
     end
-  end
 
-  def test_once_raises_without_expiry_column
+    # Missing expiry column
     with_recording(record_class: OnceNoExpiryRecord) do
-      op = define_operation(:TestOnceNoExpiryCol) do
+      op3 = define_operation(:TestOnceNoExpiryCol) do
         prop :user_id, Integer
         once :user_id, expires_in: 3600
         define_method(:perform) { "done" }
       end
-
-      error = assert_raises(ArgumentError) { op.call(user_id: 1) }
+      error = assert_raises(ArgumentError) { op3.call(user_id: 1) }
       assert_match(/missing required attributes/, error.message)
       assert_match(/once_key_expires_at/, error.message)
     end

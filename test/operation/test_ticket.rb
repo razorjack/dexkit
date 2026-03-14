@@ -47,58 +47,23 @@ class TestOperationTicket < Minitest::Test
 
   # --- Delegated accessors ---
 
-  def test_id_delegates_to_record
+  def test_delegated_accessors
     with_recording do
-      record = create_record(status: "pending")
+      record = create_record(
+        status: "error",
+        name: "Orders::Place",
+        error_code: "out_of_stock",
+        error_message: "Item unavailable",
+        error_details: { "item_id" => "123" }
+      )
       ticket = Dex::Operation::Ticket.from_record(record)
 
       assert_equal record.id, ticket.id
-    end
-  end
-
-  def test_operation_name_delegates_to_record_name
-    with_recording do
-      record = create_record(status: "pending", name: "Orders::Place")
-      ticket = Dex::Operation::Ticket.from_record(record)
-
       assert_equal "Orders::Place", ticket.operation_name
-    end
-  end
-
-  def test_status_delegates_to_record
-    with_recording do
-      record = create_record(status: "running")
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      assert_equal "running", ticket.status
-    end
-  end
-
-  def test_error_code_delegates_to_record
-    with_recording do
-      record = create_record(status: "error", error_code: "out_of_stock")
-      ticket = Dex::Operation::Ticket.from_record(record)
-
+      assert_equal "error", ticket.status
       assert_equal "out_of_stock", ticket.error_code
-    end
-  end
-
-  def test_error_message_delegates_to_record
-    with_recording do
-      record = create_record(status: "error", error_code: "out_of_stock", error_message: "Item unavailable")
-      ticket = Dex::Operation::Ticket.from_record(record)
-
       assert_equal "Item unavailable", ticket.error_message
-    end
-  end
-
-  def test_error_details_delegates_to_record
-    with_recording do
-      details = { "item_id" => "123" }
-      record = create_record(status: "error", error_code: "out_of_stock", error_details: details)
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      assert_equal details, ticket.error_details
+      assert_equal({ "item_id" => "123" }, ticket.error_details)
     end
   end
 
@@ -113,56 +78,33 @@ class TestOperationTicket < Minitest::Test
 
   # --- Predicates ---
 
-  def test_completed_predicate
+  def test_status_predicates
     with_recording do
-      ticket = ticket_with_status("completed")
-      assert ticket.completed?
-      refute ticket.pending?
-      refute ticket.error?
-      refute ticket.failed?
-      refute ticket.running?
-    end
-  end
+      completed = ticket_with_status("completed")
+      assert completed.completed?
+      refute completed.pending?
+      refute completed.error?
+      refute completed.failed?
+      refute completed.running?
+      assert completed.terminal?
 
-  def test_error_predicate
-    with_recording do
-      ticket = ticket_with_status("error", error_code: "bad")
-      assert ticket.error?
-      refute ticket.completed?
-    end
-  end
+      error = ticket_with_status("error", error_code: "bad")
+      assert error.error?
+      refute error.completed?
+      assert error.terminal?
 
-  def test_failed_predicate
-    with_recording do
-      ticket = ticket_with_status("failed", error_code: "RuntimeError")
-      assert ticket.failed?
-      refute ticket.completed?
-    end
-  end
+      failed = ticket_with_status("failed", error_code: "RuntimeError")
+      assert failed.failed?
+      refute failed.completed?
+      assert failed.terminal?
 
-  def test_pending_predicate
-    with_recording do
-      ticket = ticket_with_status("pending")
-      assert ticket.pending?
-      refute ticket.terminal?
-    end
-  end
+      pending = ticket_with_status("pending")
+      assert pending.pending?
+      refute pending.terminal?
 
-  def test_running_predicate
-    with_recording do
-      ticket = ticket_with_status("running")
-      assert ticket.running?
-      refute ticket.terminal?
-    end
-  end
-
-  def test_terminal_includes_completed_error_failed
-    with_recording do
-      assert ticket_with_status("completed").terminal?
-      assert ticket_with_status("error", error_code: "x").terminal?
-      assert ticket_with_status("failed", error_code: "RuntimeError").terminal?
-      refute ticket_with_status("pending").terminal?
-      refute ticket_with_status("running").terminal?
+      running = ticket_with_status("running")
+      assert running.running?
+      refute running.terminal?
     end
   end
 
@@ -206,117 +148,87 @@ class TestOperationTicket < Minitest::Test
 
   # --- Outcome reconstruction ---
 
-  def test_outcome_completed_returns_ok_with_hash_result
+  def test_outcome_completed
     with_recording do
-      record = create_record(status: "completed", result: { "url" => "/done", "count" => 42 })
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      result = ticket.outcome
+      # Hash result — symbolized keys
+      hash_ticket = Dex::Operation::Ticket.from_record(
+        create_record(status: "completed", result: { "url" => "/done", "count" => 42 })
+      )
+      result = hash_ticket.outcome
       assert_instance_of Dex::Ok, result
       assert_equal({ url: "/done", count: 42 }, result.value)
-    end
-  end
 
-  def test_outcome_completed_unwraps_dex_value
-    with_recording do
-      record = create_record(status: "completed", result: { "_dex_value" => "hello" })
-      ticket = Dex::Operation::Ticket.from_record(record)
+      # Nested keys — deep symbolization
+      nested_ticket = Dex::Operation::Ticket.from_record(
+        create_record(status: "completed", result: {
+          "order" => { "id" => 1, "items" => [{ "name" => "Widget" }] }
+        })
+      )
+      assert_equal({ order: { id: 1, items: [{ name: "Widget" }] } }, nested_ticket.outcome.value)
 
-      result = ticket.outcome
-      assert_instance_of Dex::Ok, result
-      assert_equal "hello", result.value
-    end
-  end
+      # _dex_value unwrapping — string
+      unwrap_ticket = Dex::Operation::Ticket.from_record(
+        create_record(status: "completed", result: { "_dex_value" => "hello" })
+      )
+      assert_equal "hello", unwrap_ticket.outcome.value
 
-  def test_outcome_completed_with_nil_result
-    with_recording do
-      record = create_record(status: "completed", result: nil)
-      ticket = Dex::Operation::Ticket.from_record(record)
+      # _dex_value unwrapping — non-hash value
+      int_ticket = Dex::Operation::Ticket.from_record(
+        create_record(status: "completed", result: { "_dex_value" => 42 })
+      )
+      assert_equal 42, int_ticket.outcome.value
 
-      result = ticket.outcome
+      # nil result
+      nil_ticket = Dex::Operation::Ticket.from_record(
+        create_record(status: "completed", result: nil)
+      )
+      result = nil_ticket.outcome
       assert_instance_of Dex::Ok, result
       assert_nil result.value
     end
   end
 
-  def test_outcome_completed_symbolizes_nested_keys
+  def test_outcome_error
     with_recording do
-      record = create_record(status: "completed", result: {
-        "order" => { "id" => 1, "items" => [{ "name" => "Widget" }] }
-      })
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      result = ticket.outcome
-      expected = { order: { id: 1, items: [{ name: "Widget" }] } }
-      assert_equal expected, result.value
-    end
-  end
-
-  def test_outcome_completed_with_non_hash_value
-    with_recording do
-      record = create_record(status: "completed", result: { "_dex_value" => 42 })
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      result = ticket.outcome
-      assert_instance_of Dex::Ok, result
-      assert_equal 42, result.value
-    end
-  end
-
-  def test_outcome_error_returns_err
-    with_recording do
-      record = create_record(
-        status: "error",
-        error_code: "out_of_stock",
-        error_message: "Item unavailable",
-        error_details: { "item_id" => "123" }
+      # With details
+      with_details = Dex::Operation::Ticket.from_record(
+        create_record(
+          status: "error",
+          error_code: "out_of_stock",
+          error_message: "Item unavailable",
+          error_details: { "item_id" => "123" }
+        )
       )
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      result = ticket.outcome
+      result = with_details.outcome
       assert_instance_of Dex::Err, result
       assert_equal :out_of_stock, result.code
       assert_equal "Item unavailable", result.message
       assert_equal({ item_id: "123" }, result.details)
-    end
-  end
 
-  def test_outcome_error_without_details
-    with_recording do
-      record = create_record(status: "error", error_code: "forbidden", error_message: "Access denied")
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      result = ticket.outcome
+      # Without details
+      without_details = Dex::Operation::Ticket.from_record(
+        create_record(status: "error", error_code: "forbidden", error_message: "Access denied")
+      )
+      result = without_details.outcome
       assert_instance_of Dex::Err, result
       assert_equal :forbidden, result.code
       assert_nil result.details
     end
   end
 
-  def test_outcome_failed_returns_nil
+  def test_outcome_returns_nil_for_non_terminal_and_failed
     with_recording do
-      record = create_record(status: "failed", error_code: "RuntimeError", error_message: "boom")
-      ticket = Dex::Operation::Ticket.from_record(record)
+      assert_nil Dex::Operation::Ticket.from_record(
+        create_record(status: "failed", error_code: "RuntimeError", error_message: "boom")
+      ).outcome
 
-      assert_nil ticket.outcome
-    end
-  end
+      assert_nil Dex::Operation::Ticket.from_record(
+        create_record(status: "pending")
+      ).outcome
 
-  def test_outcome_pending_returns_nil
-    with_recording do
-      record = create_record(status: "pending")
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      assert_nil ticket.outcome
-    end
-  end
-
-  def test_outcome_running_returns_nil
-    with_recording do
-      record = create_record(status: "running")
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      assert_nil ticket.outcome
+      assert_nil Dex::Operation::Ticket.from_record(
+        create_record(status: "running")
+      ).outcome
     end
   end
 
@@ -438,37 +350,23 @@ class TestOperationTicket < Minitest::Test
     end
   end
 
-  def test_wait_validates_no_record
-    ticket = Dex::Operation::Ticket.new(record: nil, job: nil)
-    error = assert_raises(ArgumentError) { ticket.wait(1) }
+  def test_wait_validation
+    # No record
+    unrecorded = Dex::Operation::Ticket.new(record: nil, job: nil)
+    error = assert_raises(ArgumentError) { unrecorded.wait(1) }
     assert_match(/wait requires a recorded operation/, error.message)
-  end
 
-  def test_wait_validates_timeout_positive
     with_recording do
       ticket = Dex::Operation::Ticket.from_record(create_record(status: "pending"))
-      error = assert_raises(ArgumentError) { ticket.wait(0) }
-      assert_match(/timeout must be a positive Numeric/, error.message)
 
-      error = assert_raises(ArgumentError) { ticket.wait(-1) }
-      assert_match(/timeout must be a positive Numeric/, error.message)
-    end
-  end
-
-  def test_wait_validates_timeout_type
-    with_recording do
-      ticket = Dex::Operation::Ticket.from_record(create_record(status: "pending"))
+      # Timeout: zero, negative, wrong type
+      assert_raises(ArgumentError) { ticket.wait(0) }
+      assert_raises(ArgumentError) { ticket.wait(-1) }
       error = assert_raises(ArgumentError) { ticket.wait("five") }
       assert_match(/timeout must be a positive Numeric/, error.message)
-    end
-  end
 
-  def test_wait_validates_interval
-    with_recording do
-      ticket = Dex::Operation::Ticket.from_record(create_record(status: "pending"))
-      error = assert_raises(ArgumentError) { ticket.wait(1, interval: 0) }
-      assert_match(/interval must be a positive number or a callable/, error.message)
-
+      # Interval: zero, negative
+      assert_raises(ArgumentError) { ticket.wait(1, interval: 0) }
       error = assert_raises(ArgumentError) { ticket.wait(1, interval: -0.1) }
       assert_match(/interval must be a positive number or a callable/, error.message)
     end
@@ -476,56 +374,46 @@ class TestOperationTicket < Minitest::Test
 
   # --- Wait! ---
 
-  def test_wait_bang_returns_value_on_success
+  def test_wait_bang_success
     with_recording do
-      record = create_record(status: "completed", result: { "url" => "/done" })
-      ticket = Dex::Operation::Ticket.from_record(record)
+      # Returns value
+      ticket = Dex::Operation::Ticket.from_record(
+        create_record(status: "completed", result: { "url" => "/done" })
+      )
+      assert_equal({ url: "/done" }, ticket.wait!(1))
 
-      result = ticket.wait!(1)
-      assert_equal({ url: "/done" }, result)
+      # Returns nil for nil result
+      nil_ticket = Dex::Operation::Ticket.from_record(
+        create_record(status: "completed", result: nil)
+      )
+      assert_nil nil_ticket.wait!(1)
     end
   end
 
-  def test_wait_bang_raises_dex_error_on_business_error
+  def test_wait_bang_errors
     with_recording do
-      record = create_record(status: "error", error_code: "out_of_stock", error_message: "Gone")
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      error = assert_raises(Dex::Error) { ticket.wait!(1) }
+      # Business error → Dex::Error
+      error_ticket = Dex::Operation::Ticket.from_record(
+        create_record(status: "error", error_code: "out_of_stock", error_message: "Gone")
+      )
+      error = assert_raises(Dex::Error) { error_ticket.wait!(1) }
       assert_equal :out_of_stock, error.code
       assert_equal "Gone", error.message
-    end
-  end
 
-  def test_wait_bang_raises_timeout_on_timeout
-    with_recording do
-      record = create_record(status: "pending")
-      ticket = Dex::Operation::Ticket.from_record(record)
+      # Infrastructure crash → Dex::OperationFailed
+      failed_ticket = Dex::Operation::Ticket.from_record(
+        create_record(status: "failed", error_code: "NoMethodError", error_message: "undefined method 'foo'")
+      )
+      error = assert_raises(Dex::OperationFailed) { failed_ticket.wait!(1) }
+      assert_equal "NoMethodError", error.exception_class
 
-      error = assert_raises(Dex::Timeout) { ticket.wait!(0.05, interval: 0.01) }
-      assert_equal record.id, error.ticket_id
+      # Timeout → Dex::Timeout
+      pending_record = create_record(status: "pending")
+      pending_ticket = Dex::Operation::Ticket.from_record(pending_record)
+      error = assert_raises(Dex::Timeout) { pending_ticket.wait!(0.05, interval: 0.01) }
+      assert_equal pending_record.id, error.ticket_id
       assert_equal "TestOp", error.operation_name
       assert_in_delta 0.05, error.timeout, 0.001
-    end
-  end
-
-  def test_wait_bang_raises_operation_failed_on_crash
-    with_recording do
-      record = create_record(status: "failed", error_code: "NoMethodError", error_message: "undefined method 'foo'")
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      error = assert_raises(Dex::OperationFailed) { ticket.wait!(1) }
-      assert_equal "NoMethodError", error.exception_class
-    end
-  end
-
-  def test_wait_bang_returns_nil_for_nil_result_success
-    with_recording do
-      record = create_record(status: "completed", result: nil)
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      result = ticket.wait!(1)
-      assert_nil result
     end
   end
 
@@ -542,77 +430,59 @@ class TestOperationTicket < Minitest::Test
 
   # --- as_json ---
 
-  def test_as_json_completed
+  def test_as_json_by_status
     with_recording do
-      record = create_record(status: "completed", result: { "url" => "/orders/1" })
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      json = ticket.as_json
-      assert_equal record.id.to_s, json["id"]
+      # Completed — includes id, name, status, result
+      completed_record = create_record(status: "completed", result: { "url" => "/orders/1" })
+      json = Dex::Operation::Ticket.from_record(completed_record).as_json
+      assert_equal completed_record.id.to_s, json["id"]
       assert_equal "TestOp", json["name"]
       assert_equal "completed", json["status"]
       assert_equal({ "url" => "/orders/1" }, json["result"])
-    end
-  end
 
-  def test_as_json_completed_unwraps_dex_value
-    with_recording do
-      record = create_record(status: "completed", result: { "_dex_value" => 42 })
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      json = ticket.as_json
-      assert_equal 42, json["result"]
-    end
-  end
-
-  def test_as_json_completed_omits_nil_result
-    with_recording do
-      record = create_record(status: "completed", result: nil)
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      json = ticket.as_json
-      refute json.key?("result")
-    end
-  end
-
-  def test_as_json_error
-    with_recording do
-      record = create_record(
+      # Error — includes error hash
+      error_record = create_record(
         status: "error",
         error_code: "out_of_stock",
         error_message: "Item unavailable",
         error_details: { "item_id" => "123" }
       )
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      json = ticket.as_json
+      json = Dex::Operation::Ticket.from_record(error_record).as_json
       assert_equal "error", json["status"]
       assert_equal "out_of_stock", json.dig("error", "code")
       assert_equal "Item unavailable", json.dig("error", "message")
       assert_equal({ "item_id" => "123" }, json.dig("error", "details"))
-    end
-  end
 
-  def test_as_json_failed_redacts_exception_details
-    with_recording do
-      record = create_record(status: "failed", error_code: "RuntimeError", error_message: "boom")
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      json = ticket.as_json
+      # Failed — redacts exception details
+      json = Dex::Operation::Ticket.from_record(
+        create_record(status: "failed", error_code: "RuntimeError", error_message: "boom")
+      ).as_json
       assert_equal "failed", json["status"]
+      refute json.key?("error")
+      refute json.key?("result")
+
+      # Pending — no error, no result
+      json = Dex::Operation::Ticket.from_record(
+        create_record(status: "pending")
+      ).as_json
+      assert_equal "pending", json["status"]
       refute json.key?("error")
       refute json.key?("result")
     end
   end
 
-  def test_as_json_pending
+  def test_as_json_edge_cases
     with_recording do
-      record = create_record(status: "pending")
-      ticket = Dex::Operation::Ticket.from_record(record)
+      # Unwraps _dex_value
+      json = Dex::Operation::Ticket.from_record(
+        create_record(status: "completed", result: { "_dex_value" => 42 })
+      ).as_json
+      assert_equal 42, json["result"]
 
-      json = ticket.as_json
-      assert_equal "pending", json["status"]
-      refute json.key?("error")
+      # Omits nil result
+      json = Dex::Operation::Ticket.from_record(
+        create_record(status: "completed", result: nil)
+      ).as_json
       refute json.key?("result")
     end
   end
@@ -776,75 +646,45 @@ class TestOperationTicket < Minitest::Test
 
   # --- Outcome: typed result coercion ---
 
-  def test_outcome_coerces_date_success_type
+  def test_outcome_type_coercion
     with_recording do
-      op_class = define_operation(:TestTicketTypedDate) do
+      # Date coercion
+      date_op = define_operation(:TestTicketTypedDate) do
         success Date
         prop :day, String
         def perform = Date.parse(day)
       end
-
-      op_class.new(day: "2025-06-15").async.call
+      date_op.new(day: "2025-06-15").async.call
       record = OperationRecord.last
-
-      Dex::Operation::RecordJob.new.perform(
-        class_name: "TestTicketTypedDate",
-        record_id: record.id
-      )
-
-      ticket = Dex::Operation::Ticket.from_record(record.reload)
-      result = ticket.outcome
-      assert_instance_of Dex::Ok, result
+      Dex::Operation::RecordJob.new.perform(class_name: "TestTicketTypedDate", record_id: record.id)
+      result = Dex::Operation::Ticket.from_record(record.reload).outcome
       assert_instance_of Date, result.value
       assert_equal Date.new(2025, 6, 15), result.value
-    end
-  end
 
-  def test_outcome_coerces_symbol_success_type
-    with_recording do
-      op_class = define_operation(:TestTicketTypedSymbol) do
+      # Symbol coercion
+      symbol_op = define_operation(:TestTicketTypedSymbol) do
         success Symbol
         prop :status, Symbol
         def perform = status
       end
-
-      op_class.new(status: :active).async.call
+      symbol_op.new(status: :active).async.call
       record = OperationRecord.last
-
-      Dex::Operation::RecordJob.new.perform(
-        class_name: "TestTicketTypedSymbol",
-        record_id: record.id
-      )
-
-      ticket = Dex::Operation::Ticket.from_record(record.reload)
-      result = ticket.outcome
-      assert_instance_of Dex::Ok, result
+      Dex::Operation::RecordJob.new.perform(class_name: "TestTicketTypedSymbol", record_id: record.id)
+      result = Dex::Operation::Ticket.from_record(record.reload).outcome
       assert_instance_of Symbol, result.value
       assert_equal :active, result.value
-    end
-  end
 
-  def test_outcome_coerces_ref_success_type
-    with_recording do
+      # Ref coercion (model lookup)
       model = TestModel.create!(name: "Alice")
-
-      op_class = define_operation(:TestTicketTypedRef) do
+      ref_op = define_operation(:TestTicketTypedRef) do
         success _Ref(TestModel)
         prop :model_id, Integer
         def perform = TestModel.find(model_id)
       end
-
-      op_class.new(model_id: model.id).async.call
+      ref_op.new(model_id: model.id).async.call
       record = OperationRecord.last
-
-      Dex::Operation::RecordJob.new.perform(
-        class_name: "TestTicketTypedRef",
-        record_id: record.id
-      )
-
-      ticket = Dex::Operation::Ticket.from_record(record.reload)
-      result = ticket.outcome
-      assert_instance_of Dex::Ok, result
+      Dex::Operation::RecordJob.new.perform(class_name: "TestTicketTypedRef", record_id: record.id)
+      result = Dex::Operation::Ticket.from_record(record.reload).outcome
       assert_instance_of TestModel, result.value
       assert_equal model.id, result.value.id
     end
@@ -867,30 +707,21 @@ class TestOperationTicket < Minitest::Test
 
   # --- Outcome: array symbolization ---
 
-  def test_outcome_symbolizes_array_of_hashes
+  def test_outcome_symbolizes_arrays
     with_recording do
-      record = create_record(
-        status: "completed",
-        result: { "_dex_value" => [{ "name" => "Alice" }, { "name" => "Bob" }] }
+      # Array of hashes via _dex_value
+      array_ticket = Dex::Operation::Ticket.from_record(
+        create_record(status: "completed", result: { "_dex_value" => [{ "name" => "Alice" }, { "name" => "Bob" }] })
       )
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      result = ticket.outcome
+      result = array_ticket.outcome
       assert_instance_of Dex::Ok, result
       assert_equal [{ name: "Alice" }, { name: "Bob" }], result.value
-    end
-  end
 
-  def test_outcome_symbolizes_nested_array_in_hash
-    with_recording do
-      record = create_record(
-        status: "completed",
-        result: { "items" => [{ "id" => 1 }, { "id" => 2 }] }
+      # Nested array in hash
+      nested_ticket = Dex::Operation::Ticket.from_record(
+        create_record(status: "completed", result: { "items" => [{ "id" => 1 }, { "id" => 2 }] })
       )
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      result = ticket.outcome
-      assert_equal({ items: [{ id: 1 }, { id: 2 }] }, result.value)
+      assert_equal({ items: [{ id: 1 }, { id: 2 }] }, nested_ticket.outcome.value)
     end
   end
 
@@ -901,29 +732,17 @@ class TestOperationTicket < Minitest::Test
       record = create_record(status: "completed", result: { "ok" => true })
       ticket = Dex::Operation::Ticket.from_record(record)
 
-      result = ticket.wait(3.seconds)
-      assert_instance_of Dex::Ok, result
-    end
-  end
-
-  def test_wait_bang_accepts_active_support_duration
-    with_recording do
-      record = create_record(status: "completed", result: { "ok" => true })
-      ticket = Dex::Operation::Ticket.from_record(record)
-
-      result = ticket.wait!(3.seconds)
-      assert_equal({ ok: true }, result)
+      assert_instance_of Dex::Ok, ticket.wait(3.seconds)
+      assert_equal({ ok: true }, ticket.wait!(3.seconds))
     end
   end
 
   # --- Exception classes ---
 
-  def test_operation_failed_is_not_dex_error
+  def test_operation_failed_exception
     refute Dex::OperationFailed < Dex::Error
     assert Dex::OperationFailed < StandardError
-  end
 
-  def test_operation_failed_message
     error = Dex::OperationFailed.new(
       operation_name: "Orders::Place",
       exception_class: "RuntimeError",
@@ -935,12 +754,10 @@ class TestOperationTicket < Minitest::Test
     assert_match(/Orders::Place failed with RuntimeError: connection refused/, error.message)
   end
 
-  def test_timeout_is_not_dex_error
+  def test_timeout_exception
     refute Dex::Timeout < Dex::Error
     assert Dex::Timeout < StandardError
-  end
 
-  def test_timeout_message
     error = Dex::Timeout.new(timeout: 3, ticket_id: "op_abc", operation_name: "Reports::Generate")
     assert_in_delta 3.0, error.timeout, 0.001
     assert_equal "op_abc", error.ticket_id

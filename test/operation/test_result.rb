@@ -7,30 +7,22 @@ class TestOperationResult < Minitest::Test
     setup_test_database
   end
 
-  # success Type declaration
+  # success Type declaration and inheritance
 
-  def test_success_type_is_stored
+  def test_success_type_declaration_and_inheritance
+    # Stored
     op = build_operation {}
     op.success(String)
-
     assert_equal String, op._success_type
-  end
 
-  def test_success_type_inherits_from_parent
+    # Inherits from parent
     parent = build_operation {}
     parent.success(Integer)
-
     child = Class.new(parent)
     assert_equal Integer, child._success_type
-  end
 
-  def test_success_type_child_overrides_parent
-    parent = build_operation {}
-    parent.success(Integer)
-
-    child = Class.new(parent)
+    # Child overrides parent
     child.success(String)
-
     assert_equal String, child._success_type
     assert_equal Integer, parent._success_type
   end
@@ -40,34 +32,21 @@ class TestOperationResult < Minitest::Test
     assert_nil op._success_type
   end
 
-  # error :codes declaration
+  # error :codes declaration and inheritance
 
-  def test_error_codes_stored
+  def test_error_codes_declaration_and_inheritance
+    # Stored
     op = build_operation {}
     op.error(:not_found, :invalid)
-
     assert_equal %i[not_found invalid], op._declared_errors
-  end
 
-  def test_error_codes_inherit_from_parent
+    # Inherits and deduplicates
     parent = build_operation {}
     parent.error(:not_found)
-
-    child = Class.new(parent)
-    child.error(:invalid)
-
-    assert_equal %i[not_found invalid], child._declared_errors
-    assert_equal %i[not_found], parent._declared_errors
-  end
-
-  def test_error_codes_deduplicated_across_inheritance
-    parent = build_operation {}
-    parent.error(:not_found)
-
     child = Class.new(parent)
     child.error(:not_found, :invalid)
-
     assert_equal %i[not_found invalid], child._declared_errors
+    assert_equal %i[not_found], parent._declared_errors
   end
 
   def test_has_declared_errors_false_when_empty
@@ -133,19 +112,18 @@ class TestOperationResult < Minitest::Test
 
   # success type runtime validation
 
-  def test_success_type_validates_correct_type
-    op = operation(success: String) { "hello" }
-    assert_equal "hello", op.new.call
-  end
+  def test_success_type_validation
+    # Correct type accepted
+    op1 = operation(success: String) { "hello" }
+    assert_equal "hello", op1.new.call
 
-  def test_success_type_rejects_wrong_type
-    op = operation(success: String) { 123 }
-    assert_raises(ArgumentError) { op.new.call }
-  end
+    # Wrong type rejected
+    op2 = operation(success: String) { 123 }
+    assert_raises(ArgumentError) { op2.new.call }
 
-  def test_success_type_skips_nil_return
-    op = operation(success: String) { nil }
-    assert_nil op.new.call
+    # Nil return skips validation
+    op3 = operation(success: String) { nil }
+    assert_nil op3.new.call
   end
 
   def test_success_type_validates_ref_type
@@ -164,28 +142,27 @@ class TestOperationResult < Minitest::Test
     assert_equal 42, op.new.call
   end
 
-  def test_success_optional_type_accepts_correct_type
-    op = build_operation do
+  def test_success_optional_type
+    # Accepts correct type
+    op1 = build_operation do
       success _Nilable(String)
       def perform = "hello"
     end
-    assert_equal "hello", op.new.call
-  end
+    assert_equal "hello", op1.new.call
 
-  def test_success_optional_type_rejects_wrong_type
-    op = build_operation do
+    # Rejects wrong type
+    op2 = build_operation do
       success _Nilable(String)
       def perform = 123
     end
-    assert_raises(ArgumentError) { op.new.call }
-  end
+    assert_raises(ArgumentError) { op2.new.call }
 
-  def test_success_optional_type_accepts_nil
-    op = build_operation do
+    # Accepts nil
+    op3 = build_operation do
       success _Nilable(String)
       def perform = nil
     end
-    assert_nil op.new.call
+    assert_nil op3.new.call
   end
 
   def test_success_type_validates_success_bang

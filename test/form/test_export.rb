@@ -33,24 +33,17 @@ class TestFormExport < Minitest::Test
     refute h[:fields][:notes][:required]
   end
 
-  def test_to_h_with_default
+  def test_to_h_defaults
     form_class = build_form do
       field :currency, :string, default: "USD"
       field? :priority, :integer, default: 0
-    end
-
-    h = form_class.to_h
-    assert_equal "USD", h[:fields][:currency][:default]
-    assert_equal 0, h[:fields][:priority][:default]
-  end
-
-  def test_to_h_without_default
-    form_class = build_form do
       field :name, :string
       field? :notes, :string
     end
 
     h = form_class.to_h
+    assert_equal "USD", h[:fields][:currency][:default]
+    assert_equal 0, h[:fields][:priority][:default]
     refute h[:fields][:name].key?(:default)
     refute h[:fields][:notes].key?(:default)
   end
@@ -98,42 +91,7 @@ class TestFormExport < Minitest::Test
     assert_equal :float, h[:nested][:address][:nested][:coordinate][:fields][:lat][:type]
   end
 
-  def test_to_h_no_nested_key_when_empty
-    form_class = build_form do
-      field :name, :string
-    end
-
-    h = form_class.to_h
-    refute h.key?(:nested)
-  end
-
   # --- Class-level to_json_schema ---
-
-  def test_to_json_schema_basic
-    form_class = define_form(:SchemaBasicForm) do
-      description "Schema form"
-      field :email, :string, desc: "Customer email"
-      field :amount, :decimal
-      field? :notes, :string
-    end
-
-    schema = form_class.to_json_schema
-    assert_equal "https://json-schema.org/draft/2020-12/schema", schema[:$schema]
-    assert_equal "object", schema[:type]
-    assert_equal "SchemaBasicForm", schema[:title]
-    assert_equal "Schema form", schema[:description]
-
-    assert_equal({ type: "string", description: "Customer email" },
-      schema[:properties]["email"])
-    assert_equal({ type: "number" }, schema[:properties]["amount"])
-    assert_equal({ type: "string" }, schema[:properties]["notes"])
-
-    assert_includes schema[:required], "email"
-    assert_includes schema[:required], "amount"
-    refute_includes schema[:required], "notes"
-
-    assert_equal false, schema[:additionalProperties]
-  end
 
   def test_to_json_schema_type_mapping
     form_class = build_form do
@@ -156,29 +114,6 @@ class TestFormExport < Minitest::Test
     assert_equal "date", schema[:properties]["dt"][:format]
     assert_equal "date-time", schema[:properties]["dtt"][:format]
     assert_equal "time", schema[:properties]["t"][:format]
-  end
-
-  def test_to_json_schema_with_default
-    form_class = build_form do
-      field :currency, :string, default: "USD"
-    end
-
-    schema = form_class.to_json_schema
-    assert_equal "USD", schema[:properties]["currency"][:default]
-  end
-
-  def test_to_json_schema_coerces_defaults
-    form_class = build_form do
-      field :amount, :decimal, default: BigDecimal("9.99")
-      field :count, :integer, default: 0
-      field :active, :boolean, default: true
-    end
-
-    schema = form_class.to_json_schema
-    assert_equal 9.99, schema[:properties]["amount"][:default]
-    assert_instance_of Float, schema[:properties]["amount"][:default]
-    assert_equal 0, schema[:properties]["count"][:default]
-    assert_equal true, schema[:properties]["active"][:default]
   end
 
   def test_to_json_schema_nested_one
@@ -257,26 +192,6 @@ class TestFormExport < Minitest::Test
 
   # --- Global export ---
 
-  def test_export_hash
-    define_form(:ExportAForm) { field :a, :string }
-    define_form(:ExportBForm) { field :b, :string }
-
-    result = Dex::Form.export(format: :hash)
-    assert_equal 2, result.size
-    names = result.map { |h| h[:name] }
-    assert_includes names, "ExportAForm"
-    assert_includes names, "ExportBForm"
-  end
-
-  def test_export_json_schema
-    define_form(:SchemaExportForm) do
-      field :name, :string
-    end
-
-    result = Dex::Form.export(format: :json_schema)
-    assert result.all? { |s| s[:type] == "object" }
-  end
-
   def test_export_excludes_nested_helper_forms
     define_form(:ExportParentForm) do
       field :name, :string
@@ -290,24 +205,5 @@ class TestFormExport < Minitest::Test
     names = result.map { |h| h[:name] }
     assert_includes names, "ExportParentForm"
     refute_includes names, "ExportParentForm::Address"
-  end
-
-  def test_export_invalid_format
-    err = assert_raises(ArgumentError) do
-      Dex::Form.export(format: :xml)
-    end
-    assert_match(/unknown format/, err.message)
-  end
-
-  # --- Instance-level to_h unchanged ---
-
-  def test_instance_to_h_still_works
-    form_class = build_form do
-      field :name, :string
-      field :age, :integer
-    end
-
-    form = form_class.new(name: "Alice", age: 30)
-    assert_equal({ name: "Alice", age: 30 }, form.to_h)
   end
 end

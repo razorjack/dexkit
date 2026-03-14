@@ -45,15 +45,22 @@ class TestEvent < Minitest::Test
     refute_nil event.timestamp
     refute_nil event.trace_id
     assert_equal [], event.event_ancestry
+    assert_nil event.caused_by_id
   end
 
-  def test_id_is_prefixed
-    event_class = build_event do
-      prop :name, String
-    end
+  def test_id_generation
+    event_class = build_event { prop :name, String }
 
     event = event_class.new(name: "test")
+    # Prefixed format
     assert_match(/\Aev_[1-9A-HJ-NP-Za-km-z]{20}\z/, event.id)
+    # trace_id is separate from id
+    assert_match(/\Atr_[1-9A-HJ-NP-Za-km-z]{20}\z/, event.trace_id)
+    refute_equal event.id, event.trace_id
+
+    # Each event gets unique id
+    ids = 10.times.map { event_class.new(name: "test").id }
+    assert_equal 10, ids.uniq.size
   end
 
   def test_timestamp_is_utc
@@ -64,34 +71,6 @@ class TestEvent < Minitest::Test
     event = event_class.new(name: "test")
     assert_instance_of Time, event.timestamp
     assert event.timestamp.utc?
-  end
-
-  def test_trace_id_defaults_to_trace_id_when_no_trace
-    event_class = build_event do
-      prop :name, String
-    end
-
-    event = event_class.new(name: "test")
-    assert_match(/\Atr_[1-9A-HJ-NP-Za-km-z]{20}\z/, event.trace_id)
-    refute_equal event.id, event.trace_id
-  end
-
-  def test_caused_by_id_nil_by_default
-    event_class = build_event do
-      prop :name, String
-    end
-
-    event = event_class.new(name: "test")
-    assert_nil event.caused_by_id
-  end
-
-  def test_event_ancestry_empty_by_default
-    event_class = build_event do
-      prop :name, String
-    end
-
-    event = event_class.new(name: "test")
-    assert_equal [], event.event_ancestry
   end
 
   def test_reserved_prop_names_raise
@@ -128,49 +107,25 @@ class TestEvent < Minitest::Test
     assert_equal [], json["metadata"]["event_ancestry"]
   end
 
-  def test_context_from_config
+  def test_context_capture
+    # From config
     ctx_value = { user_id: 7 }
     Dex.configure { |c| c.event_context = -> { ctx_value } }
-
-    event_class = build_event do
-      prop :name, String
-    end
-
+    event_class = build_event { prop :name, String }
     event = event_class.new(name: "test")
     assert_equal ctx_value, event.context
-  ensure
     Dex.configure { |c| c.event_context = nil }
-  end
 
-  def test_context_nil_by_default
-    event_class = build_event do
-      prop :name, String
-    end
-
+    # Nil by default
     event = event_class.new(name: "test")
     assert_nil event.context
-  end
 
-  def test_context_failure_returns_nil
+    # Failure returns nil
     Dex.configure { |c| c.event_context = -> { raise "boom" } }
-
-    event_class = build_event do
-      prop :name, String
-    end
-
     event = event_class.new(name: "test")
     assert_nil event.context
   ensure
     Dex.configure { |c| c.event_context = nil }
-  end
-
-  def test_each_event_gets_unique_id
-    event_class = build_event do
-      prop :n, Integer
-    end
-
-    ids = 10.times.map { event_class.new(n: 1).id }
-    assert_equal 10, ids.uniq.size
   end
 
   def test_uses_active_trace_id_when_present

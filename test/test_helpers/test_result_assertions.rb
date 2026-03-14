@@ -12,32 +12,23 @@ class TestResultAssertions < Minitest::Test
     setup_test_database
   end
 
-  # assert_ok
-
-  def test_assert_ok_passes_for_ok
+  def test_assert_ok
     op = build_operation { def perform = "yes" }
     result = call_operation(op)
     assert_ok result
-  end
 
-  def test_assert_ok_fails_for_err
-    op = build_operation do
+    err_op = build_operation do
       error :nope
       def perform = error!(:nope)
     end
-    result = call_operation(op)
-    assert_raises(Minitest::Assertion) { assert_ok result }
+    err_result = call_operation(err_op)
+    assert_raises(Minitest::Assertion) { assert_ok err_result }
   end
 
-  def test_assert_ok_with_expected_value
+  def test_assert_ok_with_value
     op = build_operation { def perform = 42 }
     result = call_operation(op)
     assert_ok result, 42
-  end
-
-  def test_assert_ok_with_wrong_expected_value
-    op = build_operation { def perform = 42 }
-    result = call_operation(op)
     assert_raises(Minitest::Assertion) { assert_ok result, 99 }
   end
 
@@ -49,38 +40,26 @@ class TestResultAssertions < Minitest::Test
     assert_equal "hello", yielded
   end
 
-  # refute_ok
-
-  def test_refute_ok_passes_for_err
-    op = build_operation do
+  def test_refute_ok
+    err_op = build_operation do
       error :nope
       def perform = error!(:nope)
     end
-    result = call_operation(op)
-    refute_ok result
+    refute_ok call_operation(err_op)
+
+    ok_op = build_operation { def perform = "yes" }
+    assert_raises(Minitest::Assertion) { refute_ok call_operation(ok_op) }
   end
 
-  def test_refute_ok_fails_for_ok
-    op = build_operation { def perform = "yes" }
-    result = call_operation(op)
-    assert_raises(Minitest::Assertion) { refute_ok result }
-  end
-
-  # assert_err
-
-  def test_assert_err_passes_for_err
-    op = build_operation do
+  def test_assert_err
+    err_op = build_operation do
       error :nope
       def perform = error!(:nope)
     end
-    result = call_operation(op)
-    assert_err result
-  end
+    assert_err call_operation(err_op)
 
-  def test_assert_err_fails_for_ok
-    op = build_operation { def perform = "yes" }
-    result = call_operation(op)
-    assert_raises(Minitest::Assertion) { assert_err result }
+    ok_op = build_operation { def perform = "yes" }
+    assert_raises(Minitest::Assertion) { assert_err call_operation(ok_op) }
   end
 
   def test_assert_err_with_code
@@ -90,32 +69,16 @@ class TestResultAssertions < Minitest::Test
     end
     result = call_operation(op)
     assert_err result, :not_found
-  end
-
-  def test_assert_err_with_wrong_code
-    op = build_operation do
-      error :not_found
-      def perform = error!(:not_found)
-    end
-    result = call_operation(op)
     assert_raises(Minitest::Assertion) { assert_err result, :invalid }
   end
 
-  def test_assert_err_with_message_string
-    op = build_operation do
-      error :fail
-      def perform = error!(:fail, "oops")
-    end
-    result = call_operation(op)
-    assert_err result, :fail, message: "oops"
-  end
-
-  def test_assert_err_with_message_regex
+  def test_assert_err_with_message
     op = build_operation do
       error :fail
       def perform = error!(:fail, "something went wrong")
     end
     result = call_operation(op)
+    assert_err result, :fail, message: "something went wrong"
     assert_err result, :fail, message: /went wrong/
   end
 
@@ -139,44 +102,24 @@ class TestResultAssertions < Minitest::Test
     assert_equal "oops", yielded.message
   end
 
-  # refute_err
+  def test_refute_err
+    ok_op = build_operation { def perform = "yes" }
+    refute_err call_operation(ok_op)
+    refute_err call_operation(ok_op), :not_found
 
-  def test_refute_err_passes_for_ok
-    op = build_operation { def perform = "yes" }
-    result = call_operation(op)
-    refute_err result
-  end
-
-  def test_refute_err_fails_for_err
-    op = build_operation do
+    err_op = build_operation do
       error :nope
       def perform = error!(:nope)
     end
-    result = call_operation(op)
-    assert_raises(Minitest::Assertion) { refute_err result }
-  end
+    assert_raises(Minitest::Assertion) { refute_err call_operation(err_op) }
 
-  def test_refute_err_with_code_passes_for_different_code
-    op = build_operation do
+    # refute_err with code: passes for different code, fails for matching code
+    multi_op = build_operation do
       error :not_found, :invalid
       def perform = error!(:not_found)
     end
-    result = call_operation(op)
+    result = call_operation(multi_op)
     refute_err result, :invalid
-  end
-
-  def test_refute_err_with_code_passes_for_ok
-    op = build_operation { def perform = "yes" }
-    result = call_operation(op)
-    refute_err result, :not_found
-  end
-
-  def test_refute_err_with_code_fails_for_matching_code
-    op = build_operation do
-      error :not_found
-      def perform = error!(:not_found)
-    end
-    result = call_operation(op)
     assert_raises(Minitest::Assertion) { refute_err result, :not_found }
   end
 end

@@ -24,9 +24,7 @@ class TestAsyncAssertions < Minitest::Test
 
   def test_refute_enqueues_operation
     refute_enqueues_operation { "nothing happens" }
-  end
 
-  def test_refute_enqueues_operation_fails_when_enqueued
     op = define_operation(:AsyncTestOp2) do
       prop :name, String
       def perform = name

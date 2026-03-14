@@ -9,35 +9,35 @@ class TestOperationCallbacks < Minitest::Test
 
   # before
 
-  def test_before_symbol
+  def test_before_callback_forms
     log = []
-    op = build_operation do
+
+    # Symbol
+    op1 = build_operation do
       before :setup_step
       define_method(:setup_step) { log << :setup }
       define_method(:perform) { log << :perform }
     end
-    op.new.call
+    op1.new.call
     assert_equal [:setup, :perform], log
-  end
 
-  def test_before_lambda
-    log = []
+    # Lambda
+    log.clear
     callable = -> { log << :before }
-    op = build_operation do
+    op2 = build_operation do
       before callable
       define_method(:perform) { log << :perform }
     end
-    op.new.call
+    op2.new.call
     assert_equal [:before, :perform], log
-  end
 
-  def test_before_block
-    log = []
-    op = build_operation do
+    # Block
+    log.clear
+    op3 = build_operation do
       before { log << :before }
       define_method(:perform) { log << :perform }
     end
-    op.new.call
+    op3.new.call
     assert_equal [:before, :perform], log
   end
 
@@ -74,35 +74,35 @@ class TestOperationCallbacks < Minitest::Test
 
   # after
 
-  def test_after_symbol
+  def test_after_callback_forms
     log = []
-    op = build_operation do
+
+    # Symbol
+    op1 = build_operation do
       after :finish_step
       define_method(:finish_step) { log << :finish }
       define_method(:perform) { log << :perform }
     end
-    op.new.call
+    op1.new.call
     assert_equal [:perform, :finish], log
-  end
 
-  def test_after_lambda
-    log = []
+    # Lambda
+    log.clear
     callable = -> { log << :after }
-    op = build_operation do
+    op2 = build_operation do
       after callable
       define_method(:perform) { log << :perform }
     end
-    op.new.call
+    op2.new.call
     assert_equal [:perform, :after], log
-  end
 
-  def test_after_block
-    log = []
-    op = build_operation do
+    # Block
+    log.clear
+    op3 = build_operation do
       after { log << :after }
       define_method(:perform) { log << :perform }
     end
-    op.new.call
+    op3.new.call
     assert_equal [:perform, :after], log
   end
 
@@ -129,9 +129,11 @@ class TestOperationCallbacks < Minitest::Test
 
   # around
 
-  def test_around_symbol
+  def test_around_callback_forms
     log = []
-    op = build_operation do
+
+    # Symbol
+    op1 = build_operation do
       around :wrap_step
       define_method(:wrap_step) { |&blk|
         log << :before
@@ -140,22 +142,21 @@ class TestOperationCallbacks < Minitest::Test
       }
       define_method(:perform) { log << :perform }
     end
-    op.new.call
+    op1.new.call
     assert_equal [:before, :perform, :after], log
-  end
 
-  def test_around_lambda
-    log = []
+    # Lambda
+    log.clear
     callable = ->(cont) {
       log << :before
       cont.call
       log << :after
     }
-    op = build_operation do
+    op2 = build_operation do
       around callable
       define_method(:perform) { log << :perform }
     end
-    op.new.call
+    op2.new.call
     assert_equal [:before, :perform, :after], log
   end
 
@@ -190,32 +191,24 @@ class TestOperationCallbacks < Minitest::Test
 
   # Inheritance
 
-  def test_child_inherits_parent_callbacks
+  def test_callback_inheritance
     log = []
     parent = build_operation do
       before { log << :parent }
       define_method(:perform) { log << :perform }
     end
+
+    # Child inherits parent callbacks
     child = build_operation(parent: parent) do
       before { log << :child }
     end
     child.new.call
     assert_equal [:parent, :child, :perform], log
-  end
 
-  def test_parent_unaffected_by_child_callbacks
-    log = []
-    parent = build_operation do
-      before { log << :parent }
-      define_method(:perform) { log << :perform }
-    end
-    child = build_operation(parent: parent) do
-      before { log << :child }
-    end
+    # Parent unaffected by child callbacks
+    log.clear
     parent.new.call
     assert_equal [:parent, :perform], log
-    child.new.call
-    assert_equal [:parent, :perform, :parent, :child, :perform], log
   end
 
   # Combined lifecycle

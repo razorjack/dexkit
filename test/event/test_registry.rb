@@ -5,27 +5,19 @@ require "test_helper"
 class TestEventRegistry < Minitest::Test
   # --- Event registry ---
 
-  def test_event_registry_returns_frozen_set
+  def test_event_registration
     result = Dex::Event.registry
     assert_instance_of Set, result
     assert result.frozen?
-  end
 
-  def test_named_event_registered
     define_event(:RegistryTestEvent) { prop :name, String }
     assert_includes Dex::Event.registry, RegistryTestEvent
-  end
 
-  def test_anonymous_event_excluded
-    ev = build_event { prop :name, String }
-    refute_includes Dex::Event.registry, ev
-  end
+    anon = build_event { prop :name, String }
+    refute_includes Dex::Event.registry, anon
 
-  def test_event_deregister
-    define_event(:DeregEvent) { prop :x, Integer }
-    assert_includes Dex::Event.registry, DeregEvent
-    Dex::Event.deregister(DeregEvent)
-    refute_includes Dex::Event.registry, DeregEvent
+    Dex::Event.deregister(RegistryTestEvent)
+    refute_includes Dex::Event.registry, RegistryTestEvent
   end
 
   # --- Event description ---
@@ -36,11 +28,9 @@ class TestEventRegistry < Minitest::Test
       prop :name, String
     end
     assert_equal "Something happened", ev.description
-  end
 
-  def test_event_description_nil_by_default
-    ev = build_event { prop :name, String }
-    assert_nil ev.description
+    ev_nil = build_event { prop :name, String }
+    assert_nil ev_nil.description
   end
 
   # --- Event to_h ---
@@ -57,12 +47,10 @@ class TestEventRegistry < Minitest::Test
     assert_equal "String", h[:props][:name][:type]
     assert_equal "The name", h[:props][:name][:desc]
     assert h[:props][:name][:required]
-  end
 
-  def test_event_to_h_omits_description_when_nil
-    ev = build_event { prop :x, Integer }
-    h = ev.to_h
-    refute h.key?(:description)
+    # Omits description when nil
+    ev_nil = build_event { prop :x, Integer }
+    refute ev_nil.to_h.key?(:description)
   end
 
   # --- Event to_json_schema ---
@@ -89,43 +77,36 @@ class TestEventRegistry < Minitest::Test
   def test_event_export
     define_event(:ExportEvA) { prop :x, Integer }
     define_event(:ExportEvB) { prop :y, String }
+
     result = Dex::Event.export
     names = result.map { |h| h[:name] }
     assert_includes names, "ExportEvA"
     assert_includes names, "ExportEvB"
-    idx_a = names.index("ExportEvA")
-    idx_b = names.index("ExportEvB")
-    assert idx_a < idx_b
-  end
+    assert names.index("ExportEvA") < names.index("ExportEvB")
 
-  def test_event_export_json_schema
-    define_event(:ExportEvSchema) { prop :x, Integer }
-    result = Dex::Event.export(format: :json_schema)
-    entry = result.find { |h| h[:title] == "ExportEvSchema" }
+    # JSON schema format
+    schema_result = Dex::Event.export(format: :json_schema)
+    entry = schema_result.find { |h| h[:title] == "ExportEvA" }
     assert entry
     assert entry.key?(:properties)
   end
 
   # --- Handler registry ---
 
-  def test_handler_registry_returns_frozen_set
+  def test_handler_registration
     result = Dex::Event::Handler.registry
     assert_instance_of Set, result
     assert result.frozen?
-  end
 
-  def test_named_handler_registered
     define_event(:HandlerRegEvent) { prop :x, Integer }
     define_handler(:HandlerRegTestHandler) do
       on HandlerRegEvent
       def perform = nil
     end
     assert_includes Dex::Event::Handler.registry, HandlerRegTestHandler
-  end
 
-  def test_anonymous_handler_excluded
-    h = build_handler { def perform = nil }
-    refute_includes Dex::Event::Handler.registry, h
+    anon = build_handler { def perform = nil }
+    refute_includes Dex::Event::Handler.registry, anon
   end
 
   # --- Handler to_h ---
@@ -144,16 +125,14 @@ class TestEventRegistry < Minitest::Test
     assert_equal 3, h[:retries]
     refute h[:transaction]
     assert_instance_of Array, h[:pipeline]
-  end
 
-  def test_handler_to_h_without_event
+    # Without event
     define_handler(:HandlerNoEvent) { def perform = nil }
-    h = HandlerNoEvent.to_h
-    assert_equal "HandlerNoEvent", h[:name]
-    refute h.key?(:events)
-  end
+    h_no = HandlerNoEvent.to_h
+    assert_equal "HandlerNoEvent", h_no[:name]
+    refute h_no.key?(:events)
 
-  def test_handler_multi_event
+    # Multi-event
     define_event(:MultiEvA) { prop :x, Integer }
     define_event(:MultiEvB) { prop :y, String }
     define_handler(:MultiHandler) do
@@ -161,8 +140,7 @@ class TestEventRegistry < Minitest::Test
       def perform = nil
     end
     assert_equal [MultiEvA, MultiEvB], MultiHandler.handled_events
-    h = MultiHandler.to_h
-    assert_equal %w[MultiEvA MultiEvB], h[:events]
+    assert_equal %w[MultiEvA MultiEvB], MultiHandler.to_h[:events]
   end
 
   # --- Handler export ---
@@ -173,12 +151,11 @@ class TestEventRegistry < Minitest::Test
       on HandlerBulkEvent
       def perform = nil
     end
+
     result = Dex::Event::Handler.export
     names = result.map { |h| h[:name] }
     assert_includes names, "HandlerBulkA"
-  end
 
-  def test_handler_export_unknown_format
     assert_raises(ArgumentError) { Dex::Event::Handler.export(format: :xml) }
   end
 

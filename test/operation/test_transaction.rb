@@ -13,15 +13,26 @@ class TestOperationTransaction < Minitest::Test
     super
   end
 
-  def test_transaction_enabled_by_default
-    op = build_operation do
+  def test_transaction_enabled_by_default_and_explicit
+    # Enabled by default (rollback on error)
+    op1 = build_operation do
       def perform
         TestModel.create!(name: "Test")
         raise "Error"
       end
     end
+    assert_raises(RuntimeError) { op1.new.call }
+    assert_equal 0, TestModel.count
 
-    assert_raises(RuntimeError) { op.new.call }
+    # Explicitly enabled with `transaction true`
+    op2 = build_operation do
+      transaction true
+      def perform
+        TestModel.create!(name: "Test")
+        raise "Error"
+      end
+    end
+    assert_raises(RuntimeError) { op2.new.call }
     assert_equal 0, TestModel.count
   end
 
@@ -51,20 +62,6 @@ class TestOperationTransaction < Minitest::Test
 
     assert_raises(RuntimeError) { op.new.call }
     assert_equal 1, TestModel.count # Record was created despite error
-  end
-
-  def test_transaction_true_explicitly_enables
-    op = build_operation do
-      transaction true
-
-      def perform
-        TestModel.create!(name: "Test")
-        raise "Error"
-      end
-    end
-
-    assert_raises(RuntimeError) { op.new.call }
-    assert_equal 0, TestModel.count
   end
 
   def test_transaction_settings_inherit
@@ -220,7 +217,6 @@ class TestOperationTransaction < Minitest::Test
         transaction :unknown_adapter
       end
     end
-
     assert_match(/unknown transaction adapter/, error.message)
   end
 
@@ -296,36 +292,29 @@ class TestOperationTransaction < Minitest::Test
     assert_equal %i[after_call deferred], log
   end
 
-  def test_after_commit_not_run_on_error_halt_without_transaction
+  def test_after_commit_not_run_on_error_or_exception_without_transaction
+    # Error halt
     log = []
-
-    op = build_operation do
+    op1 = build_operation do
       transaction false
       error :boom
-
       define_method(:perform) do
         after_commit { log << :committed }
         error!(:boom)
       end
     end
-
-    assert_raises(Dex::Error) { op.new.call }
+    assert_raises(Dex::Error) { op1.new.call }
     assert_empty log
-  end
 
-  def test_after_commit_not_run_on_exception_without_transaction
-    log = []
-
-    op = build_operation do
+    # Exception
+    op2 = build_operation do
       transaction false
-
       define_method(:perform) do
         after_commit { log << :committed }
         raise "boom"
       end
     end
-
-    assert_raises(RuntimeError) { op.new.call }
+    assert_raises(RuntimeError) { op2.new.call }
     assert_empty log
   end
 

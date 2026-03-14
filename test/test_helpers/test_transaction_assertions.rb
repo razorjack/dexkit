@@ -21,16 +21,14 @@ class TestTransactionAssertions < Minitest::Test
       end
     end
     assert_rolls_back(TestModel) { op.new.call }
-  end
 
-  def test_assert_rolls_back_fails_when_committed
-    op = build_operation do
+    committed_op = build_operation do
       define_method(:perform) do
         TestModel.create!(name: "Persisted")
       end
     end
     assert_raises(Minitest::Assertion) do
-      assert_rolls_back(TestModel) { op.new.call }
+      assert_rolls_back(TestModel) { committed_op.new.call }
     end
   end
 
@@ -41,12 +39,10 @@ class TestTransactionAssertions < Minitest::Test
       end
     end
     assert_commits(TestModel) { op.new.call }
-  end
 
-  def test_assert_commits_fails_when_no_change
-    op = build_operation { def perform = "no db" }
+    noop_op = build_operation { def perform = "no db" }
     assert_raises(Minitest::Assertion) do
-      assert_commits(TestModel) { op.new.call }
+      assert_commits(TestModel) { noop_op.new.call }
     end
   end
 end

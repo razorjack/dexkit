@@ -21,51 +21,45 @@ class TestEventHandlerTransaction < Minitest::Test
     assert_equal [:perform], log
   end
 
-  def test_after_commit_defers_until_handler_completes
+  def test_after_commit_defers_with_and_without_transaction
     log = []
     event_class = build_event { prop :name, String }
 
+    # With transaction enabled
     build_handler do
       on event_class
       transaction
       define_method(:perform) do
-        after_commit { log << :committed }
-        log << :perform
+        after_commit { log << :committed_tx }
+        log << :perform_tx
       end
     end
 
     event_class.new(name: "test").publish(sync: true)
-    assert_equal %i[perform committed], log
-  end
+    assert_equal %i[perform_tx committed_tx], log
 
-  def test_after_commit_defers_without_transaction_too
-    log = []
-    event_class = build_event { prop :name, String }
+    # Without transaction (default for handler)
+    log.clear
+    Dex::Event::Bus.clear!
 
     build_handler do
       on event_class
       define_method(:perform) do
-        after_commit { log << :committed }
-        log << :perform
+        after_commit { log << :committed_no_tx }
+        log << :perform_no_tx
       end
     end
 
     event_class.new(name: "test").publish(sync: true)
-    assert_equal %i[perform committed], log
-  end
-
-  def test_transaction_false_disables_wrapping
-    handler = build_handler do
-      transaction false
-    end
-
-    settings = handler.settings_for(:transaction)
-    assert_equal false, settings[:enabled]
+    assert_equal %i[perform_no_tx committed_no_tx], log
   end
 
   def test_transaction_default_disabled_for_handler
     settings = Dex::Event::Handler.settings_for(:transaction)
     assert_equal false, settings[:enabled]
+
+    handler = build_handler { transaction false }
+    assert_equal false, handler.settings_for(:transaction)[:enabled]
   end
 
   def test_exception_rolls_back_after_commit

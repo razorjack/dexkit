@@ -14,10 +14,16 @@ class TestOneLinerAssertions < Minitest::Test
 
   # assert_operation
 
-  def test_assert_operation_with_explicit_class
+  def test_assert_operation
     op = build_operation { def perform = "ok" }
     result = assert_operation(op)
     assert result.ok?
+
+    err_op = build_operation do
+      error :nope
+      def perform = error!(:nope)
+    end
+    assert_raises(Minitest::Assertion) { assert_operation(err_op) }
   end
 
   def test_assert_operation_with_params
@@ -34,14 +40,6 @@ class TestOneLinerAssertions < Minitest::Test
     assert_operation(op, returns: 42)
   end
 
-  def test_assert_operation_fails_on_error
-    op = build_operation do
-      error :nope
-      def perform = error!(:nope)
-    end
-    assert_raises(Minitest::Assertion) { assert_operation(op) }
-  end
-
   def test_assert_operation_fails_on_wrong_return
     op = build_operation { def perform = 42 }
     assert_raises(Minitest::Assertion) { assert_operation(op, returns: 99) }
@@ -49,13 +47,15 @@ class TestOneLinerAssertions < Minitest::Test
 
   # assert_operation_error
 
-  def test_assert_operation_error_with_class_and_code
+  def test_assert_operation_error
     op = build_operation do
-      error :not_found
+      error :not_found, :invalid
       def perform = error!(:not_found)
     end
     result = assert_operation_error(op, :not_found)
     assert result.error?
+
+    assert_raises(Minitest::Assertion) { assert_operation_error(op, :invalid) }
   end
 
   def test_assert_operation_error_with_params
@@ -70,33 +70,18 @@ class TestOneLinerAssertions < Minitest::Test
     assert_operation_error(op, :invalid, name: "bad")
   end
 
-  def test_assert_operation_error_with_message
-    op = build_operation do
-      error :fail
-      def perform = error!(:fail, "it broke")
-    end
-    assert_operation_error(op, :fail, message: "it broke")
-  end
-
-  def test_assert_operation_error_with_message_regex
+  def test_assert_operation_error_message
     op = build_operation do
       error :fail
       def perform = error!(:fail, "something went wrong")
     end
+    assert_operation_error(op, :fail, message: "something went wrong")
     assert_operation_error(op, :fail, message: /went wrong/)
   end
 
   def test_assert_operation_error_fails_on_success
     op = build_operation { def perform = "ok" }
     assert_raises(Minitest::Assertion) { assert_operation_error(op, :nope) }
-  end
-
-  def test_assert_operation_error_fails_on_wrong_code
-    op = build_operation do
-      error :not_found, :invalid
-      def perform = error!(:not_found)
-    end
-    assert_raises(Minitest::Assertion) { assert_operation_error(op, :invalid) }
   end
 end
 

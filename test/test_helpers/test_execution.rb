@@ -12,19 +12,17 @@ class TestTestExecution < Minitest::Test
     setup_test_database
   end
 
-  def test_call_operation_returns_ok
-    op = build_operation { def perform = "hello" }
-    result = call_operation(op)
+  def test_call_operation
+    ok_op = build_operation { def perform = "hello" }
+    result = call_operation(ok_op)
     assert result.ok?
     assert_equal "hello", result.value
-  end
 
-  def test_call_operation_returns_err
-    op = build_operation do
+    err_op = build_operation do
       error :nope
       def perform = error!(:nope)
     end
-    result = call_operation(op)
+    result = call_operation(err_op)
     assert result.error?
     assert_equal :nope, result.code
   end
@@ -39,17 +37,15 @@ class TestTestExecution < Minitest::Test
     assert_equal "Hi Alice", result.value
   end
 
-  def test_call_operation_bang_returns_value
-    op = build_operation { def perform = 42 }
-    assert_equal 42, call_operation!(op)
-  end
+  def test_call_operation_bang
+    ok_op = build_operation { def perform = 42 }
+    assert_equal 42, call_operation!(ok_op)
 
-  def test_call_operation_bang_raises_on_error
-    op = build_operation do
+    err_op = build_operation do
       error :broken
       def perform = error!(:broken)
     end
-    err = assert_raises(Dex::Error) { call_operation!(op) }
+    err = assert_raises(Dex::Error) { call_operation!(err_op) }
     assert_equal :broken, err.code
   end
 

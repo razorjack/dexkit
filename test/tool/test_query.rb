@@ -56,117 +56,87 @@ class TestToolQuery < Minitest::Test
 
   # --- Validation: required options ---
 
-  def test_missing_scope_raises
+  def test_required_options_validation
     query_class = build_query(scope_model: QueryUser)
-    err = assert_raises(ArgumentError) do
+
+    # Missing scope
+    err1 = assert_raises(ArgumentError) do
       Dex::Tool.from(query_class, serialize: ->(r) { r })
     end
-    assert_match(/Query tools require scope: and serialize:/, err.message)
-  end
+    assert_match(/Query tools require scope: and serialize:/, err1.message)
 
-  def test_missing_serialize_raises
-    query_class = build_query(scope_model: QueryUser)
-    err = assert_raises(ArgumentError) do
+    # Missing serialize
+    err2 = assert_raises(ArgumentError) do
       Dex::Tool.from(query_class, scope: -> { QueryUser.all })
     end
-    assert_match(/Query tools require serialize:/, err.message)
-  end
+    assert_match(/Query tools require serialize:/, err2.message)
 
-  def test_no_scope_block_raises
-    query_class = Class.new(Dex::Query)
-    err = assert_raises(ArgumentError) do
-      Dex::Tool.from(query_class,
-        scope: -> { QueryUser.all },
-        serialize: ->(r) { r })
+    # No scope block on query class
+    bare_class = Class.new(Dex::Query)
+    err3 = assert_raises(ArgumentError) do
+      Dex::Tool.from(bare_class, scope: -> { QueryUser.all }, serialize: ->(r) { r })
     end
-    assert_match(/has no scope block/, err.message)
-  end
+    assert_match(/has no scope block/, err3.message)
 
-  def test_scope_not_callable_raises
-    query_class = build_query(scope_model: QueryUser)
-    err = assert_raises(ArgumentError) do
+    # scope not callable
+    err4 = assert_raises(ArgumentError) do
       Dex::Tool.from(query_class, scope: "not_callable", serialize: ->(r) { r })
     end
-    assert_match(/scope: must respond to call/, err.message)
-  end
+    assert_match(/scope: must respond to call/, err4.message)
 
-  def test_serialize_not_callable_raises
-    query_class = build_query(scope_model: QueryUser)
-    err = assert_raises(ArgumentError) do
+    # serialize not callable
+    err5 = assert_raises(ArgumentError) do
       Dex::Tool.from(query_class, scope: -> { QueryUser.all }, serialize: "not_callable")
     end
-    assert_match(/serialize: must respond to call/, err.message)
+    assert_match(/serialize: must respond to call/, err5.message)
   end
 
   # --- Validation: limit ---
 
-  def test_limit_zero_raises
+  def test_limit_validation
     query_class = build_query(scope_model: QueryUser)
-    err = assert_raises(ArgumentError) do
-      Dex::Tool.from(query_class, scope: -> { QueryUser.all }, serialize: ->(r) { r }, limit: 0)
-    end
-    assert_match(/limit: must be a positive integer/, err.message)
-  end
+    base_opts = { scope: -> { QueryUser.all }, serialize: ->(r) { r } }
 
-  def test_limit_negative_raises
-    query_class = build_query(scope_model: QueryUser)
-    err = assert_raises(ArgumentError) do
-      Dex::Tool.from(query_class, scope: -> { QueryUser.all }, serialize: ->(r) { r }, limit: -1)
+    [0, -1].each do |val|
+      err = assert_raises(ArgumentError) do
+        Dex::Tool.from(query_class, **base_opts, limit: val)
+      end
+      assert_match(/limit: must be a positive integer/, err.message)
     end
-    assert_match(/limit: must be a positive integer/, err.message)
-  end
 
-  def test_limit_non_integer_raises
-    query_class = build_query(scope_model: QueryUser)
     err = assert_raises(ArgumentError) do
-      Dex::Tool.from(query_class, scope: -> { QueryUser.all }, serialize: ->(r) { r }, limit: "10")
+      Dex::Tool.from(query_class, **base_opts, limit: "10")
     end
     assert_match(/limit: must be a positive integer/, err.message)
   end
 
   # --- Validation: filter restrictions ---
 
-  def test_only_filters_and_except_filters_raises
+  def test_filter_restriction_validation
     query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       filter :role
     end
+    base_opts = { scope: -> { QueryUser.all }, serialize: ->(r) { r } }
 
-    err = assert_raises(ArgumentError) do
-      Dex::Tool.from(query_class,
-        scope: -> { QueryUser.all }, serialize: ->(r) { r },
-        only_filters: [:role], except_filters: [:role])
+    # Mutually exclusive
+    err1 = assert_raises(ArgumentError) do
+      Dex::Tool.from(query_class, **base_opts, only_filters: [:role], except_filters: [:role])
     end
-    assert_match(/mutually exclusive/, err.message)
-  end
+    assert_match(/mutually exclusive/, err1.message)
 
-  def test_only_filters_unknown_raises
-    query_class = build_query(scope_model: QueryUser) do
-      prop? :role, String
-      filter :role
+    # Unknown in only_filters
+    err2 = assert_raises(ArgumentError) do
+      Dex::Tool.from(query_class, **base_opts, only_filters: [:bogus])
     end
+    assert_match(/unknown filter :bogus/, err2.message)
+    assert_match(/Declared:/, err2.message)
 
-    err = assert_raises(ArgumentError) do
-      Dex::Tool.from(query_class,
-        scope: -> { QueryUser.all }, serialize: ->(r) { r },
-        only_filters: [:bogus])
+    # Unknown in except_filters
+    err3 = assert_raises(ArgumentError) do
+      Dex::Tool.from(query_class, **base_opts, except_filters: [:bogus])
     end
-    assert_match(/unknown filter :bogus/, err.message)
-    assert_match(/Declared:/, err.message)
-  end
-
-  def test_except_filters_unknown_raises
-    query_class = build_query(scope_model: QueryUser) do
-      prop? :role, String
-      filter :role
-    end
-
-    err = assert_raises(ArgumentError) do
-      Dex::Tool.from(query_class,
-        scope: -> { QueryUser.all }, serialize: ->(r) { r },
-        except_filters: [:bogus])
-    end
-    assert_match(/unknown filter :bogus in except_filters/, err.message)
+    assert_match(/unknown filter :bogus in except_filters/, err3.message)
   end
 
   # --- Validation: sort restrictions ---
@@ -199,26 +169,20 @@ class TestToolQuery < Minitest::Test
 
   # --- Validation: prop conflicts ---
 
-  def test_prop_named_limit_raises
-    query_class = build_query(scope_model: QueryUser) do
-      prop? :limit, Integer
+  def test_prop_named_limit_or_offset_raises
+    # limit
+    query1 = build_query(scope_model: QueryUser) { prop? :limit, Integer }
+    err1 = assert_raises(ArgumentError) do
+      Dex::Tool.from(query1, scope: -> { QueryUser.all }, serialize: ->(r) { r })
     end
+    assert_match(/prop :limit which conflicts/, err1.message)
 
-    err = assert_raises(ArgumentError) do
-      Dex::Tool.from(query_class, scope: -> { QueryUser.all }, serialize: ->(r) { r })
+    # offset
+    query2 = build_query(scope_model: QueryUser) { prop? :offset, Integer }
+    err2 = assert_raises(ArgumentError) do
+      Dex::Tool.from(query2, scope: -> { QueryUser.all }, serialize: ->(r) { r })
     end
-    assert_match(/prop :limit which conflicts/, err.message)
-  end
-
-  def test_prop_named_offset_raises
-    query_class = build_query(scope_model: QueryUser) do
-      prop? :offset, Integer
-    end
-
-    err = assert_raises(ArgumentError) do
-      Dex::Tool.from(query_class, scope: -> { QueryUser.all }, serialize: ->(r) { r })
-    end
-    assert_match(/prop :offset which conflicts/, err.message)
+    assert_match(/prop :offset which conflicts/, err2.message)
   end
 
   # --- Validation: unsatisfiable props ---
@@ -304,97 +268,77 @@ class TestToolQuery < Minitest::Test
     assert_equal "Filter by role", props["role"][:description]
   end
 
-  def test_schema_excludes_context_mapped_props
-    query_class = build_query(scope_model: QueryUser) do
+  def test_schema_exclusions
+    # Excludes context-mapped props
+    query1 = build_query(scope_model: QueryUser) do
       prop? :role, String
       prop? :status, String
       filter :role
       filter :status
       context :role
     end
+    tool1 = Dex::Tool.from(query1,
+      scope: -> { QueryUser.all }, serialize: ->(r) { r.as_json })
+    props1 = tool1.params_schema[:properties]
+    refute props1.key?("role")
+    assert props1.key?("status")
 
-    tool = Dex::Tool.from(query_class,
-      scope: -> { QueryUser.all },
-      serialize: ->(r) { r.as_json })
-
-    props = tool.params_schema[:properties]
-    refute props.key?("role")
-    assert props.key?("status")
-  end
-
-  def test_schema_excludes_ref_props
-    query_class = build_query(scope_model: QueryUser) do
+    # Excludes _Ref props
+    query2 = build_query(scope_model: QueryUser) do
       prop? :user, _Ref(QueryUser)
       prop? :status, String
     end
+    tool2 = Dex::Tool.from(query2,
+      scope: -> { QueryUser.all }, serialize: ->(r) { r.as_json })
+    props2 = tool2.params_schema[:properties]
+    refute props2.key?("user")
+    assert props2.key?("status")
 
-    tool = Dex::Tool.from(query_class,
-      scope: -> { QueryUser.all },
-      serialize: ->(r) { r.as_json })
-
-    props = tool.params_schema[:properties]
-    refute props.key?("user")
-    assert props.key?("status")
-  end
-
-  def test_schema_excludes_props_backing_excluded_filters
-    query_class = build_query(scope_model: QueryUser) do
+    # Excludes props backing excluded filters
+    query3 = build_query(scope_model: QueryUser) do
       prop? :role, String
       prop? :status, String
       filter :role
       filter :status
     end
-
-    tool = Dex::Tool.from(query_class,
-      scope: -> { QueryUser.all },
-      serialize: ->(r) { r.as_json },
+    tool3 = Dex::Tool.from(query3,
+      scope: -> { QueryUser.all }, serialize: ->(r) { r.as_json },
       except_filters: [:status])
-
-    props = tool.params_schema[:properties]
-    assert props.key?("role")
-    refute props.key?("status")
+    props3 = tool3.params_schema[:properties]
+    assert props3.key?("role")
+    refute props3.key?("status")
   end
 
-  def test_schema_sort_enum
-    query_class = build_query(scope_model: QueryUser) do
+  def test_schema_sort_enum_and_custom
+    # Standard sort enum
+    query1 = build_query(scope_model: QueryUser) do
       sort :name, :age, default: "-name"
     end
+    tool1 = Dex::Tool.from(query1,
+      scope: -> { QueryUser.all }, serialize: ->(r) { r.as_json })
+    sort_prop1 = tool1.params_schema[:properties]["sort"]
+    assert_equal %w[name -name age -age], sort_prop1[:enum]
+    assert_match(/Default: -name/, sort_prop1[:description])
 
-    tool = Dex::Tool.from(query_class,
-      scope: -> { QueryUser.all },
-      serialize: ->(r) { r.as_json })
-
-    sort_prop = tool.params_schema[:properties]["sort"]
-    assert_equal %w[name -name age -age], sort_prop[:enum]
-    assert_match(/Default: -name/, sort_prop[:description])
-  end
-
-  def test_schema_sort_custom_no_dash_prefix
-    query_class = build_query(scope_model: QueryUser) do
+    # Custom sort (no dash prefix)
+    query2 = build_query(scope_model: QueryUser) do
       sort(:relevance) { |scope| scope.order(Arel.sql("1")) }
     end
+    tool2 = Dex::Tool.from(query2,
+      scope: -> { QueryUser.all }, serialize: ->(r) { r.as_json })
+    sort_prop2 = tool2.params_schema[:properties]["sort"]
+    assert_includes sort_prop2[:enum], "relevance"
+    refute_includes sort_prop2[:enum], "-relevance"
 
-    tool = Dex::Tool.from(query_class,
-      scope: -> { QueryUser.all },
-      serialize: ->(r) { r.as_json })
-
-    sort_prop = tool.params_schema[:properties]["sort"]
-    assert_includes sort_prop[:enum], "relevance"
-    refute_includes sort_prop[:enum], "-relevance"
-  end
-
-  def test_schema_sort_respects_only_sorts
-    query_class = build_query(scope_model: QueryUser) do
+    # Respects only_sorts
+    query3 = build_query(scope_model: QueryUser) do
       sort :name, :age, default: "name"
     end
-
-    tool = Dex::Tool.from(query_class,
-      scope: -> { QueryUser.all },
-      serialize: ->(r) { r.as_json },
+    tool3 = Dex::Tool.from(query3,
+      scope: -> { QueryUser.all }, serialize: ->(r) { r.as_json },
       only_sorts: [:name])
-
-    sort_prop = tool.params_schema[:properties]["sort"]
-    assert_equal %w[name -name], sort_prop[:enum]
+    sort_prop3 = tool3.params_schema[:properties]["sort"]
+    assert_equal %w[name -name], sort_prop3[:enum]
   end
 
   def test_schema_has_limit_and_offset
@@ -657,7 +601,7 @@ class TestToolQuery < Minitest::Test
     assert_equal 50, result[:limit]
   end
 
-  def test_execute_strips_excluded_filter_keys
+  def test_execute_strips_excluded_and_only_filter_keys
     query_class = build_query(scope_model: QueryUser) do
       prop? :role, String
       prop? :status, String
@@ -665,34 +609,17 @@ class TestToolQuery < Minitest::Test
       filter :status
       sort :name, default: "name"
     end
+    base_opts = { scope: -> { QueryUser.all }, serialize: ->(r) { { name: r.name } } }
 
-    tool = Dex::Tool.from(query_class,
-      scope: -> { QueryUser.all },
-      serialize: ->(r) { { name: r.name } },
-      except_filters: [:status])
+    # except_filters strips excluded keys
+    tool1 = Dex::Tool.from(query_class, **base_opts, except_filters: [:status])
+    result1 = tool1.execute(status: "inactive")
+    assert_equal 3, result1[:records].size
 
-    # Agent sends excluded filter — must be stripped at runtime
-    result = tool.execute(status: "inactive")
-    assert_equal 3, result[:records].size
-  end
-
-  def test_execute_strips_only_filters_excluded_keys
-    query_class = build_query(scope_model: QueryUser) do
-      prop? :role, String
-      prop? :status, String
-      filter :role
-      filter :status
-      sort :name, default: "name"
-    end
-
-    tool = Dex::Tool.from(query_class,
-      scope: -> { QueryUser.all },
-      serialize: ->(r) { { name: r.name } },
-      only_filters: [:role])
-
-    # Agent sends non-allowed filter — must be stripped
-    result = tool.execute(status: "inactive")
-    assert_equal 3, result[:records].size
+    # only_filters strips non-allowed keys
+    tool2 = Dex::Tool.from(query_class, **base_opts, only_filters: [:role])
+    result2 = tool2.execute(status: "inactive")
+    assert_equal 3, result2[:records].size
   end
 
   def test_only_filters_context_mapped_raises

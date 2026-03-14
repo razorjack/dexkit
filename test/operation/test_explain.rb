@@ -66,40 +66,32 @@ class TestOperationExplain < Minitest::Test
 
   # Context
 
-  def test_context_with_ambient_source
-    op = build_operation do
+  def test_context_resolution_sources
+    # Ambient source
+    ambient_op = build_operation do
       prop :user, String
       context user: :current_user
       def perform = "ok"
     end
     Dex.with_context(current_user: "admin") do
-      info = op.explain
+      info = ambient_op.explain
       assert_equal({ user: :current_user }, info[:context][:mappings])
       assert_equal({ user: "admin" }, info[:context][:resolved])
       assert_equal({ user: :ambient }, info[:context][:source])
-    end
-  end
 
-  def test_context_with_explicit_source
-    op = build_operation do
-      prop :user, String
-      context user: :current_user
-      def perform = "ok"
-    end
-    Dex.with_context(current_user: "ambient_user") do
-      info = op.explain(user: "explicit_user")
+      # Explicit source (same op, explicit kwarg overrides ambient)
+      info = ambient_op.explain(user: "explicit_user")
       assert_equal :explicit, info[:context][:source][:user]
       assert_equal "explicit_user", info[:context][:resolved][:user]
     end
-  end
 
-  def test_context_with_default_source
-    op = build_operation do
+    # Default source
+    default_op = build_operation do
       prop :locale, String, default: "en"
       context :locale
       def perform = "ok"
     end
-    info = op.explain
+    info = default_op.explain
     assert_equal :default, info[:context][:source][:locale]
   end
 
@@ -129,6 +121,7 @@ class TestOperationExplain < Minitest::Test
   end
 
   def test_guards_failure
+    # Default message
     op = build_operation do
       guard(:blocked) { true }
       def perform = "ok"
@@ -137,24 +130,22 @@ class TestOperationExplain < Minitest::Test
     refute info[:guards][:passed]
     assert_equal [{ name: :blocked, passed: false, message: "blocked" }], info[:guards][:results]
     refute info[:callable]
-  end
 
-  def test_guards_failure_includes_custom_message
-    op = build_operation do
+    # Custom message
+    op2 = build_operation do
       guard(:denied, "Access denied") { true }
       def perform = "ok"
     end
-    info = op.explain
-    assert_equal "Access denied", info[:guards][:results][0][:message]
-  end
+    info2 = op2.explain
+    assert_equal "Access denied", info2[:guards][:results][0][:message]
 
-  def test_guards_passed_results_have_no_message
-    op = build_operation do
+    # Passed results have no message key
+    op3 = build_operation do
       guard(:check) { false }
       def perform = "ok"
     end
-    info = op.explain
-    refute info[:guards][:results][0].key?(:message)
+    info3 = op3.explain
+    refute info3[:guards][:results][0].key?(:message)
   end
 
   def test_guards_multiple_mixed
@@ -240,39 +231,58 @@ class TestOperationExplain < Minitest::Test
     assert_equal 3600, info[:once][:expires_in]
   end
 
-  def test_once_status_unavailable_without_backend
-    op = define_operation(:OnceExplainNoBackend) do
+  def test_once_valid_statuses
+    # :unavailable without backend
+    unavailable_op = define_operation(:OnceExplainNoBackend) do
       prop :order_id, Integer
       once :order_id
       def perform = "ok"
     end
-    info = op.explain(order_id: 1)
+    info = unavailable_op.explain(order_id: 1)
     assert_equal :unavailable, info[:once][:status]
-  end
 
-  def test_once_status_fresh_with_backend
-    op = define_operation(:OnceExplainFresh) do
-      prop :order_id, Integer
-      once :order_id
-      def perform = "ok"
-    end
     with_recording do
-      info = op.explain(order_id: 999)
+      # :fresh — no prior execution
+      fresh_op = define_operation(:OnceExplainFresh) do
+        prop :order_id, Integer
+        once :order_id
+        def perform = "ok"
+      end
+      info = fresh_op.explain(order_id: 999)
       assert_equal :fresh, info[:once][:status]
-    end
-  end
 
-  def test_once_status_exists_with_backend
-    op = define_operation(:OnceExplainExists) do
-      prop :order_id, Integer
-      once :order_id
-      def perform = "ok"
-    end
-    with_recording do
-      # Execute to create the record
-      op.call(order_id: 77)
-      info = op.explain(order_id: 77)
+      # :exists — after execution
+      exists_op = define_operation(:OnceExplainExists) do
+        prop :order_id, Integer
+        once :order_id
+        def perform = "ok"
+      end
+      exists_op.call(order_id: 77)
+      info = exists_op.explain(order_id: 77)
       assert_equal :exists, info[:once][:status]
+
+      # :expired — after expiry
+      expired_op = define_operation(:OnceExplainExpired) do
+        prop :order_id, Integer
+        once :order_id, expires_in: 3600
+        def perform = "ok"
+      end
+      expired_op.call(order_id: 55)
+      key = expired_op._once_build_scoped_key(order_id: 55)
+      OperationRecord.where(once_key: key).update_all(once_key_expires_at: Time.now - 7200)
+      info = expired_op.explain(order_id: 55)
+      assert_equal :expired, info[:once][:status]
+
+      # :pending — record exists in pending state
+      pending_op = define_operation(:OnceExplainPending) do
+        prop :order_id, Integer
+        once :order_id
+        def perform = "ok"
+      end
+      key = pending_op._once_build_scoped_key(order_id: 88)
+      OperationRecord.create!(name: "OnceExplainPending", once_key: key, status: "pending")
+      info = pending_op.explain(order_id: 88)
+      assert_equal :pending, info[:once][:status]
     end
   end
 
@@ -495,16 +505,57 @@ class TestOperationExplain < Minitest::Test
 
   # Removed pipeline steps
 
-  def test_removed_guard_step_not_evaluated
-    op = build_operation do
+  def test_removed_steps_show_disabled_or_inactive
+    # Guard step removed — guards not evaluated
+    guard_op = build_operation do
       guard(:blocked) { true }
       pipeline.remove(:guard)
       def perform = "ok"
     end
-    info = op.explain
+    info = guard_op.explain
     assert info[:guards][:passed]
     assert_empty info[:guards][:results]
     assert info[:callable]
+
+    # Once step removed
+    once_op = build_operation do
+      prop :order_id, Integer
+      once :order_id
+      pipeline.remove(:once)
+      def perform = "ok"
+    end
+    assert_equal({ active: false }, once_op.explain(order_id: 1)[:once])
+
+    # Lock step removed
+    lock_op = build_operation do
+      advisory_lock "my_lock"
+      pipeline.remove(:lock)
+      def perform = "ok"
+    end
+    assert_equal({ active: false }, lock_op.explain[:lock])
+
+    # Transaction step removed
+    tx_op = build_operation do
+      pipeline.remove(:transaction)
+      def perform = "ok"
+    end
+    refute tx_op.explain[:transaction][:enabled]
+
+    # Callback step removed
+    cb_op = build_operation do
+      before {}
+      pipeline.remove(:callback)
+      def perform = "ok"
+    end
+    assert_equal({ before: 0, after: 0, around: 0 }, cb_op.explain[:callbacks])
+
+    # Rescue step removed
+    rescue_op = build_operation do
+      rescue_from ArgumentError, as: :bad_input
+      pipeline.remove(:rescue)
+      def perform = "ok"
+    end
+    assert_equal({}, rescue_op.explain[:rescue_from])
   end
 
   def test_removed_record_step_shows_disabled
@@ -518,201 +569,103 @@ class TestOperationExplain < Minitest::Test
     end
   end
 
-  def test_removed_transaction_step_shows_disabled
-    op = build_operation do
-      pipeline.remove(:transaction)
-      def perform = "ok"
-    end
-    info = op.explain
-    refute info[:transaction][:enabled]
-  end
+  # Once misconfigured / invalid statuses
 
-  def test_removed_once_step_shows_inactive
-    op = build_operation do
-      prop :order_id, Integer
-      once :order_id
-      pipeline.remove(:once)
-      def perform = "ok"
-    end
-    info = op.explain(order_id: 1)
-    assert_equal({ active: false }, info[:once])
-  end
-
-  def test_removed_lock_step_shows_inactive
-    op = build_operation do
-      advisory_lock "my_lock"
-      pipeline.remove(:lock)
-      def perform = "ok"
-    end
-    info = op.explain
-    assert_equal({ active: false }, info[:lock])
-  end
-
-  def test_removed_callback_step_shows_zero
-    op = build_operation do
-      before {}
-      pipeline.remove(:callback)
-      def perform = "ok"
-    end
-    info = op.explain
-    assert_equal({ before: 0, after: 0, around: 0 }, info[:callbacks])
-  end
-
-  def test_removed_rescue_step_shows_empty
-    op = build_operation do
-      rescue_from ArgumentError, as: :bad_input
-      pipeline.remove(:rescue)
-      def perform = "ok"
-    end
-    info = op.explain
-    assert_equal({}, info[:rescue_from])
-  end
-
-  # Once status: expired
-
-  def test_once_status_expired_with_backend
-    op = define_operation(:OnceExplainExpired) do
-      prop :order_id, Integer
-      once :order_id, expires_in: 3600
-      def perform = "ok"
-    end
-    with_recording do
-      op.call(order_id: 55)
-      key = op._once_build_scoped_key(order_id: 55)
-      OperationRecord.where(once_key: key).update_all(once_key_expires_at: Time.now - 7200)
-
-      info = op.explain(order_id: 55)
-      assert_equal :expired, info[:once][:status]
-    end
-  end
-
-  # Once status: pending
-
-  def test_once_status_pending_with_backend
-    op = define_operation(:OnceExplainPending) do
-      prop :order_id, Integer
-      once :order_id
-      def perform = "ok"
-    end
-    with_recording do
-      key = op._once_build_scoped_key(order_id: 88)
-      OperationRecord.create!(name: "OnceExplainPending", once_key: key, status: "pending")
-
-      info = op.explain(order_id: 88)
-      assert_equal :pending, info[:once][:status]
-    end
-  end
-
-  # Once status: misconfigured
-
-  def test_once_status_misconfigured_without_expires_column
-    op = define_operation(:OnceExplainMisconfigured) do
-      prop :order_id, Integer
-      once :order_id, expires_in: 3600
-      def perform = "ok"
-    end
-    with_recording(record_class: OnceNoExpiryRecord) do
-      info = op.explain(order_id: 1)
-      assert_equal :misconfigured, info[:once][:status]
-    end
-  end
-
-  # Once status: invalid (nil key)
-
-  def test_once_nil_key_reports_invalid
-    op = define_operation(:OnceExplainNilKey) do
+  def test_once_misconfigured_and_invalid_statuses
+    # :invalid — nil key
+    nil_key_op = define_operation(:OnceExplainNilKey) do
       once { nil }
       def perform = "ok"
     end
     with_recording do
-      info = op.explain
+      info = nil_key_op.explain
       assert info[:once][:active]
       assert_nil info[:once][:key]
       assert_equal :invalid, info[:once][:status]
     end
-  end
 
-  # Once status: misconfigured (missing once_key column)
-
-  def test_once_missing_once_key_column_reports_misconfigured
-    op = define_operation(:OnceExplainNoColumn) do
+    # :misconfigured — missing once_key column
+    no_column_op = define_operation(:OnceExplainNoColumn) do
       prop :order_id, Integer
       once :order_id
       def perform = "ok"
     end
     with_recording(record_class: MinimalOperationRecord) do
-      info = op.explain(order_id: 1)
+      info = no_column_op.explain(order_id: 1)
       assert_equal :misconfigured, info[:once][:status]
     end
-  end
 
-  # Once status: misconfigured (anonymous operation)
-
-  def test_once_anonymous_operation_reports_misconfigured
-    op = build_operation do
+    # :misconfigured — anonymous operation
+    anon_op = build_operation do
       prop :order_id, Integer
       once :order_id
       def perform = "ok"
     end
     with_recording do
-      info = op.explain(order_id: 1)
+      info = anon_op.explain(order_id: 1)
       assert_equal :misconfigured, info[:once][:status]
     end
-  end
 
-  # Once status: misconfigured (record step removed)
-
-  def test_once_record_step_removed_reports_misconfigured
-    op = define_operation(:OnceExplainNoRecord) do
+    # :misconfigured — record step removed
+    removed_op = define_operation(:OnceExplainNoRecord) do
       prop :order_id, Integer
       once :order_id
       pipeline.remove(:record)
       def perform = "ok"
     end
     with_recording do
-      info = op.explain(order_id: 1)
+      info = removed_op.explain(order_id: 1)
+      assert_equal :misconfigured, info[:once][:status]
+    end
+
+    # :misconfigured — missing expires column
+    no_expiry_op = define_operation(:OnceExplainMisconfigured) do
+      prop :order_id, Integer
+      once :order_id, expires_in: 3600
+      def perform = "ok"
+    end
+    with_recording(record_class: OnceNoExpiryRecord) do
+      info = no_expiry_op.explain(order_id: 1)
       assert_equal :misconfigured, info[:once][:status]
     end
   end
 
   # Callable reflects once status
 
-  def test_callable_false_when_once_pending
-    op = define_operation(:CallableOncePending) do
+  def test_callable_reflects_once_status
+    # Not callable when pending
+    pending_op = define_operation(:CallableOncePending) do
       prop :order_id, Integer
       once :order_id
       def perform = "ok"
     end
     with_recording do
-      key = op._once_build_scoped_key(order_id: 99)
+      key = pending_op._once_build_scoped_key(order_id: 99)
       OperationRecord.create!(name: "CallableOncePending", once_key: key, status: "pending")
-
-      info = op.explain(order_id: 99)
+      info = pending_op.explain(order_id: 99)
       assert_equal :pending, info[:once][:status]
       refute info[:callable]
     end
-  end
 
-  def test_callable_false_when_once_unavailable
-    op = define_operation(:CallableOnceNoBackend) do
+    # Not callable when unavailable (no backend)
+    unavailable_op = define_operation(:CallableOnceNoBackend) do
       prop :order_id, Integer
       once :order_id
       def perform = "ok"
     end
-    info = op.explain(order_id: 1)
+    info = unavailable_op.explain(order_id: 1)
     assert_equal :unavailable, info[:once][:status]
     refute info[:callable]
-  end
 
-  def test_callable_true_when_once_exists
-    op = define_operation(:CallableOnceExists) do
+    # Callable when exists (already ran)
+    exists_op = define_operation(:CallableOnceExists) do
       prop :order_id, Integer
       once :order_id
       def perform = "ok"
     end
     with_recording do
-      op.call(order_id: 50)
-      info = op.explain(order_id: 50)
+      exists_op.call(order_id: 50)
+      info = exists_op.explain(order_id: 50)
       assert_equal :exists, info[:once][:status]
       assert info[:callable]
     end
@@ -820,29 +773,28 @@ class TestOperationExplain < Minitest::Test
     end
   end
 
-  def test_partial_lock_nil_key_for_dynamic_lock
-    op = build_operation do
+  def test_partial_lock_key_resolution
+    # Dynamic lock — nil key (can't evaluate with bad props)
+    dynamic_op = build_operation do
       prop :order_id, Integer
       advisory_lock { "order:#{order_id}" }
       def perform = "ok"
     end
-    info = op.explain(order_id: "bad")
+    info = dynamic_op.explain(order_id: "bad")
     assert info[:lock][:active]
     assert_nil info[:lock][:key]
-  end
 
-  def test_partial_lock_preserves_static_string_key
-    op = build_operation do
+    # Static string key — preserved despite bad props
+    static_op = build_operation do
       prop :name, String
       advisory_lock "global_lock"
       def perform = "ok"
     end
-    info = op.explain(name: 123)
+    info = static_op.explain(name: 123)
     assert info[:lock][:active]
     assert_equal "global_lock", info[:lock][:key]
-  end
 
-  def test_partial_lock_preserves_nil_key_as_class_name
+    # No-arg lock — class name as key, preserved despite bad props
     define_operation(:PartialLockNamed) do
       prop :name, String
       advisory_lock
@@ -853,53 +805,51 @@ class TestOperationExplain < Minitest::Test
     assert_equal "PartialLockNamed", info[:lock][:key]
   end
 
-  def test_partial_context_shows_mappings_and_source
-    op = build_operation do
+  def test_partial_context_sources
+    # Ambient source — mappings and source preserved, resolved empty (invalid props)
+    ambient_op = build_operation do
       prop :user, String
       prop :count, Integer
       context user: :current_user
       def perform = "ok"
     end
     Dex.with_context(current_user: "admin") do
-      info = op.explain(count: "bad")
+      info = ambient_op.explain(count: "bad")
       assert info.key?(:error)
       assert_equal({ user: :current_user }, info[:context][:mappings])
       assert_equal({ user: :ambient }, info[:context][:source])
       assert_equal({}, info[:context][:resolved])
     end
-  end
 
-  def test_partial_context_explicit_source_detected
-    op = build_operation do
+    # Explicit source detected
+    explicit_op = build_operation do
       prop :user, String
       prop :role, String
       context user: :current_user
       def perform = "ok"
     end
-    info = op.explain(user: "explicit_user")
+    info = explicit_op.explain(user: "explicit_user")
     assert_equal :explicit, info[:context][:source][:user]
     assert_equal({}, info[:context][:resolved])
-  end
 
-  def test_partial_context_missing_without_default
-    op = build_operation do
+    # Missing source (no ambient, no default)
+    missing_op = build_operation do
       prop :user, String
       context user: :current_user
       def perform = "ok"
     end
-    info = op.explain
+    info = missing_op.explain
     assert info.key?(:error)
     assert_equal :missing, info[:context][:source][:user]
-  end
 
-  def test_partial_context_default_with_default_value
-    op = build_operation do
+    # Default source
+    default_op = build_operation do
       prop :locale, String, default: "en"
       prop :count, Integer
       context :locale
       def perform = "ok"
     end
-    info = op.explain(count: "bad")
+    info = default_op.explain(count: "bad")
     assert info.key?(:error)
     assert_equal :default, info[:context][:source][:locale]
   end

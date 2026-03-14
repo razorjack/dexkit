@@ -86,32 +86,26 @@ class TestOperationRecording < Minitest::Test
     end
   end
 
-  def test_record_false_disables_for_class
+  def test_record_disable_mechanisms
     with_recording do
-      op = define_operation(:TestRecordFalseOp) do
+      # record false
+      op1 = define_operation(:TestRecordFalseOp) do
         record false
         prop :name, String
         def perform
         end
       end
-
-      op.new(name: "Test").call
-
+      op1.new(name: "Test").call
       assert_equal 0, OperationRecord.count
-    end
-  end
 
-  def test_set_record_enabled_false_disables
-    with_recording do
-      op = define_operation(:TestSetRecordFalseOp) do
+      # set :record, enabled: false
+      op2 = define_operation(:TestSetRecordFalseOp) do
         set :record, enabled: false
         prop :name, String
         def perform
         end
       end
-
-      op.new(name: "Test").call
-
+      op2.new(name: "Test").call
       assert_equal 0, OperationRecord.count
     end
   end
@@ -151,8 +145,9 @@ class TestOperationRecording < Minitest::Test
     end
   end
 
-  def test_record_false_inherits_to_children
+  def test_record_inheritance
     with_recording do
+      # record false inherits to children
       parent = define_operation(:TestParentNoRecord) do
         record false
       end
@@ -164,56 +159,64 @@ class TestOperationRecording < Minitest::Test
       end
 
       child.new(name: "Test").call
-
       assert_equal 0, OperationRecord.count
-    end
-  end
 
-  def test_child_can_reenable_with_record_true
-    with_recording do
-      parent = define_operation(:TestParentNoRecord2) do
-        record false
-      end
-
-      child = define_operation(:TestChildReenabled, parent: parent) do
+      # Child can re-enable with record true
+      child2 = define_operation(:TestChildReenabled, parent: parent) do
         record true
         prop :name, String
         def perform
         end
       end
 
-      child.new(name: "Test").call
-
+      child2.new(name: "Test").call
       assert_equal 1, OperationRecord.count
     end
   end
 
   def test_backend_auto_detects_active_record
     backend = Dex::Operation::RecordBackend.for(OperationRecord)
-
     assert_instance_of Dex::Operation::RecordBackend::ActiveRecordAdapter, backend
   end
 
   def test_backend_returns_nil_when_no_record_class
     backend = Dex::Operation::RecordBackend.for(nil)
-
     assert_nil backend
   end
 
   # Result recording tests
 
-  def test_records_result_hash
+  def test_records_various_result_types
     with_recording do
-      op = define_operation(:TestRecordsResultHash) do
+      # Hash result
+      op1 = define_operation(:TestRecordsResultHash) do
         prop :name, String
         def perform
           { greeting: "Hello #{name}" }
         end
       end
-
-      op.new(name: "World").call
-
+      op1.new(name: "World").call
       assert_equal({ "greeting" => "Hello World" }, OperationRecord.last.result)
+
+      # Nil result
+      op2 = define_operation(:TestRecordsNilResult) do
+        prop :name, String
+        def perform
+          nil
+        end
+      end
+      op2.new(name: "Test").call
+      assert_nil OperationRecord.where(name: "TestRecordsNilResult").last.result
+
+      # Primitive result (wrapped)
+      op3 = define_operation(:TestRecordsPrimitiveResult) do
+        prop :name, String
+        def perform
+          42
+        end
+      end
+      op3.new(name: "Test").call
+      assert_equal({ "_dex_value" => 42 }, OperationRecord.where(name: "TestRecordsPrimitiveResult").last.result)
     end
   end
 
@@ -229,36 +232,6 @@ class TestOperationRecording < Minitest::Test
       op.new(name: "World").call
 
       assert_equal "Hello World", OperationRecord.last.result
-    end
-  end
-
-  def test_records_nil_result
-    with_recording do
-      op = define_operation(:TestRecordsNilResult) do
-        prop :name, String
-        def perform
-          nil
-        end
-      end
-
-      op.new(name: "Test").call
-
-      assert_nil OperationRecord.last.result
-    end
-  end
-
-  def test_records_primitive_result_wrapped
-    with_recording do
-      op = define_operation(:TestRecordsPrimitiveResult) do
-        prop :name, String
-        def perform
-          42
-        end
-      end
-
-      op.new(name: "Test").call
-
-      assert_equal({ "_dex_value" => 42 }, OperationRecord.last.result)
     end
   end
 
@@ -280,67 +253,82 @@ class TestOperationRecording < Minitest::Test
     end
   end
 
-  def test_business_error_records_with_error_status
+  def test_records_status_transitions
     with_recording do
-      op = define_operation(:TestErrorRecords) do
+      # Success records as completed with performed_at
+      op1 = define_operation(:TestCompletedStatus) do
+        prop :name, String
+        def perform
+        end
+      end
+      op1.new(name: "Test").call
+      assert_equal "completed", OperationRecord.last.status
+      refute_nil OperationRecord.last.performed_at
+
+      # Business error records with error status
+      op2 = define_operation(:TestErrorRecords) do
         prop :name, String
         def perform
           error!(:test_error, "Test error message")
         end
       end
+      assert_raises(Dex::Error) { op2.new(name: "Test").call }
+      record2 = OperationRecord.where(name: "TestErrorRecords").last
+      assert_equal "error", record2.status
+      assert_equal "test_error", record2.error_code
+      assert_equal "Test error message", record2.error_message
+      refute_nil record2.performed_at
 
-      assert_raises(Dex::Error) do
-        op.new(name: "Test").call
-      end
-
-      assert_equal 1, OperationRecord.count
-      record = OperationRecord.last
-      assert_equal "error", record.status
-      assert_equal "test_error", record.error_code
-      assert_equal "Test error message", record.error_message
-      refute_nil record.performed_at
-    end
-  end
-
-  def test_business_error_records_details
-    with_recording do
-      op = define_operation(:TestErrorRecordsDetails) do
-        prop :name, String
-        def perform
-          error!(:validation_failed, "Invalid input", details: { field: "name" })
-        end
-      end
-
-      assert_raises(Dex::Error) do
-        op.new(name: "Test").call
-      end
-
-      record = OperationRecord.last
-      assert_equal "error", record.status
-      assert_equal "validation_failed", record.error_code
-      assert_equal({ "field" => "name" }, record.error_details)
-    end
-  end
-
-  def test_exception_records_with_failed_status
-    with_recording do
-      op = define_operation(:TestExceptionRecords) do
+      # Exception records with failed status
+      op3 = define_operation(:TestExceptionRecords) do
         prop :name, String
         def perform
           raise "boom"
         end
       end
+      assert_raises(RuntimeError) { op3.new(name: "Test").call }
+      record3 = OperationRecord.where(name: "TestExceptionRecords").last
+      assert_equal "failed", record3.status
+      assert_equal "RuntimeError", record3.error_code
+      assert_equal "boom", record3.error_message
+      refute_nil record3.performed_at
+    end
+  end
 
-      assert_raises(RuntimeError) do
-        op.new(name: "Test").call
+  def test_records_error_details_shapes
+    with_recording do
+      # Hash details
+      op1 = define_operation(:TestErrorRecordsDetails) do
+        prop :name, String
+        def perform
+          error!(:validation_failed, "Invalid input", details: { field: "name" })
+        end
       end
+      assert_raises(Dex::Error) { op1.new(name: "Test").call }
+      record1 = OperationRecord.where(name: "TestErrorRecordsDetails").last
+      assert_equal({ "field" => "name" }, record1.error_details)
 
-      assert_equal 1, OperationRecord.count
-      record = OperationRecord.last
-      assert_equal "failed", record.status
-      assert_equal "RuntimeError", record.error_code
-      assert_equal "boom", record.error_message
-      refute_nil record.performed_at
+      # Array details
+      op2 = define_operation(:TestErrorDetailsArray) do
+        prop :name, String
+        def perform
+          error!(:bad, "bad input", details: [1, "two", nil, false])
+        end
+      end
+      assert_raises(Dex::Error) { op2.new(name: "Test").call }
+      record2 = OperationRecord.where(name: "TestErrorDetailsArray").last
+      assert_equal [1, "two", nil, false], record2.error_details
+
+      # Nested hash with arrays
+      op3 = define_operation(:TestErrorDetailsNested) do
+        prop :name, String
+        def perform
+          error!(:bad, "bad", details: { ids: [1, 2, 3], nested: { ok: true } })
+        end
+      end
+      assert_raises(Dex::Error) { op3.new(name: "Test").call }
+      record3 = OperationRecord.where(name: "TestErrorDetailsNested").last
+      assert_equal({ "ids" => [1, 2, 3], "nested" => { "ok" => true } }, record3.error_details)
     end
   end
 
@@ -412,34 +400,6 @@ class TestOperationRecording < Minitest::Test
       record = OperationRecord.last
       assert_equal({ "name" => "Test" }, record.params)
       assert_equal({ "greeting" => "Hello" }, record.result)
-    end
-  end
-
-  def test_completed_status_on_success
-    with_recording do
-      op = define_operation(:TestCompletedStatus) do
-        prop :name, String
-        def perform
-        end
-      end
-
-      op.new(name: "Test").call
-
-      assert_equal "completed", OperationRecord.last.status
-    end
-  end
-
-  def test_performed_at_set_on_success
-    with_recording do
-      op = define_operation(:TestPerformedAtSuccess) do
-        prop :name, String
-        def perform
-        end
-      end
-
-      op.new(name: "Test").call
-
-      refute_nil OperationRecord.last.performed_at
     end
   end
 
@@ -556,42 +516,6 @@ class TestOperationRecording < Minitest::Test
       assert_equal "error", record.status
       assert_equal "not_found", record.error_code
       assert_equal "not_found", record.error_message
-    end
-  end
-
-  def test_error_details_array_preserved
-    with_recording do
-      op = define_operation(:TestErrorDetailsArray) do
-        prop :name, String
-        def perform
-          error!(:bad, "bad input", details: [1, "two", nil, false])
-        end
-      end
-
-      assert_raises(Dex::Error) do
-        op.new(name: "Test").call
-      end
-
-      record = OperationRecord.last
-      assert_equal [1, "two", nil, false], record.error_details
-    end
-  end
-
-  def test_error_details_nested_hash_with_arrays
-    with_recording do
-      op = define_operation(:TestErrorDetailsNested) do
-        prop :name, String
-        def perform
-          error!(:bad, "bad", details: { ids: [1, 2, 3], nested: { ok: true } })
-        end
-      end
-
-      assert_raises(Dex::Error) do
-        op.new(name: "Test").call
-      end
-
-      record = OperationRecord.last
-      assert_equal({ "ids" => [1, 2, 3], "nested" => { "ok" => true } }, record.error_details)
     end
   end
 end

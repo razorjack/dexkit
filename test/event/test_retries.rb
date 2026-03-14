@@ -5,11 +5,9 @@ require "test_helper"
 class TestEventRetries < Minitest::Test
   include ActiveJob::TestHelper
 
-  def test_retries_exponential_backoff
-    define_event(:TestRetryExpEvent) do
-      prop :n, Integer
-    end
-
+  def test_retries_enqueue_with_wait_strategies
+    # Exponential backoff (default)
+    define_event(:TestRetryExpEvent) { prop :n, Integer }
     define_handler(:TestRetryExpHandler) do
       on TestRetryExpEvent
       retries 3
@@ -27,13 +25,9 @@ class TestEventRetries < Minitest::Test
     rescue RuntimeError
       nil
     end
-  end
 
-  def test_retries_fixed_wait
-    define_event(:TestRetryFixedEvent) do
-      prop :n, Integer
-    end
-
+    # Fixed wait
+    define_event(:TestRetryFixedEvent) { prop :n, Integer }
     define_handler(:TestRetryFixedHandler) do
       on TestRetryFixedEvent
       retries 3, wait: 10
@@ -51,13 +45,9 @@ class TestEventRetries < Minitest::Test
     rescue RuntimeError
       nil
     end
-  end
 
-  def test_retries_proc_wait
-    define_event(:TestRetryProcEvent) do
-      prop :n, Integer
-    end
-
+    # Proc wait
+    define_event(:TestRetryProcEvent) { prop :n, Integer }
     define_handler(:TestRetryProcHandler) do
       on TestRetryProcEvent
       retries 3, wait: ->(attempt) { attempt * 5 }
@@ -77,52 +67,36 @@ class TestEventRetries < Minitest::Test
     end
   end
 
-  def test_retries_exhausted_raises
-    define_event(:TestRetryExhaustEvent) do
-      prop :n, Integer
-    end
-
-    define_handler(:TestRetryExhaustHandler) do
-      on TestRetryExhaustEvent
+  def test_retries_boundary
+    define_event(:TestRetryBoundaryEvent) { prop :n, Integer }
+    define_handler(:TestRetryBoundaryHandler) do
+      on TestRetryBoundaryEvent
       retries 2
       define_method(:perform) { raise "boom" }
     end
 
-    # retries 2 means 2 retries (3 total attempts): original + retry 1 + retry 2
-    # attempt_number 3 is past all retries, so it should raise
-    assert_raises(RuntimeError) do
-      Dex::Event::Processor.new.perform(
-        handler_class: "TestRetryExhaustHandler",
-        event_class: "TestRetryExhaustEvent",
-        payload: { "n" => 1 },
-        metadata: build_event_metadata,
-        attempt_number: 3
-      )
-    end
-  end
-
-  def test_last_retry_still_retries
-    define_event(:TestLastRetryEvent) do
-      prop :n, Integer
-    end
-
-    define_handler(:TestLastRetryHandler) do
-      on TestLastRetryEvent
-      retries 2
-      define_method(:perform) { raise "boom" }
-    end
-
-    # attempt_number 2 is the last retry — should still enqueue
+    # Last retry (attempt 2) still enqueues
     assert_enqueued_with(job: Dex::Event::Processor) do
       Dex::Event::Processor.new.perform(
-        handler_class: "TestLastRetryHandler",
-        event_class: "TestLastRetryEvent",
+        handler_class: "TestRetryBoundaryHandler",
+        event_class: "TestRetryBoundaryEvent",
         payload: { "n" => 1 },
         metadata: build_event_metadata,
         attempt_number: 2
       )
     rescue RuntimeError
       nil
+    end
+
+    # Exhausted (attempt 3) raises
+    assert_raises(RuntimeError) do
+      Dex::Event::Processor.new.perform(
+        handler_class: "TestRetryBoundaryHandler",
+        event_class: "TestRetryBoundaryEvent",
+        payload: { "n" => 1 },
+        metadata: build_event_metadata,
+        attempt_number: 3
+      )
     end
   end
 

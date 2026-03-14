@@ -156,16 +156,11 @@ class TestEventTrace < Minitest::Test
 
     assert_equal event.id, inner_child.caused_by_id
     assert_equal event.trace_id, inner_child.trace_id
-  end
 
-  def test_restore_nil_is_noop
-    event_class = build_event do
-      prop :name, String
-    end
-
+    # Restore nil is a noop
     Dex::Event::Trace.restore(nil) do
-      event = event_class.new(name: "test")
-      assert_nil event.caused_by_id
+      noop_event = event_class.new(name: "test")
+      assert_nil noop_event.caused_by_id
     end
   end
 
@@ -206,7 +201,7 @@ class TestEventTrace < Minitest::Test
     assert_equal parent.trace_id, children.first.trace_id
   end
 
-  def test_legacy_restore_shape_still_works
+  def test_legacy_restore_shape
     event_class = build_event do
       prop :name, String
     end
@@ -214,33 +209,28 @@ class TestEventTrace < Minitest::Test
     parent = event_class.new(name: "parent")
     child = nil
 
+    # Legacy shape still works
     Dex::Event::Trace.restore(id: parent.id, trace_id: parent.trace_id) do
       child = event_class.new(name: "child")
     end
 
     assert_equal parent.id, child.caused_by_id
     assert_equal parent.trace_id, child.trace_id
-  end
 
-  def test_legacy_restore_shape_preserves_active_trace_frames
-    event_class = build_event do
-      prop :name, String
-    end
-
-    parent = event_class.new(name: "parent")
+    # Preserves active trace frames
     actor = nil
-    child = nil
+    child2 = nil
 
     Dex::Trace.start(actor: { type: :user, id: 7 }) do
       Dex::Event::Trace.restore(id: parent.id, trace_id: parent.trace_id) do
         actor = Dex::Trace.actor
-        child = event_class.new(name: "child")
+        child2 = event_class.new(name: "child2")
       end
     end
 
     assert_equal "user", actor[:actor_type]
     assert_equal "7", actor[:id]
-    assert_equal parent.id, child.caused_by_id
-    assert_equal parent.trace_id, child.trace_id
+    assert_equal parent.id, child2.caused_by_id
+    assert_equal parent.trace_id, child2.trace_id
   end
 end

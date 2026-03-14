@@ -3,39 +3,23 @@
 require "test_helper"
 
 class TestEventContext < Minitest::Test
-  def test_context_captured_at_event_creation
+  def test_context_capture_and_serialization
     Dex.configure { |c| c.event_context = -> { { user_id: 1 } } }
 
-    event_class = build_event do
-      prop :n, Integer
-    end
+    event_class = build_event { prop :n, Integer }
 
+    # Captured at event creation
     event = event_class.new(n: 1)
     assert_equal({ user_id: 1 }, event.context)
-  ensure
-    Dex.configure { |c| c.event_context = nil }
-  end
 
-  def test_context_included_in_as_json
-    Dex.configure { |c| c.event_context = -> { { tenant: "acme" } } }
-
-    event_class = build_event do
-      prop :n, Integer
-    end
-
-    event = event_class.new(n: 1)
+    # Included in as_json
     json = event.as_json
-
-    assert_equal({ tenant: "acme" }, json["metadata"]["context"])
+    assert_equal({ user_id: 1 }, json["metadata"]["context"])
   ensure
     Dex.configure { |c| c.event_context = nil }
-  end
 
-  def test_context_not_in_metadata_when_nil
-    event_class = build_event do
-      prop :n, Integer
-    end
-
+    # Not in metadata when nil
+    event_class = build_event { prop :n, Integer }
     event = event_class.new(n: 1)
     refute event.metadata.as_json.key?("context")
   end

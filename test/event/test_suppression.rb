@@ -101,13 +101,11 @@ class TestEventSuppression < Minitest::Test
     assert_equal [:b], received
   end
 
-  def test_suppress_validates_class
+  def test_suppress_validates_argument
     assert_raises(ArgumentError) do
       Dex::Event.suppress(String) {}
     end
-  end
 
-  def test_suppress_validates_non_class_argument
     err = assert_raises(ArgumentError) do
       Dex::Event.suppress(:not_a_class) {}
     end

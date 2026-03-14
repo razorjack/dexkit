@@ -141,100 +141,82 @@ class TestOperationAsync < Minitest::Test
 
   # --- Round-trip serialization tests ---
 
-  def test_async_round_trip_date
+  def test_async_round_trip_type_coercion
+    # Date
     define_operation(:TestDateOp) do
       prop :due, Date
       def perform = due
     end
-
-    result = Dex::Operation::Job.new.perform(
+    date_result = Dex::Operation::Job.new.perform(
       class_name: "TestDateOp", params: { "due" => "2025-06-15" }
     )
+    assert_equal Date.new(2025, 6, 15), date_result
 
-    assert_equal Date.new(2025, 6, 15), result
-  end
-
-  def test_async_round_trip_time
+    # Time
     define_operation(:TestTimeOp) do
       prop :at, Time
       def perform = at
     end
-
-    result = Dex::Operation::Job.new.perform(
+    time_result = Dex::Operation::Job.new.perform(
       class_name: "TestTimeOp", params: { "at" => "2025-06-15 10:30:00 UTC" }
     )
+    assert_instance_of Time, time_result
+    assert_equal 2025, time_result.year
+    assert_equal 6, time_result.month
+    assert_equal 15, time_result.day
 
-    assert_instance_of Time, result
-    assert_equal 2025, result.year
-    assert_equal 6, result.month
-    assert_equal 15, result.day
-  end
-
-  def test_async_round_trip_symbol
+    # Symbol
     define_operation(:TestSymbolOp) do
       prop :status, Symbol
       def perform = status
     end
-
-    result = Dex::Operation::Job.new.perform(
+    symbol_result = Dex::Operation::Job.new.perform(
       class_name: "TestSymbolOp", params: { "status" => "active" }
     )
+    assert_equal :active, symbol_result
 
-    assert_equal :active, result
-  end
-
-  def test_async_round_trip_optional_date_nil
-    define_operation(:TestOptDateNilOp) do
-      prop? :due, Date
-      def perform = due
-    end
-
-    result = Dex::Operation::Job.new.perform(
-      class_name: "TestOptDateNilOp", params: { "due" => nil }
-    )
-
-    assert_nil result
-  end
-
-  def test_async_round_trip_optional_date_present
-    define_operation(:TestOptDateOp) do
-      prop? :due, Date
-      def perform = due
-    end
-
-    result = Dex::Operation::Job.new.perform(
-      class_name: "TestOptDateOp", params: { "due" => "2025-06-15" }
-    )
-
-    assert_equal Date.new(2025, 6, 15), result
-  end
-
-  def test_async_round_trip_array_of_dates
+    # Array of dates
     define_operation(:TestArrayDatesOp) do
       prop :dates, _Array(Date)
       def perform = dates
     end
-
-    result = Dex::Operation::Job.new.perform(
+    array_result = Dex::Operation::Job.new.perform(
       class_name: "TestArrayDatesOp", params: { "dates" => ["2025-01-01", "2025-12-31"] }
     )
+    assert_equal [Date.new(2025, 1, 1), Date.new(2025, 12, 31)], array_result
 
-    assert_equal [Date.new(2025, 1, 1), Date.new(2025, 12, 31)], result
-  end
-
-  def test_async_round_trip_record
+    # Record (_Ref)
     model = TestModel.create!(name: "Alice")
-
     define_operation(:TestRecordOp) do
       prop :model, _Ref(TestModel)
       def perform = model
     end
-
-    result = Dex::Operation::Job.new.perform(
+    record_result = Dex::Operation::Job.new.perform(
       class_name: "TestRecordOp", params: { "model" => model.id }
     )
+    assert_equal model, record_result
+  end
 
-    assert_equal model, result
+  def test_async_round_trip_optional_date
+    # Nil
+    define_operation(:TestOptDateNilOp) do
+      prop? :due, Date
+      def perform = due
+    end
+    nil_result = Dex::Operation::Job.new.perform(
+      class_name: "TestOptDateNilOp", params: { "due" => nil }
+    )
+    assert_nil nil_result
+
+    # Present
+    define_operation(:TestOptDateOp) do
+      prop? :due, Date
+      def perform = due
+    end
+    present_result = Dex::Operation::Job.new.perform(
+      class_name: "TestOptDateOp", params: { "due" => "2025-06-15" }
+    )
+    assert_equal Date.new(2025, 6, 15), present_result
   end
 
   def test_async_job_restores_trace_context

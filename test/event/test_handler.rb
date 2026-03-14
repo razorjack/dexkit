@@ -37,15 +37,13 @@ class TestEventHandler < Minitest::Test
     assert_includes Dex::Event::Bus.subscribers_for(event_b), handler
   end
 
-  def test_on_validates_event_class
+  def test_on_validates_arguments
     assert_raises(ArgumentError) do
       build_handler do
         on String
       end
     end
-  end
 
-  def test_on_validates_non_class_argument
     err = assert_raises(ArgumentError) do
       build_handler do
         on :not_a_class
@@ -86,61 +84,30 @@ class TestEventHandler < Minitest::Test
     assert_equal "hello", received_event.name
   end
 
-  def test_retries_validation_positive_integer
-    assert_raises(ArgumentError) do
-      build_handler do
-        retries 0
-      end
-    end
-
-    assert_raises(ArgumentError) do
-      build_handler do
-        retries(-1)
-      end
-    end
-
-    assert_raises(ArgumentError) do
-      build_handler do
-        retries "three"
-      end
-    end
+  def test_retries_validation
+    assert_raises(ArgumentError) { build_handler { retries 0 } }
+    assert_raises(ArgumentError) { build_handler { retries(-1) } }
+    assert_raises(ArgumentError) { build_handler { retries "three" } }
+    assert_raises(ArgumentError) { build_handler { retries 3, wait: "invalid" } }
   end
 
-  def test_retries_wait_validation
-    assert_raises(ArgumentError) do
-      build_handler do
-        retries 3, wait: "invalid"
-      end
-    end
-  end
-
-  def test_retries_stores_config
-    handler = build_handler do
-      retries 3, wait: 5
-    end
-
+  def test_retries_configuration
+    # Stores config
+    handler = build_handler { retries 3, wait: 5 }
     config = handler._event_handler_retry_config
     assert_equal 3, config[:count]
     assert_equal 5, config[:wait]
-  end
 
-  def test_retries_inherits_from_parent
-    parent = build_handler do
-      retries 3
-    end
-
-    child = Class.new(parent)
-
+    # Inherits from parent
+    child = Class.new(handler)
     assert_equal 3, child._event_handler_retry_config[:count]
-  end
 
-  def test_retries_with_proc_wait
-    handler = build_handler do
+    # Proc wait
+    handler_proc = build_handler do
       retries 5, wait: ->(attempt) { attempt * 2 }
     end
-
-    config = handler._event_handler_retry_config
-    assert_equal 5, config[:count]
-    assert_instance_of Proc, config[:wait]
+    config_proc = handler_proc._event_handler_retry_config
+    assert_equal 5, config_proc[:count]
+    assert_instance_of Proc, config_proc[:wait]
   end
 end

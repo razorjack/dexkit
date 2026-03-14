@@ -9,62 +9,34 @@ class TestEventAssertions < Minitest::Test
   def test_assert_event_published
     event_class = build_event do
       prop :order_id, Integer
-    end
-
-    capture_events do
-      event_class.new(order_id: 1).publish
-      assert_event_published(event_class)
-    end
-  end
-
-  def test_assert_event_published_with_props
-    event_class = build_event do
-      prop :order_id, Integer
       prop :total, Float
     end
 
     capture_events do
       event_class.new(order_id: 1, total: 99.99).publish
+      assert_event_published(event_class)
       assert_event_published(event_class, order_id: 1)
       assert_event_published(event_class, total: 99.99)
       assert_event_published(event_class, order_id: 1, total: 99.99)
     end
   end
 
-  def test_assert_event_published_fails_when_not_published
+  def test_assert_event_published_failures
     event_class = build_event do
       prop :n, Integer
     end
 
     capture_events do
-      err = assert_raises(Minitest::Assertion) do
-        assert_event_published(event_class)
-      end
+      err = assert_raises(Minitest::Assertion) { assert_event_published(event_class) }
       assert_match(/no events were published/, err.message)
-    end
-  end
 
-  def test_assert_event_published_fails_with_wrong_props
-    event_class = build_event do
-      prop :n, Integer
-    end
-
-    capture_events do
       event_class.new(n: 1).publish
-      err = assert_raises(Minitest::Assertion) do
-        assert_event_published(event_class, n: 999)
-      end
+      err = assert_raises(Minitest::Assertion) { assert_event_published(event_class, n: 999) }
       assert_match(/only found/, err.message)
     end
   end
 
-  def test_refute_event_published_no_args
-    capture_events do
-      refute_event_published
-    end
-  end
-
-  def test_refute_event_published_with_class
+  def test_refute_event_published
     event_a = build_event do
       prop :a, Integer
     end
@@ -74,6 +46,7 @@ class TestEventAssertions < Minitest::Test
     end
 
     capture_events do
+      refute_event_published
       event_a.new(a: 1).publish
       refute_event_published(event_b)
     end
@@ -140,19 +113,10 @@ class TestEventAssertions < Minitest::Test
     end
 
     assert_same_trace(*events)
-  end
-
-  def test_assert_same_trace_fails_different_traces
-    event_class = build_event do
-      prop :n, Integer
-    end
 
     a = event_class.new(n: 1)
     b = event_class.new(n: 2)
-
-    assert_raises(Minitest::Assertion) do
-      assert_same_trace(a, b)
-    end
+    assert_raises(Minitest::Assertion) { assert_same_trace(a, b) }
   end
 
   def test_capture_respects_suppression
@@ -179,7 +143,6 @@ class TestEventAssertions < Minitest::Test
       define_method(:perform) { received << event }
     end
 
-    # Outside capture_events, publish dispatches sync
     event_class.new(n: 1).publish
     assert_equal 1, received.size
   end
@@ -196,7 +159,6 @@ class TestEventAssertions < Minitest::Test
         event_class.new(n: 2).publish
       end
 
-      # Outer capture should still be active after inner block exits
       event_class.new(n: 3).publish
       assert_event_count(event_class, 3)
     end
