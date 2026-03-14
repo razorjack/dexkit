@@ -57,18 +57,6 @@ module Dex
       throw(:_dex_halt, Operation::Halt.new(type: :success, value: attrs.empty? ? value : attrs))
     end
 
-    def assert!(*args, &block)
-      if block
-        code = args[0]
-        value = yield
-      else
-        value, code = args
-      end
-
-      error!(code) unless value
-      value
-    end
-
     private
 
     def _result_validate_success_type!(value)

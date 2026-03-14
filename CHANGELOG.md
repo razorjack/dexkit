@@ -1,5 +1,9 @@
 ## [Unreleased]
 
+### Removed
+
+- **`assert!` removed from operations** — `assert!(:code) { value }` and `assert!(value, :code)` are no longer available. Use `error!(:code) unless value` instead – it's equally concise and doesn't require learning a separate method
+
 ### Added
 
 - **`Dex::Id.parse`** – parse a Stripe-style ID back into prefix, timestamp, and random components. Returns `Dex::Id::Parsed` (a `Data.define` value object)

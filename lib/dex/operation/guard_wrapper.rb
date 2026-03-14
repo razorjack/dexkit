@@ -124,7 +124,7 @@ module Dex
         threat = catch(:_dex_halt) { instance_exec(&guard.block) }
         if threat.is_a?(Operation::Halt)
           raise ArgumentError,
-            "guard :#{guard.name} must return truthy/falsy, not call error!/success!/assert!"
+            "guard :#{guard.name} must return truthy/falsy, not call error!/success!"
         end
 
         if threat

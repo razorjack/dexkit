@@ -1,10 +1,10 @@
 ---
-description: Handle errors in Dex::Operation with error!, success!, assert!, and rescue_from – including transaction rollback and safe result wrapping.
+description: Handle errors in Dex::Operation with error!, success!, and rescue_from – including transaction rollback and safe result wrapping.
 ---
 
 # Error Handling
 
-Operations provide structured error handling through `error!`, `success!`, `assert!`, and `rescue_from`. All of these integrate with transactions (errors roll back), [Ok / Err](/operation/safe-mode) (errors become `Err`), and recording.
+Operations provide structured error handling through `error!`, `success!`, and `rescue_from`. All of these integrate with transactions (errors roll back), [Ok / Err](/operation/safe-mode) (errors become `Err`), and recording.
 
 ## error!
 
@@ -76,35 +76,6 @@ success!(42)                          # returns 42
 success!(name: "Alice", age: 30)     # returns { name: "Alice", age: 30 }
 success!                              # returns nil
 ```
-
-## assert!
-
-A guard that returns the value if truthy, or calls `error!` if falsy. Perfect for "find or fail" patterns:
-
-```ruby
-class Employee::Find < Dex::Operation
-  prop :employee_id, Integer
-
-  def perform
-    # Block form – evaluate and guard in one step
-    employee = assert!(:not_found) { Employee.find_by(id: employee_id) }
-    employee.as_json
-  end
-end
-```
-
-Two forms are supported:
-
-```ruby
-# Block form (preferred) – evaluates the block, errors if nil/false
-employee = assert!(:not_found) { Employee.find_by(id: employee_id) }
-
-# Value form – guards an already-evaluated value
-employee = Employee.find_by(id: employee_id)
-assert!(employee, :not_found)
-```
-
-Both call `error!(code)` when the value is falsy, which rolls back the transaction and raises `Dex::Error`.
 
 ## Declared error codes
 

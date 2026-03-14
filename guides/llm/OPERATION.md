@@ -111,7 +111,7 @@ Optional declarations documenting intent and catching mistakes at runtime.
 success _Ref(User)   # perform must return a User (or nil)
 ```
 
-**`error(*codes)`** — restricts which codes `error!`/`assert!` accept (raises `ArgumentError` on undeclared):
+**`error(*codes)`** — restricts which codes `error!` accepts (raises `ArgumentError` on undeclared):
 
 ```ruby
 error :email_taken, :invalid_email
@@ -297,13 +297,6 @@ success!(user)                      # return value early
 success!(name: "John", age: 30)    # kwargs become Hash
 ```
 
-**`assert!(code, &block)` / `assert!(value, code)`** — returns value if truthy, otherwise `error!(code)`:
-
-```ruby
-user = assert!(:not_found) { User.find_by(id: id) }
-assert!(user.active?, :inactive)
-```
-
 **Dex::Error** has `code` (Symbol), `message` (String, defaults to code.to_s), `details` (any). Pattern matching:
 
 ```ruby
@@ -317,7 +310,7 @@ rescue Dex::Error => e
 end
 ```
 
-**Key differences:** `error!`/`assert!` roll back transaction, skip `after` callbacks, but are still recorded (status `error`). `success!` commits, runs `after` callbacks, records normally (status `completed`).
+**Key differences:** `error!` rolls back transaction, skips `after` callbacks, but is still recorded (status `error`). `success!` commits, runs `after` callbacks, records normally (status `completed`).
 
 ---
 
