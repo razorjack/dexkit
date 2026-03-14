@@ -235,6 +235,10 @@ DEX_MONGOID_TESTS=1 \
 bundle exec rake test
 ```
 
+### Probe tests (`test/mongoid_only/`)
+
+Tests that verify dexkit works without ActiveRecord. Gated behind `DEX_PROBE_TESTS=1` (slow locally — subprocess-per-test). When working on Mongoid-only compatibility, boot behavior, or optional dependency detection, run with `DEX_PROBE_TESTS=1`. CI runs these automatically.
+
 **DSL validation:** All DSL methods (`error`, `rescue_from`, `async`, `record`, `advisory_lock`, `before`/`after`/`around`, `transaction`, etc.) validate their arguments at declaration time, raising `ArgumentError` for invalid inputs. The low-level `set` method stays unvalidated — it's the extensible foundation. When adding new DSL methods, always validate arguments early.
 
 ## Finishing Up

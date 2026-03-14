@@ -8,6 +8,10 @@ class TestMongoidOnlyWithoutActiveRecord < Minitest::Test
   ROOT = File.expand_path("../..", __dir__)
   RESULT_MARKER = "__RESULT__"
 
+  def setup
+    skip "Probe tests disabled (set DEX_PROBE_TESTS=1)" unless ENV["DEX_PROBE_TESTS"] == "1"
+  end
+
   def test_boots_without_active_record_and_does_not_auto_enable_mongoid_transactions
     result = run_probe_json(<<~'RUBY')
       require "json"

@@ -10,6 +10,8 @@ class TestMongoidOnlyRuntimeWithoutActiveRecord < Minitest::Test
   ].freeze
 
   def setup
+    skip "Probe tests disabled (set DEX_PROBE_TESTS=1)" unless ENV["DEX_PROBE_TESTS"] == "1"
+
     setup_mongoid_operation_database
     setup_mongoid_query_database
     setup_mongoid_event_database
