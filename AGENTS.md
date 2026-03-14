@@ -119,7 +119,6 @@ lib/
       export.rb          # Dex::Event::Export (to_h, to_json_schema)
     test_log.rb          # Dex::TestLog (global activity log for tests)
     test_helpers.rb      # Dex::TestHelpers (convenience, includes Operation + Event helpers)
-    event_test_helpers.rb # backward-compat shim → dex/event/test_helpers
     operation/
       test_helpers.rb    # Dex::Operation::TestHelpers + Dex::Operation::TestWrapper
       test_helpers/
