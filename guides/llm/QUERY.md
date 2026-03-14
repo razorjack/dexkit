@@ -396,3 +396,9 @@ class UserSearchTest < Minitest::Test
   end
 end
 ```
+
+---
+
+## LLM Tools
+
+To expose a query as an LLM-callable tool, see `TOOL.md`.

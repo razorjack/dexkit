@@ -913,6 +913,8 @@ end
 
 Requires `gem 'ruby_llm'` in your Gemfile. Lazy-loaded — ruby-llm is only required when you call `Dex::Tool`.
 
+See `TOOL.md` for the full Tool reference including query tools.
+
 ---
 
 **End of reference.**

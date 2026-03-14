@@ -135,5 +135,5 @@ Contracts are useful for:
 - **Testing** – assert the contract without calling the operation (see [Testing](/operation/testing#contract-assertions))
 - **Tooling** – build admin panels, API docs, or monitoring dashboards from contract data
 - **Export** – serialize contracts as hashes or JSON Schema for external tools (see [Registry & Export](/tooling/registry))
-- **LLM integration** – turn operations into LLM-callable tools (see [LLM Tools](/operation/llm-tools))
+- **LLM integration** – turn operations and queries into LLM-callable tools (see [Tool](/tool/))
 - **Catching mistakes** – typos in error codes and wrong return types are caught at runtime

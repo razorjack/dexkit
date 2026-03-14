@@ -5,6 +5,7 @@
 - **`Dex::Id.parse`** – parse a Stripe-style ID back into prefix, timestamp, and random components. Returns `Dex::Id::Parsed` (a `Data.define` value object)
 - **`Dex::Id.generate` now validates prefix format** – prefix must match `/\A[a-z][a-z0-9_]*_\z/` (lowercase alphanumeric with internal underscores, ending in underscore). Internal prefixes (`op_`, `ev_`, `tr_`, `hd_`) already comply
 - **`Dex::Id.generate` accepts `random:` width option** – controls the number of random suffix characters (default 12, minimum 8). `Dex::Id.generate("ord_", random: 16)` produces a longer ID with more collision resistance
+- **`Dex::Tool.from` accepts Query classes** – `Dex::Tool.from(Order::Query, scope: -> { ... }, serialize: -> { ... })` turns a `Dex::Query` into an LLM-callable tool with mandatory scope injection, serialization, and result limiting. Supports `limit:`, `only_filters:`, `except_filters:`, and `only_sorts:` for fine-grained control. Context-mapped and `_Ref` props are auto-excluded from the tool schema. Returns paginated results with `{ records:, total:, limit:, offset: }`. All options are validated at registration time with prescriptive error messages. Excluded filters are enforced at runtime — the agent cannot bypass filter restrictions even by sending unlisted params
 
 ## [0.10.0] - 2026-03-09
 

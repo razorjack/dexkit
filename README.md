@@ -94,7 +94,7 @@ once :nonexistent_prop
 
 ### And more
 
-[Ambient context](https://dex.razorjack.net/operation/context), [unified tracing](https://dex.razorjack.net/operation/tracing) with [Stripe-style IDs](https://dex.razorjack.net/utilities/prefixed-ids), [idempotency](https://dex.razorjack.net/operation/once), [async execution](https://dex.razorjack.net/operation/async), [advisory locks](https://dex.razorjack.net/operation/advisory-lock), [DB recording](https://dex.razorjack.net/operation/recording), [explain](https://dex.razorjack.net/operation/explain) for preflight checks, [callbacks](https://dex.razorjack.net/operation/callbacks), a [customizable pipeline](https://dex.razorjack.net/operation/pipeline), [registry & export](https://dex.razorjack.net/tooling/registry), and [LLM tool integration](https://dex.razorjack.net/operation/llm-tools).
+[Ambient context](https://dex.razorjack.net/operation/context), [unified tracing](https://dex.razorjack.net/operation/tracing) with [Stripe-style IDs](https://dex.razorjack.net/utilities/prefixed-ids), [idempotency](https://dex.razorjack.net/operation/once), [async execution](https://dex.razorjack.net/operation/async), [advisory locks](https://dex.razorjack.net/operation/advisory-lock), [DB recording](https://dex.razorjack.net/operation/recording), [explain](https://dex.razorjack.net/operation/explain) for preflight checks, [callbacks](https://dex.razorjack.net/operation/callbacks), a [customizable pipeline](https://dex.razorjack.net/operation/pipeline), [registry & export](https://dex.razorjack.net/tooling/registry), and [LLM tool integration](https://dex.razorjack.net/tool/) for operations and queries.
 
 ## Events
 

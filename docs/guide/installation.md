@@ -263,7 +263,7 @@ gem "ruby_llm"
 
 `Dex::Tool` is lazy-loaded – it only requires ruby-llm when you call it. If the gem isn't installed, you get a clear `LoadError`.
 
-See [LLM Tools](/operation/llm-tools) for usage.
+See [Tool](/tool/) for usage.
 
 ## Test setup
 

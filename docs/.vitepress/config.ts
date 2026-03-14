@@ -13,6 +13,7 @@ const SECTION_TITLES: Record<string, string> = {
   form: 'Dex::Form',
   event: 'Dex::Event',
   query: 'Dex::Query',
+  tool: 'Dex::Tool',
   tooling: 'Tooling',
   utilities: 'Utilities'
 }
@@ -23,6 +24,7 @@ const SECTION_ENTRY_PATHS: Record<string, string> = {
   form: '/form/',
   event: '/event/',
   query: '/query/',
+  tool: '/tool/',
   tooling: '/tooling/registry.html',
   utilities: '/utilities/prefixed-ids.html'
 }
@@ -284,8 +286,7 @@ export default defineConfig({
           { text: 'Recording', link: '/operation/recording' },
           { text: 'Middleware', link: '/operation/pipeline' },
           { text: 'Contracts', link: '/operation/contracts' },
-          { text: 'Explain', link: '/operation/explain' },
-          { text: 'LLM Tools', link: '/operation/llm-tools' }
+          { text: 'Explain', link: '/operation/explain' }
         ]
       },
       {
@@ -320,6 +321,13 @@ export default defineConfig({
           { text: 'Nested Forms', link: '/form/nesting' },
           { text: 'Rails Integration', link: '/form/rails' },
           { text: 'Conventions', link: '/form/conventions' }
+        ]
+      },
+      {
+        text: 'Tool',
+        collapsed: true,
+        items: [
+          { text: 'Overview', link: '/tool/' }
         ]
       },
       {
