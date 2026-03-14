@@ -262,49 +262,6 @@ module Dex
         result
       end
 
-      # --- Batch assertions ---
-
-      def assert_all_succeed(*args, params_list:)
-        klass = _dex_resolve_subject(args)
-        results = params_list.map { |p| klass.new(**p).safe.call }
-        failures = results.each_with_index.reject { |r, _| r.ok? }
-        if failures.any?
-          msgs = failures.map { |r, i| "  [#{i}] #{params_list[i].inspect} => #{_dex_format_err(r)}" }
-          flunk "Expected all #{results.size} calls to succeed, but #{failures.size} failed:\n#{msgs.join("\n")}"
-        end
-        results
-      end
-
-      def assert_all_fail(*args, code:, params_list:, message: nil, details: nil)
-        klass = _dex_resolve_subject(args)
-        results = params_list.map { |p| klass.new(**p).safe.call }
-        failures = results.each_with_index.reject { |r, _| r.error? && r.code == code }
-        if failures.any?
-          msgs = failures.map { |r, i|
-            status = r.ok? ? "Ok(#{r.value.inspect})" : "Err(#{r.code})"
-            "  [#{i}] #{params_list[i].inspect} => #{status}"
-          }
-          flunk "Expected all #{results.size} calls to fail with #{code.inspect}, but #{failures.size} didn't:\n#{msgs.join("\n")}"
-        end
-        results.each_with_index do |r, i|
-          if message
-            case message
-            when Regexp
-              assert_match message, r.message,
-                "Error message mismatch at [#{i}] #{params_list[i].inspect}.\n#{_dex_format_err(r)}"
-            else
-              assert_equal message, r.message,
-                "Error message mismatch at [#{i}] #{params_list[i].inspect}.\n#{_dex_format_err(r)}"
-            end
-          end
-          details&.each do |key, val|
-            assert_equal val, r.details&.dig(key),
-              "Error details[:#{key}] mismatch at [#{i}] #{params_list[i].inspect}.\n#{_dex_format_err(r)}"
-          end
-        end
-        results
-      end
-
       private
 
       def _dex_format_err(result)

@@ -229,25 +229,6 @@ class SendConfirmationTest < Minitest::Test
 end
 ```
 
-## Batch assertions
-
-Test multiple inputs at once:
-
-```ruby
-assert_all_succeed(params_list: [
-  { amount: 10 },
-  { amount: 20 },
-  { amount: 30 }
-])
-
-assert_all_fail(code: :invalid, params_list: [
-  { amount: -1 },
-  { amount: 0 }
-])
-```
-
-Both report which specific cases failed, with their index and params.
-
 ## TestLog
 
 All operation calls are recorded to `Dex::TestLog` during tests. The log is cleared automatically between tests.

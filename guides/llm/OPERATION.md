@@ -803,21 +803,6 @@ assert_rolls_back(User) { CreateUser.call(email: "bad", name: "A") }
 assert_commits(User) { CreateUser.call(email: "ok@b.com", name: "A") }
 ```
 
-### Batch Assertions
-
-```ruby
-assert_all_succeed(params_list: [
-  { email: "a@b.com", name: "A" },
-  { email: "b@b.com", name: "B" }
-])
-
-assert_all_fail(code: :invalid_email, params_list: [
-  { email: "", name: "A" },
-  { email: "no-at", name: "B" }
-])
-# Also supports message: and details: options
-```
-
 ### Stubbing
 
 Replace an operation within a block. Bypasses all wrappers, not recorded in TestLog:
@@ -893,13 +878,6 @@ class CreateUserTest < Minitest::Test
 
   def test_rejects_bad_email
     assert_operation_error(:invalid_email, email: "bad", name: "A")
-  end
-
-  def test_batch_rejects
-    assert_all_fail(code: :invalid_email, params_list: [
-      { email: "", name: "A" },
-      { email: "no-at", name: "B" }
-    ])
   end
 
   def test_stubs_dependency
