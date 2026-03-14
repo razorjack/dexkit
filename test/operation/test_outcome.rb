@@ -41,6 +41,22 @@ class TestOperationOutcome < Minitest::Test
     end
   end
 
+  def test_ok_deconstruct_array_pattern
+    ok = Dex::Operation::Ok.new({ id: 1, name: "Test" })
+
+    case ok
+    in Dex::Ok[value]
+      assert_equal({ id: 1, name: "Test" }, value)
+    else
+      flunk "Array pattern matching failed"
+    end
+  end
+
+  def test_ok_deconstruct_returns_array
+    ok = Dex::Operation::Ok.new("hello")
+    assert_equal ["hello"], ok.deconstruct
+  end
+
   def test_ok_deconstruct_keys_with_struct
     result_struct = Struct.new(:id, :name, keyword_init: true)
     ok = Dex::Operation::Ok.new(result_struct.new(id: 1, name: "Test"))
@@ -81,6 +97,24 @@ class TestOperationOutcome < Minitest::Test
     assert_equal :validation_failed, err.code
     assert_equal "Invalid input", err.message
     assert_equal({ field: "email" }, err.details)
+  end
+
+  def test_err_deconstruct_array_pattern
+    error = Dex::Error.new(:not_found, "Gone")
+    err = Dex::Operation::Err.new(error)
+
+    case err
+    in Dex::Err[wrapped_error]
+      assert_equal :not_found, wrapped_error.code
+    else
+      flunk "Array pattern matching failed"
+    end
+  end
+
+  def test_err_deconstruct_returns_array
+    error = Dex::Error.new(:bad, "oops")
+    err = Dex::Operation::Err.new(error)
+    assert_equal [error], err.deconstruct
   end
 
   def test_err_deconstruct_keys

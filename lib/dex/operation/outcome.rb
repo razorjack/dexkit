@@ -26,6 +26,10 @@ module Dex
         @value.respond_to?(method, include_private) || super
       end
 
+      def deconstruct
+        [@value]
+      end
+
       def deconstruct_keys(keys)
         return { value: @value } unless @value.respond_to?(:deconstruct_keys)
         @value.deconstruct_keys(keys)
@@ -49,6 +53,10 @@ module Dex
       def message = @error.message
       def details = @error.details
 
+      def deconstruct
+        [@error]
+      end
+
       def deconstruct_keys(keys)
         { code: @error.code, message: @error.message, details: @error.details }
       end
@@ -64,6 +72,12 @@ module Dex
         Operation::Ok.new(result)
       rescue Dex::Error => e
         Operation::Err.new(e)
+      end
+
+      def async(*)
+        raise NoMethodError,
+          "safe and async are alternative execution strategies. " \
+          "For async outcome reconstruction, use wait/wait! on the ticket."
       end
     end
   end

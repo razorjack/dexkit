@@ -351,6 +351,10 @@ end
 
 `Ok`/`Err` are available inside operations without prefix. In other contexts (controllers, POROs), use `Dex::Ok`/`Dex::Err` or `include Dex::Match`.
 
+**Deconstruct forms:**
+- Hash: `in Dex::Ok(key:)` — destructures value's keys. `in Dex::Err(code:, message:)` — named error fields.
+- Array: `in Dex::Ok[value]` — binds entire value. `in Dex::Err[error]` — binds the `Dex::Error` instance.
+
 ---
 
 ## Rescue Mapping
@@ -464,15 +468,81 @@ On timeout: raises `Dex::Error(code: :lock_timeout)`. Works with `.safe`.
 Enqueue as background jobs (requires ActiveJob):
 
 ```ruby
-CreateUser.new(email: "a@b.com", name: "Alice").async.call
-CreateUser.new(email: "a@b.com", name: "Alice").async(queue: "urgent").call
-CreateUser.new(email: "a@b.com", name: "Alice").async(in: 5.minutes).call
-CreateUser.new(email: "a@b.com", name: "Alice").async(at: 1.hour.from_now).call
+ticket = CreateUser.new(email: "a@b.com", name: "Alice").async.call
+ticket = CreateUser.new(email: "a@b.com", name: "Alice").async(queue: "urgent").call
+ticket = CreateUser.new(email: "a@b.com", name: "Alice").async(in: 5.minutes).call
+ticket = CreateUser.new(email: "a@b.com", name: "Alice").async(at: 1.hour.from_now).call
 ```
 
 Class-level defaults: `async queue: "mailers"`. Runtime options override.
 
 Props serialize/deserialize automatically (Date, Time, BigDecimal, Symbol, `_Ref` — all handled). Non-serializable props raise `ArgumentError` at enqueue time.
+
+### Ticket
+
+`async.call` returns a `Dex::Operation::Ticket` with `record` (operation record if recording enabled) and `job` (the enqueued job).
+
+```ruby
+ticket.id              # record ID
+ticket.operation_name  # operation class name
+ticket.status          # "pending"/"running"/"completed"/"error"/"failed"
+ticket.recorded?       # true if record strategy was used
+ticket.pending?        # status predicates
+ticket.terminal?       # completed? || error? || failed?
+ticket.reload          # refresh from DB, returns self
+ticket.to_param        # id.to_s (Rails path helpers)
+ticket.as_json         # { "id": ..., "name": ..., "status": ..., "result"?: ..., "error"?: ... }
+```
+
+`Ticket.from_record(record)` constructs from any operation record (for polling endpoints/dashboards).
+
+Record-dependent methods raise `ArgumentError` when `record` is nil (direct strategy without recording).
+
+### Outcome Reconstruction
+
+`ticket.outcome` reconstructs `Ok`/`Err` from the record — same types as `.safe.call`:
+
+- `completed` → `Ok(result)` with deep-symbolized keys
+- `error` → `Err(Dex::Error)` with symbolized code/details
+- `failed`/`pending`/`running` → `nil`
+
+Never raises, never reloads. Call `reload` first for fresh data.
+
+### wait / wait!
+
+Speculative sync — poll until terminal or timeout:
+
+```ruby
+# Safe mode (Ok/Err/nil)
+case ticket.wait(3.seconds)
+in Dex::Ok(url:)
+  redirect_to url
+in Dex::Err(code:, message:)
+  flash[:error] = message
+  redirect_to fallback_path
+else
+  redirect_to pending_path(ticket)
+end
+
+# Strict mode (value or exception)
+result = ticket.wait!(3.seconds)
+redirect_to result[:url]
+```
+
+| | Success | Business Error | Infra Crash | Timeout |
+|---|---|---|---|---|
+| `call` | value | `Dex::Error` | exception | n/a |
+| `safe.call` | `Ok` | `Err` | exception | n/a |
+| `wait!(t)` | value | `Dex::Error` | `OperationFailed` | `Dex::Timeout` |
+| `wait(t)` | `Ok` | `Err` | `OperationFailed` | `nil` |
+
+Options: `wait(timeout, interval: 0.2)`. Interval accepts a number or callable (`->(n) { ... }`).
+
+`Dex::OperationFailed` (inherits `StandardError`): `operation_name`, `exception_class`, `exception_message`.
+`Dex::Timeout` (inherits `StandardError`): `timeout`, `ticket_id`, `operation_name`.
+Neither inherits `Dex::Error` — `rescue Dex::Error` never catches them.
+
+`safe` and `async` are non-composable — `op.safe.async` and `op.async.safe` raise `NoMethodError` with prescriptive messages.
 
 ---
 

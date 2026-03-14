@@ -187,3 +187,41 @@ rescue Dex::Error => e
   end
 end
 ```
+
+## Dex::OperationFailed
+
+Raised by [`wait`/`wait!`](/operation/async#speculative-sync-wait-wait) when an async operation crashed with an infrastructure failure (record status `"failed"`). Inherits from `StandardError`, not `Dex::Error` – crashes are categorically different from business errors.
+
+```ruby
+begin
+  ticket.wait!(3.seconds)
+rescue Dex::OperationFailed => e
+  e.operation_name    # => "Order::Fulfill"
+  e.exception_class   # => "RuntimeError"
+  e.exception_message # => "connection refused"
+end
+```
+
+## Dex::Timeout
+
+Raised by [`wait!`](/operation/async#wait-strict-mode-value-or-exception) when the timeout expires without the operation completing. Inherits from `StandardError`, not `Dex::Error`.
+
+```ruby
+begin
+  ticket.wait!(3.seconds)
+rescue Dex::Timeout => e
+  e.timeout        # => 3.0
+  e.ticket_id      # => "op_01J5..."
+  e.operation_name # => "Order::Fulfill"
+end
+```
+
+The three exception types are categorically distinct:
+
+| Exception | Represents | Inherits |
+|---|---|---|
+| `Dex::Error` | Business error (`error!`) | `StandardError` |
+| `Dex::OperationFailed` | Infrastructure crash | `StandardError` |
+| `Dex::Timeout` | Wait deadline exceeded | `StandardError` |
+
+`rescue Dex::Error` never catches crashes or timeouts.

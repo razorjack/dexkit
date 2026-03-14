@@ -158,6 +158,7 @@ require_relative "operation/async_proxy"
 require_relative "operation/record_backend"
 require_relative "operation/transaction_adapter"
 require_relative "operation/jobs"
+require_relative "operation/ticket"
 require_relative "operation/explain"
 require_relative "operation/export"
 

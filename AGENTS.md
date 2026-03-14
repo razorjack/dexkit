@@ -75,6 +75,8 @@ lib/
     context_dsl.rb       # Dex::ContextDSL (shared context DSL base module)
     context_setup.rb     # Dex::ContextSetup (context DSL + injection for Operation + Event)
     error.rb             # Dex::Error
+    operation_failed.rb  # Dex::OperationFailed (async infrastructure crash exception)
+    timeout.rb           # Dex::Timeout (wait! deadline exceeded exception)
     settings.rb          # Dex::Settings (set, settings_for, validate_options!)
     pipeline.rb          # Dex::Pipeline (shared execution pipeline)
     executable.rb        # Dex::Executable (shared skeleton: Settings, Pipeline, use DSL)
@@ -105,6 +107,7 @@ lib/
       record_backend.rb  # Operation::RecordBackend + adapters
       transaction_adapter.rb # Operation::TransactionAdapter (ActiveRecord adapter)
       jobs.rb            # const_missing + lazy DirectJob/RecordJob
+      ticket.rb          # Dex::Operation::Ticket (async handle, outcome reconstruction, wait/wait!)
     event.rb             # Event class orchestrator (requires all parts)
     event/
       metadata.rb        # Dex::Event::Metadata (id, timestamp, trace_id, caused_by_id, context)

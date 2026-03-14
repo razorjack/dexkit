@@ -17,6 +17,12 @@ module Dex
         end
       end
 
+      def safe(*)
+        raise NoMethodError,
+          "safe and async are alternative execution strategies. " \
+          "For async outcome reconstruction, use wait/wait! on the ticket."
+      end
+
       private
 
       def enqueue_direct_job
@@ -27,7 +33,8 @@ module Dex
           trace: Dex::Trace.dump
         }
         apply_once_payload!(payload)
-        job.perform_later(**payload)
+        job = job.perform_later(**payload)
+        Operation::Ticket.new(record: nil, job: job)
       end
 
       def enqueue_record_job
@@ -47,7 +54,8 @@ module Dex
             trace: Dex::Trace.dump
           }
           apply_once_payload!(payload)
-          job.perform_later(**payload)
+          job = job.perform_later(**payload)
+          Operation::Ticket.new(record: record, job: job)
         rescue => e
           begin
             record.destroy

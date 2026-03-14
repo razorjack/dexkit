@@ -23,7 +23,21 @@ end
 
 `Ok` and `Err` are available without prefix inside operations and forms. In other contexts (controllers, POROs), use `Dex::Ok`/`Dex::Err` or `include Dex::Match`.
 
-`Ok` deconstructs by delegating to its value – if the value is a Hash or responds to `deconstruct_keys`, you can match its contents directly. `Err` deconstructs into `{ code:, message:, details: }`.
+Two deconstruct forms are supported:
+
+- **Hash** `Ok(key:)` – delegates to the value's `deconstruct_keys`, so you destructure the value's contents directly
+- **Array** `Ok[value]` – binds the entire value as one variable
+
+```ruby
+case result
+in Dex::Ok(order_id:, total:)   # hash – destructure into the value
+  redirect_to order_path(order_id)
+in Dex::Ok[value]               # array – grab the whole thing
+  render json: value
+end
+```
+
+`Err` supports both forms too: `Err(code:, message:, details:)` for named fields, `Err[error]` for the raw `Dex::Error` instance.
 
 ## Ok
 
