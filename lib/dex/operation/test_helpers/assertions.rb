@@ -52,39 +52,6 @@ module Dex
         result
       end
 
-      # --- One-liner assertions ---
-
-      def assert_operation(*args, returns: :_not_given, **params)
-        klass = _dex_resolve_subject(args)
-        result = klass.new(**params).safe.call
-        assert result.ok?, "Expected operation to succeed, got Err:\n#{_dex_format_err(result)}"
-        if returns != :_not_given
-          assert_equal returns, result.value, "Return value mismatch"
-        end
-        result
-      end
-
-      def assert_operation_error(*args, message: nil, details: nil, **params)
-        klass, code = _dex_resolve_subject_and_code(args)
-        result = klass.new(**params).safe.call
-        assert result.error?, "Expected operation to fail, got Ok:\n#{_dex_format_ok(result)}"
-        if code
-          assert_equal code, result.code, "Error code mismatch.\n#{_dex_format_err(result)}"
-        end
-        if message
-          case message
-          when Regexp
-            assert_match message, result.message
-          else
-            assert_equal message, result.message
-          end
-        end
-        details&.each do |key, val|
-          assert_equal val, result.details&.dig(key)
-        end
-        result
-      end
-
       # --- Contract assertions ---
 
       def assert_params(*args)
@@ -277,18 +244,6 @@ module Dex
         return "(not ok)" unless result.respond_to?(:ok?) && result.ok?
 
         "  value: #{result.value.inspect}"
-      end
-
-      def _dex_resolve_subject_and_code(args)
-        if args.first.is_a?(Class) && args.first < Dex::Operation
-          klass = args.shift
-          code = args.shift
-          [klass, code]
-        elsif args.first.is_a?(Symbol)
-          [_dex_resolve_subject([]), args.shift]
-        else
-          [_dex_resolve_subject([]), nil]
-        end
       end
 
       def _dex_split_class_and_symbols(args)

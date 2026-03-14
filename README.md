@@ -155,12 +155,14 @@ class PlaceOrderTest < Minitest::Test
   testing Order::Place
 
   def test_places_order
-    assert_operation(customer: customer.id, product: product.id, quantity: 2)
+    result = call_operation(customer: customer.id, product: product.id, quantity: 2)
+    assert_ok result
   end
 
   def test_rejects_out_of_stock
-    assert_operation_error(:out_of_stock, customer: customer.id,
+    result = call_operation(customer: customer.id,
       product: out_of_stock_product.id, quantity: 1)
+    assert_err result, :out_of_stock
   end
 end
 ```

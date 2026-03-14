@@ -5,6 +5,7 @@
 - **`assert!` removed from operations** — `assert!(:code) { value }` and `assert!(value, :code)` are no longer available. Use `error!(:code) unless value` instead – it's equally concise and doesn't require learning a separate method
 - **`assert_all_succeed` / `assert_all_fail` removed from test helpers** — use a simple loop with `assert_ok` / `assert_err` instead
 - **`dex/event_test_helpers` shim removed** — use `require "dex/event/test_helpers"` directly
+- **`assert_operation` / `assert_operation_error` removed from test helpers** — use `call_operation` + `assert_ok` / `assert_err` instead, which are more composable
 
 ### Added
 

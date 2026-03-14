@@ -738,19 +738,6 @@ refute_err result
 refute_err result, :not_found           # Ok OR different code
 ```
 
-### One-Liner Assertions
-
-Call + assert in one step:
-
-```ruby
-assert_operation(email: "a@b.com", name: "Alice")                # Ok
-assert_operation(CreateUser, email: "a@b.com", name: "Alice")    # explicit class
-assert_operation(email: "a@b.com", name: "Alice", returns: user) # check value
-
-assert_operation_error(:invalid_email, email: "bad", name: "A")
-assert_operation_error(CreateUser, :email_taken, email: "taken@b.com", name: "A")
-```
-
 ### Contract Assertions
 
 ```ruby
@@ -777,7 +764,7 @@ refute_callable(:unauthorized, post: post, user: user)           # specific guar
 refute_callable(PublishPost, :unauthorized, post: post, user: user)
 ```
 
-Guard failures on the normal `call` path produce `Dex::Error`, so `assert_operation_error` and `assert_err` also work.
+Guard failures on the normal `call` path produce `Dex::Error`, so `assert_err` also works.
 
 ### Param Validation
 
@@ -872,12 +859,9 @@ class CreateUserTest < Minitest::Test
     assert_ok(result) { |user| assert_equal "Alice", user.name }
   end
 
-  def test_one_liner
-    assert_operation(email: "a@b.com", name: "Alice")
-  end
-
   def test_rejects_bad_email
-    assert_operation_error(:invalid_email, email: "bad", name: "A")
+    result = call_operation(email: "bad", name: "A")
+    assert_err result, :invalid_email
   end
 
   def test_stubs_dependency

@@ -79,25 +79,6 @@ refute_ok result                     # passes if Err
 refute_err result, :not_found        # passes if Ok or different code
 ```
 
-## One-liner assertions
-
-Call the operation and assert the result in a single line:
-
-```ruby
-# Assert success, optionally check return value
-assert_operation(name: "Alice", returns: employee)
-
-# Assert failure with error code
-assert_operation_error(:invalid, name: "")
-
-# With explicit class
-assert_operation(Employee::Onboard, name: "Alice")
-assert_operation_error(Employee::Onboard, :invalid, name: "")
-
-# With message/details checks
-assert_operation_error(:invalid, message: /required/, name: "")
-```
-
 ## Contract assertions
 
 Inspect declarations without calling the operation:
@@ -145,7 +126,7 @@ assert_callable(Order::Place, customer: customer, product: product, quantity: 1)
 refute_callable(Order::Place, :credit_exceeded, customer: over_limit, product: product, quantity: 1)
 ```
 
-Guard failures on the normal `call` path produce the same `Dex::Error` as `error!`, so `assert_operation_error` and `assert_err` work for testing that a guard blocks execution.
+Guard failures on the normal `call` path produce the same `Dex::Error` as `error!`, so `assert_err` works for testing that a guard blocks execution.
 
 ## Param validation
 
