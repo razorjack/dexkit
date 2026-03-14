@@ -89,15 +89,13 @@ module Dex
 
         def enqueue(handler_class, event, trace_data)
           ensure_active_job_loaded!
-          ctx = event.context
 
           Dex::Event::Processor.perform_later(
             handler_class: handler_class.name,
             event_class: event.class.name,
             payload: event._props_as_json,
             metadata: event.metadata.as_json,
-            trace: trace_data,
-            context: ctx
+            trace: trace_data
           )
         end
 

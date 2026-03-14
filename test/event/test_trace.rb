@@ -116,10 +116,10 @@ class TestEventTrace < Minitest::Test
     root = root_class.new(n: 0)
     events = [root]
 
-    Dex::Event::Trace.with_event(root) do
+    Dex::Trace.with_event_context(root) do
       e1 = root_class.new(n: 1)
       events << e1
-      Dex::Event::Trace.with_event(e1) do
+      Dex::Trace.with_event_context(e1) do
         e2 = root_class.new(n: 2)
         events << e2
       end
@@ -129,8 +129,8 @@ class TestEventTrace < Minitest::Test
   end
 
   def test_no_trace_context_by_default
-    assert_nil Dex::Event::Trace.current_event_id
-    assert_nil Dex::Event::Trace.current_trace_id
+    assert_nil Dex::Trace.current_event_id
+    assert_nil Dex::Trace.trace_id
     assert_equal [], Dex::Trace.current
   end
 
@@ -142,15 +142,15 @@ class TestEventTrace < Minitest::Test
     event = event_class.new(name: "original")
     dumped = nil
 
-    Dex::Event::Trace.with_event(event) do
-      dumped = Dex::Event::Trace.dump
+    Dex::Trace.with_event_context(event) do
+      dumped = Dex::Trace.dump
     end
 
     assert_equal event.trace_id, dumped[:trace_id]
     assert_equal event.id, dumped.dig(:event_context, :id)
 
     inner_child = nil
-    Dex::Event::Trace.restore(dumped) do
+    Dex::Trace.restore(dumped) do
       inner_child = event_class.new(name: "restored")
     end
 
@@ -158,7 +158,7 @@ class TestEventTrace < Minitest::Test
     assert_equal event.trace_id, inner_child.trace_id
 
     # Restore nil is a noop
-    Dex::Event::Trace.restore(nil) do
+    Dex::Trace.restore(nil) do
       noop_event = event_class.new(name: "test")
       assert_nil noop_event.caused_by_id
     end
@@ -170,9 +170,9 @@ class TestEventTrace < Minitest::Test
     end
 
     event = event_class.new(name: "test")
-    Dex::Event::Trace.with_event(event) do
-      Dex::Event::Trace.clear!
-      assert_nil Dex::Event::Trace.current_event_id
+    Dex::Trace.with_event_context(event) do
+      Dex::Trace.clear!
+      assert_nil Dex::Trace.current_event_id
     end
   end
 
@@ -201,7 +201,7 @@ class TestEventTrace < Minitest::Test
     assert_equal parent.trace_id, children.first.trace_id
   end
 
-  def test_legacy_restore_shape
+  def test_restore_event_context
     event_class = build_event do
       prop :name, String
     end
@@ -209,8 +209,7 @@ class TestEventTrace < Minitest::Test
     parent = event_class.new(name: "parent")
     child = nil
 
-    # Legacy shape still works
-    Dex::Event::Trace.restore(id: parent.id, trace_id: parent.trace_id) do
+    Dex::Trace.restore_event_context(event_id: parent.id, trace_id: parent.trace_id) do
       child = event_class.new(name: "child")
     end
 
@@ -222,7 +221,7 @@ class TestEventTrace < Minitest::Test
     child2 = nil
 
     Dex::Trace.start(actor: { type: :user, id: 7 }) do
-      Dex::Event::Trace.restore(id: parent.id, trace_id: parent.trace_id) do
+      Dex::Trace.restore_event_context(event_id: parent.id, trace_id: parent.trace_id) do
         actor = Dex::Trace.actor
         child2 = event_class.new(name: "child2")
       end

@@ -7,9 +7,7 @@ module Dex
       return super unless name == :Processor && defined?(ActiveJob::Base)
 
       const_set(:Processor, Class.new(ActiveJob::Base) do
-        def perform(handler_class:, event_class:, payload:, metadata:, trace: nil, context: nil, attempt_number: 1)
-          restore_context(context)
-
+        def perform(handler_class:, event_class:, payload:, metadata:, trace: nil, attempt_number: 1)
           handler = Object.const_get(handler_class)
           retry_config = handler._event_handler_retry_config
 
@@ -25,7 +23,6 @@ module Dex
               payload: payload,
               metadata: metadata,
               trace: trace,
-              context: context,
               attempt_number: attempt_number + 1
             )
           else
@@ -34,17 +31,6 @@ module Dex
         end
 
         private
-
-        def restore_context(context)
-          return unless context
-
-          restorer = Dex.configuration.restore_event_context
-          return unless restorer
-
-          restorer.call(context)
-        rescue => e
-          Dex::Event._warn("restore_event_context failed: #{e.message}")
-        end
 
         def compute_delay(config, attempt)
           wait = config[:wait]

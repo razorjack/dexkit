@@ -89,7 +89,7 @@ class TestEventAssertions < Minitest::Test
     parent = parent_class.new(name: "root")
     child = nil
 
-    Dex::Event::Trace.with_event(parent) do
+    Dex::Trace.with_event_context(parent) do
       child = child_class.new(value: 42)
     end
 
@@ -104,10 +104,10 @@ class TestEventAssertions < Minitest::Test
     root = event_class.new(n: 0)
     events = [root]
 
-    Dex::Event::Trace.with_event(root) do
+    Dex::Trace.with_event_context(root) do
       e1 = event_class.new(n: 1)
       events << e1
-      Dex::Event::Trace.with_event(e1) do
+      Dex::Trace.with_event_context(e1) do
         events << event_class.new(n: 2)
       end
     end

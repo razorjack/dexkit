@@ -25,11 +25,6 @@ Dex.configure do |config|
   # Event persistence – set a model class to persist events to DB
   # config.event_store = EventRecord
 
-  # Event context – capture ambient state when events are published
-  # config.event_context = -> { { user_id: Current.user&.id } }
-
-  # Restore context – reconstruct ambient state in async handlers
-  # config.restore_event_context = ->(ctx) { Current.user = User.find(ctx["user_id"]) }
 end
 ```
 
@@ -237,22 +232,6 @@ end
 
 See [Publishing](/event/publishing) for the publish flow and context capture.
 
-## Event async context
-
-Event handlers run via ActiveJob by default. If ActiveJob is not loaded, async publish raises `LoadError`. If your handlers need ambient state (like `Current.user`), configure context capture and restoration:
-
-```ruby
-Dex.configure do |config|
-  config.event_context = -> { { user_id: Current.user&.id } }
-  config.restore_event_context = ->(ctx) { Current.user = User.find(ctx["user_id"]) }
-end
-```
-
-- `event_context` – a callable that returns a hash, evaluated at publish time, stored alongside the event
-- `restore_event_context` – a callable that receives the stored hash and reconstructs the ambient state before the handler runs
-
-Without these, async handlers won't have access to request-scoped state like the current user.
-
 ## LLM tools
 
 `Dex::Tool` turns operations into tools that LLMs can call directly. It requires the [`ruby-llm`](https://github.com/crmne/ruby-llm) gem:
@@ -332,7 +311,6 @@ A quick reference for what each feature needs:
 | Async operations | ActiveJob + queue backend | Only if you use `.async.call` |
 | Event handlers | Initializer to load handler files | Yes, if using events |
 | Event persistence | Migration + model + `config.event_store` | Only if you want event history |
-| Event async context | `config.event_context` + `config.restore_event_context` | Only if async handlers need request state |
 | LLM tools | `gem "ruby_llm"` | Only if you use `Dex::Tool` |
 | Test helpers | `include Dex::Operation::TestHelpers`, `Dex::Event::TestHelpers`, or both via `Dex::TestHelpers` | Recommended |
 | AI coding agents | `rake dex:guides` | Optional |

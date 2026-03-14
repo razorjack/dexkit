@@ -113,8 +113,7 @@ module Dex
             timestamp: Time.parse(metadata_hash["timestamp"]),
             trace_id: metadata_hash["trace_id"],
             caused_by_id: metadata_hash["caused_by_id"],
-            event_ancestry: metadata_hash["event_ancestry"] || [],
-            context: metadata_hash["context"]
+            event_ancestry: metadata_hash["event_ancestry"] || []
           )
           instance.instance_variable_set(:@metadata, metadata)
           instance.freeze

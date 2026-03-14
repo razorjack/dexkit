@@ -137,7 +137,5 @@ All optional:
 ```ruby
 Dex.configure do |config|
   config.event_store = EventRecord              # persist events to DB
-  config.event_context = -> { { user_id: Current.user&.id } }
-  config.restore_event_context = ->(ctx) { Current.user = User.find(ctx["user_id"]) }
 end
 ```

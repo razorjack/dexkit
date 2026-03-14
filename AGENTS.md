@@ -111,7 +111,6 @@ lib/
     event.rb             # Event class orchestrator (requires all parts)
     event/
       metadata.rb        # Dex::Event::Metadata (id, timestamp, trace_id, caused_by_id, context)
-      trace.rb           # Dex::Event::Trace (stack-based causality tracing)
       suppression.rb     # Dex::Event::Suppression (block-scoped suppression)
       bus.rb             # Dex::Event::Bus (global pub/sub, sync/async dispatch, persistence)
       handler.rb         # Dex::Event::Handler (on, retries, callbacks, transaction, pipeline)

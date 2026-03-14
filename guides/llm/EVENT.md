@@ -290,10 +290,6 @@ end
 
 **Introspection:** `MyEvent.context_mappings` returns the mapping hash.
 
-### Legacy Context (Metadata)
-
-The older `event_context` / `restore_event_context` configuration captures arbitrary metadata at publish time and restores it before async handler execution. Both mechanisms coexist.
-
 ---
 
 ## Configuration
@@ -302,12 +298,10 @@ The older `event_context` / `restore_event_context` configuration captures arbit
 # config/initializers/dexkit.rb
 Dex.configure do |config|
   config.event_store = nil               # model for persistence (default: nil)
-  config.event_context = nil             # -> { Hash } lambda (default: nil)
-  config.restore_event_context = nil     # ->(ctx) { ... } lambda (default: nil)
 end
 ```
 
-Everything works without configuration. All three settings are optional.
+Everything works without configuration.
 
 ---
 

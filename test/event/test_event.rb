@@ -107,27 +107,6 @@ class TestEvent < Minitest::Test
     assert_equal [], json["metadata"]["event_ancestry"]
   end
 
-  def test_context_capture
-    # From config
-    ctx_value = { user_id: 7 }
-    Dex.configure { |c| c.event_context = -> { ctx_value } }
-    event_class = build_event { prop :name, String }
-    event = event_class.new(name: "test")
-    assert_equal ctx_value, event.context
-    Dex.configure { |c| c.event_context = nil }
-
-    # Nil by default
-    event = event_class.new(name: "test")
-    assert_nil event.context
-
-    # Failure returns nil
-    Dex.configure { |c| c.event_context = -> { raise "boom" } }
-    event = event_class.new(name: "test")
-    assert_nil event.context
-  ensure
-    Dex.configure { |c| c.event_context = nil }
-  end
-
   def test_uses_active_trace_id_when_present
     event_class = build_event do
       prop :name, String

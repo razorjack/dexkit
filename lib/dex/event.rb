@@ -3,7 +3,6 @@
 # Modules loaded before class body (no reference to Dex::Event needed)
 require_relative "event/execution_state"
 require_relative "event/metadata"
-require_relative "event/trace"
 require_relative "event/suppression"
 
 module Dex
@@ -68,7 +67,6 @@ module Dex
     def trace_id = metadata.trace_id
     def caused_by_id = metadata.caused_by_id
     def event_ancestry = metadata.event_ancestry
-    def context = metadata.context
 
     # Publishing
     def publish(sync: false)
@@ -77,7 +75,7 @@ module Dex
 
     def self.publish(sync: false, caused_by: nil, **kwargs)
       if caused_by
-        Trace.with_event(caused_by) do
+        Dex::Trace.with_event_context(caused_by) do
           new(**kwargs).publish(sync: sync)
         end
       else

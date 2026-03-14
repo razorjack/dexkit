@@ -30,15 +30,13 @@ require_relative "dex/query"
 
 module Dex
   class Configuration
-    attr_accessor :record_class, :event_store, :event_context, :restore_event_context
+    attr_accessor :record_class, :event_store
     attr_reader :transaction_adapter
 
     def initialize
       @record_class = nil
       @transaction_adapter = nil
       @event_store = nil
-      @event_context = nil
-      @restore_event_context = nil
     end
 
     def transaction_adapter=(adapter)

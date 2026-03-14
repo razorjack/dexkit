@@ -1,5 +1,11 @@
 ## [Unreleased]
 
+### Breaking
+
+- **`Dex::Event::Trace` removed** – the shim module was a pure pass-through to `Dex::Trace`. All callers should use `Dex::Trace` directly: `Dex::Trace.with_event_context(event)`, `Dex::Trace.current_event_id`, `Dex::Trace.trace_id`, `Dex::Trace.dump`, `Dex::Trace.restore(data)`, `Dex::Trace.clear!`
+- **`event_context` / `restore_event_context` configuration removed** – the legacy dual context system for capturing arbitrary metadata at publish time and restoring ambient state in async handlers has been removed. Before: `config.event_context = -> { { user_id: Current.user&.id } }` captured an untyped hash into event metadata, and `config.restore_event_context` restored it before async handler execution. After: use `Dex.with_context` with typed event props via the `context` DSL instead — context values are captured as regular props at publish time, serialized automatically, and available on the event in handlers without ambient state restoration. `Metadata.context` field has been removed from event metadata and serialization
+- **`event.context` instance method removed** – the metadata delegate that returned the `event_context` config output is gone. Context data should be declared as typed props with the `context` DSL
+
 ### Removed
 
 - **`assert!` removed from operations** — `assert!(:code) { value }` and `assert!(value, :code)` are no longer available. Use `error!(:code) unless value` instead – it's equally concise and doesn't require learning a separate method
@@ -44,7 +50,7 @@
 
 ### Breaking
 
-- **Unified execution tracing replaces event-only tracing** – `Dex::Trace` is a new fiber-local trace that spans operations, events, and handlers. Operations get `op_...` execution IDs, events get `ev_...` IDs (replacing UUIDs), handlers get `hd_...` IDs, and traces are correlated with `tr_...` IDs. `event.trace { }` is removed – use `caused_by:` for explicit event causality and `Dex::Trace.start(actor:)` at request/job boundaries. `Dex::Event::Trace` remains as a thin delegation layer
+- **Unified execution tracing replaces event-only tracing** – `Dex::Trace` is a new fiber-local trace that spans operations, events, and handlers. Operations get `op_...` execution IDs, events get `ev_...` IDs (replacing UUIDs), handlers get `hd_...` IDs, and traces are correlated with `tr_...` IDs. `event.trace { }` is removed – use `caused_by:` for explicit event causality and `Dex::Trace.start(actor:)` at request/job boundaries
 - **Operation record primary keys are now string IDs** – records use the operation's `op_...` execution ID as a string primary key instead of auto-increment integers. The recording schema adds `trace_id`, `actor_type`, `actor_id`, and `trace` columns. Existing tables need a migration to adopt the new schema
 - **Mongoid transaction support removed** — `transaction :mongoid` and `config.transaction_adapter = :mongoid` are no longer valid. Dex no longer ships a Mongoid transaction adapter. Before: Mongoid transactions could be enabled via configuration or per-operation DSL. After: both forms raise `ArgumentError` immediately at declaration/configuration time. Mongoid-only apps continue to work — transactions are automatically disabled (no adapter detected), and `after_commit` fires immediately after success. If you need Mongoid multi-document transactions, call `Mongoid.transaction` directly inside `perform`
 - **Recording backends now validate required attributes before use** — Dex no longer silently drops missing `params`, `result`, `status`, or `once` attributes from `record_class`. Before: partial ActiveRecord/Mongoid recording models could appear to work while losing status transitions, replay data, or async params. After: Dex raises `ArgumentError` naming the missing attributes required by core recording, async record jobs, or `once`. Apps using minimal recording models must add the required columns/fields or explicitly disable the features that need them
@@ -213,7 +219,7 @@
   - Causality tracing: `event.trace { ... }` and `caused_by:` link events into chains with shared `trace_id`
   - Block-scoped suppression: `Dex::Event.suppress(SomeEvent) { ... }`
   - Optional persistence via `event_store` configuration
-  - Context capture and restoration across async boundaries (`event_context`, `restore_event_context`)
+  - Context capture across async boundaries via `Dex.with_context` and the `context` DSL
 - **Event test helpers** — `Dex::Event::TestHelpers` module
   - `capture_events` block for inspecting published events without dispatching
   - `assert_event_published`, `refute_event_published`, `assert_event_count`

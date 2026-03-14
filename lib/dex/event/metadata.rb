@@ -3,15 +3,14 @@
 module Dex
   class Event
     class Metadata
-      attr_reader :id, :timestamp, :trace_id, :caused_by_id, :event_ancestry, :context
+      attr_reader :id, :timestamp, :trace_id, :caused_by_id, :event_ancestry
 
-      def initialize(id:, timestamp:, trace_id:, caused_by_id:, event_ancestry:, context:)
+      def initialize(id:, timestamp:, trace_id:, caused_by_id:, event_ancestry:)
         @id = id
         @timestamp = timestamp
         @trace_id = trace_id
         @caused_by_id = caused_by_id
         @event_ancestry = event_ancestry
-        @context = context
         freeze
       end
 
@@ -26,22 +25,12 @@ module Dex
           []
         end
 
-        ctx = if Dex.configuration.event_context
-          begin
-            Dex.configuration.event_context.call
-          rescue => e
-            Event._warn("event_context failed: #{e.message}")
-            nil
-          end
-        end
-
         new(
           id: id,
           timestamp: Time.now.utc,
           trace_id: trace_id,
           caused_by_id: caused,
-          event_ancestry: ancestry,
-          context: ctx
+          event_ancestry: ancestry
         )
       end
 
@@ -53,7 +42,6 @@ module Dex
           "event_ancestry" => @event_ancestry
         }
         h["caused_by_id"] = @caused_by_id if @caused_by_id
-        h["context"] = @context if @context
         h
       end
     end
